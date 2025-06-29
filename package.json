@@ -1,0 +1,21 @@
+{
+  "name": "farm_game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "lodash": "^4.17.21",
+    "redis": "^5.5.6",
+    "yaml": "^2.8.0"
+  }
+}

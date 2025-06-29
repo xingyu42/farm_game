@@ -1,0 +1,42 @@
+# 等级配置文件
+# 定义玩家等级和经验需求
+
+levels:
+  # 等级经验需求表
+  requirements:
+    1:
+      experience: 0           # 1级起始经验
+      description: "新手农夫"
+      unlocks: ["carrot"]     # 解锁作物
+      
+    2:
+      experience: 100         # 升到2级需要的总经验
+      description: "见习农夫"
+      unlocks: ["wheat"]
+      
+    3:
+      experience: 250         # 升到3级需要的总经验
+      description: "熟练农夫"
+      unlocks: ["tomato", "watering_can"]
+      
+    4:
+      experience: 450         # 升到4级需要的总经验
+      description: "专业农夫"
+      unlocks: ["land_expansion_1"]
+      
+    5:
+      experience: 700         # 升到5级需要的总经验
+      description: "农场主"
+      unlocks: ["premium_fertilizer", "land_expansion_2"]
+      
+  # 等级奖励配置
+  rewards:
+    levelUp:
+      coins: 50              # 每次升级获得金币
+      landSlots: 1           # 每次升级增加土地槽位
+      
+  # 经验来源配置
+  experienceSources:
+    planting: 2             # 种植获得经验
+    harvesting: 5           # 收获获得经验（基础值，实际由作物配置决定）
+    selling: 1              # 售卖获得经验 
