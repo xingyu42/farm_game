@@ -4,6 +4,7 @@
 // {{START MODIFICATIONS}}
 
 import { PlayerService } from '../services/PlayerService.js'
+import { Config } from '../models/Config.js'
 
 /**
  * 农场管理功能模块
@@ -17,6 +18,14 @@ export class farm extends plugin {
       event: 'message',
       priority: 5000,
       rule: [
+        {
+          reg: '^#nc我的农场$',
+          fnc: 'showMyFarm'
+        },
+        {
+          reg: '^@(.+?) #nc农场$',
+          fnc: 'showOtherFarm'
+        },
         {
           reg: '^#nc(农场|信息|我的信息)$',
           fnc: 'showFarmInfo'
@@ -47,6 +56,200 @@ export class farm extends plugin {
         }
       ]
     })
+    
+    // 初始化配置
+    this.config = new Config()
+  }
+
+  /**
+   * 显示我的农场状态
+   */
+  async showMyFarm(e) {
+    try {
+      const userId = e.user_id
+      const playerService = new PlayerService()
+      
+      // 确保玩家已注册
+      await playerService.ensurePlayer(userId)
+      const playerData = await playerService.getPlayerData(userId)
+
+      if (!playerData) {
+        e.reply('获取农场信息失败，请稍后重试')
+        return true
+      }
+
+      const farmDisplay = await this._buildFarmDisplay(playerData, true)
+      e.reply(farmDisplay)
+      return true
+    } catch (error) {
+      logger.error('[农场游戏] 显示我的农场失败:', error)
+      e.reply('查看农场状态失败，请稍后重试')
+      return true
+    }
+  }
+
+  /**
+   * 显示他人农场状态
+   */
+  async showOtherFarm(e) {
+    try {
+      // 提取被@用户的QQ号
+      const atUser = e.at
+      if (!atUser || atUser.length === 0) {
+        e.reply('请正确@要查看的用户')
+        return true
+      }
+      
+      const targetUserId = atUser[0]
+      const playerService = new PlayerService()
+      
+      // 检查目标玩家是否存在
+      const targetPlayerData = await playerService.getPlayerData(targetUserId)
+      if (!targetPlayerData) {
+        e.reply('该用户还没有开始游戏哦~')
+        return true
+      }
+
+      const farmDisplay = await this._buildFarmDisplay(targetPlayerData, false)
+      e.reply(farmDisplay)
+      return true
+    } catch (error) {
+      logger.error('[农场游戏] 显示他人农场失败:', error)
+      e.reply('查看农场状态失败，请稍后重试')
+      return true
+    }
+  }
+
+  /**
+   * 构建农场状态显示
+   * @param {Object} playerData 玩家数据
+   * @param {boolean} isOwner 是否为农场主本人
+   * @returns {string} 农场状态显示文本
+   */
+  async _buildFarmDisplay(playerData, isOwner = true) {
+    const ownerTitle = isOwner ? '我的农场' : `${playerData.name || '玩家'} 的农场`
+    
+    // 农场基础信息
+    const farmInfo = [
+      `🌾 ${ownerTitle}`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `👤 等级: ${playerData.level} | 💰 金币: ${playerData.gold}`,
+      `🏞️ 土地: ${playerData.lands.length}/${playerData.maxLandCount || 24}`,
+      `━━━━━━━━━━━━━━━━━━`
+    ]
+
+    // 获取作物配置
+    const cropsConfig = await this.config.getCropsConfig()
+    const landConfig = await this.config.getLandConfig()
+    
+    // 显示每块土地的状态
+    for (let i = 0; i < playerData.lands.length; i++) {
+      const land = playerData.lands[i]
+      const landDisplay = this._formatLandStatus(land, cropsConfig, landConfig)
+      farmInfo.push(landDisplay)
+    }
+
+    // 添加保护状态（仅对自己可见）
+    if (isOwner) {
+      farmInfo.push(`━━━━━━━━━━━━━━━━━━`)
+      farmInfo.push(`🛡️ 狗粮保护: ${playerData.getDogFoodStatus()}`)
+      farmInfo.push(`⏰ 偷菜冷却: ${playerData.getStealCooldownStatus()}`)
+    }
+
+    return farmInfo.join('\n')
+  }
+
+  /**
+   * 格式化土地状态显示
+   * 格式：[品质][地号]：[作物名] [健康度] [成熟时间] [负面状态] [可偷窃]
+   * @param {Object} land 土地数据
+   * @param {Object} cropsConfig 作物配置
+   * @param {Object} landConfig 土地配置
+   * @returns {string} 土地状态文本
+   */
+  _formatLandStatus(land, cropsConfig, landConfig) {
+    const landId = land.id
+    const quality = land.quality || 'normal'
+    const qualityConfig = landConfig.quality?.[quality] || landConfig.quality?.normal
+    const qualityName = qualityConfig?.name || '普通土地'
+    
+    // 品质标识
+    const qualityIcon = this._getQualityIcon(quality)
+    
+    if (!land.crop || land.status === 'empty') {
+      return `${qualityIcon}[${landId}]：空闲`
+    }
+
+    // 获取作物信息
+    const cropConfig = cropsConfig[land.crop]
+    const cropName = cropConfig?.name || land.crop
+    
+    // 健康度
+    const health = land.health || 100
+    const healthDisplay = health === 100 ? '健康' : `${health}%`
+    
+    // 成熟时间
+    let timeDisplay = ''
+    const now = Date.now()
+    
+    if (land.status === 'mature') {
+      timeDisplay = '已成熟'
+    } else if (land.harvestTime) {
+      const remainingTime = land.harvestTime - now
+      if (remainingTime > 0) {
+        timeDisplay = this._formatTimeRemaining(remainingTime)
+      } else {
+        timeDisplay = '已成熟'
+      }
+    } else {
+      timeDisplay = '生长中'
+    }
+    
+    // 负面状态
+    const negativeStates = []
+    if (land.needsWater) negativeStates.push('缺水')
+    if (land.hasPests) negativeStates.push('害虫')
+    const negativeDisplay = negativeStates.length > 0 ? `[${negativeStates.join(',')}]` : ''
+    
+    // 可偷窃状态
+    const stealableDisplay = (land.status === 'mature' && land.stealable) ? '[可偷]' : ''
+    
+    return `${qualityIcon}[${landId}]：${cropName} ${healthDisplay} ${timeDisplay} ${negativeDisplay} ${stealableDisplay}`.trim()
+  }
+
+  /**
+   * 获取品质图标
+   * @param {string} quality 品质类型
+   * @returns {string} 品质图标
+   */
+  _getQualityIcon(quality) {
+    const qualityIcons = {
+      normal: '🟫',    // 普通土地 - 棕色
+      copper: '🟠',    // 铜质土地 - 橙色  
+      silver: '⚪',    // 银质土地 - 白色
+      gold: '🟡'       // 金质土地 - 黄色
+    }
+    return qualityIcons[quality] || qualityIcons.normal
+  }
+
+  /**
+   * 格式化剩余时间显示
+   * @param {number} milliseconds 剩余毫秒数
+   * @returns {string} 格式化的时间文本
+   */
+  _formatTimeRemaining(milliseconds) {
+    const totalSeconds = Math.ceil(milliseconds / 1000)
+    
+    if (totalSeconds < 60) {
+      return `${totalSeconds}秒`
+    } else if (totalSeconds < 3600) {
+      const minutes = Math.ceil(totalSeconds / 60)
+      return `${minutes}分钟`
+    } else {
+      const hours = Math.floor(totalSeconds / 3600)
+      const minutes = Math.ceil((totalSeconds % 3600) / 60)
+      return minutes > 0 ? `${hours}小时${minutes}分钟` : `${hours}小时`
+    }
   }
 
   /**

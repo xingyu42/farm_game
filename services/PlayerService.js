@@ -41,6 +41,92 @@ class PlayerService {
   }
 
   /**
+   * 获取增强后的玩家数据（包含辅助方法）
+   * @param {string} userId 用户ID
+   * @returns {Object} 增强后的玩家数据
+   */
+  async getPlayerData(userId) {
+    try {
+      const playerData = await this.getPlayer(userId);
+      return this._addPlayerDataMethods(playerData);
+    } catch (error) {
+      this.logger.error(`[PlayerService] 获取增强玩家数据失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 确保玩家存在（如果不存在则创建）
+   * @param {string} userId 用户ID
+   * @param {string} userName 用户名
+   * @returns {Object} 玩家数据
+   */
+  async ensurePlayer(userId, userName = null) {
+    try {
+      const playerData = await this.getPlayerData(userId);
+      
+      // 如果提供了用户名且玩家名称为空，更新名称
+      if (userName && !playerData.name) {
+        playerData.name = userName;
+        const playerKey = this.redis.generateKey('player', userId);
+        await this.redis.set(playerKey, this.redis.serialize(playerData));
+      }
+      
+      return playerData;
+    } catch (error) {
+      this.logger.error(`[PlayerService] 确保玩家存在失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建玩家（显式创建）
+   * @param {string} userId 用户ID
+   * @param {string} userName 用户名
+   * @returns {Object} 新玩家数据
+   */
+  async createPlayer(userId, userName) {
+    try {
+      // 检查玩家是否已存在
+      const existingPlayer = await this.getPlayerData(userId);
+      if (existingPlayer) {
+        return existingPlayer;
+      }
+      
+      // 创建新玩家
+      const playerData = this._createNewPlayer();
+      playerData.name = userName;
+      
+      const playerKey = this.redis.generateKey('player', userId);
+      await this.redis.set(playerKey, this.redis.serialize(playerData));
+      
+      this.logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
+      
+      // 发放初始礼包
+      await this._giveInitialGift(userId, playerData);
+      
+      return this._addPlayerDataMethods(playerData);
+    } catch (error) {
+      this.logger.error(`[PlayerService] 创建玩家失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 每日签到
+   * @param {string} userId 用户ID
+   * @returns {Object} 签到结果
+   */
+  async dailySignIn(userId) {
+    try {
+      return await this.signIn(userId);
+    } catch (error) {
+      this.logger.error(`[PlayerService] 每日签到失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * 创建新玩家数据
    * @returns {Object} 新玩家数据
    */
@@ -53,17 +139,40 @@ class PlayerService {
     
     return {
       // 基础信息
+      name: '',                                         // 玩家名称
       level: 1,
       experience: 0,
-      coins: defaultConfig.startingCoins || 100,
+      coins: defaultConfig.startingCoins || 100,       // 保持coins兼容性
+      
+      // 向后兼容的金币访问
+      get gold() { return this.coins; },
+      set gold(value) { this.coins = value; },
       
       // 土地系统
       landCount: landConfig.startingLands || 6,        // 当前土地数量
+      lands: new Array(landConfig.startingLands || 6).fill(null).map((_, i) => ({
+        id: i + 1,
+        crop: null,
+        quality: 'normal',
+        plantTime: null,
+        harvestTime: null,
+        status: 'empty'
+      })),
       maxLandCount: landConfig.maxLands || 24,         // 最大土地数量
       
       // 仓库系统
-      inventoryCapacity: inventoryConfig.startingCapacity || 20,
+      inventory: {},                                   // 仓库物品
+      inventoryCapacity: inventoryConfig.startingCapacity || 20,  // 保持原字段名
+      inventory_capacity: inventoryConfig.startingCapacity || 20, // 新字段名
       maxInventoryCapacity: inventoryConfig.maxCapacity || 200,
+      
+      // 统计数据（向后兼容）
+      stats: {
+        total_signin_days: 0,                         // 总签到天数
+        total_income: 0,                              // 总收入
+        total_expenses: 0,                            // 总支出
+        consecutive_signin_days: 0                    // 连续签到天数
+      },
       
       // 签到系统
       signIn: {
@@ -663,6 +772,63 @@ class PlayerService {
       this.logger.error(`[PlayerService] 扩张土地失败 [${userId}]: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * 获取等级信息
+   * @param {number} level 等级
+   * @returns {Object} 等级信息
+   */
+  async getLevelInfo(level) {
+    try {
+      // 从配置中获取等级信息
+      const levelConfig = this.config.levels?.levels?.[level + 1];
+      if (!levelConfig) {
+        return null; // 已达到最高等级
+      }
+      
+      return {
+        level: level + 1,
+        experienceRequired: levelConfig.experienceRequired,
+        rewards: levelConfig.rewards || {}
+      };
+    } catch (error) {
+      this.logger.error(`[PlayerService] 获取等级信息失败 [Level ${level}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 获取仓库使用情况（方法添加到PlayerData原型）
+   */
+  _addPlayerDataMethods(playerData) {
+    // 获取仓库使用情况
+    playerData.getInventoryUsage = function() {
+      const inventorySize = Object.values(this.inventory || {}).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      return inventorySize;
+    };
+
+    // 获取狗粮防护状态
+    playerData.getDogFoodStatus = function() {
+      const now = Date.now();
+      if (this.protection?.dogFood?.effectEndTime > now) {
+        const remainingTime = Math.ceil((this.protection.dogFood.effectEndTime - now) / (1000 * 60));
+        return `${this.protection.dogFood.type} (${remainingTime}分钟)`;
+      }
+      return '无防护';
+    };
+
+    // 获取偷菜冷却状态
+    playerData.getStealCooldownStatus = function() {
+      const now = Date.now();
+      if (this.stealing?.cooldownEndTime > now) {
+        const remainingTime = Math.ceil((this.stealing.cooldownEndTime - now) / (1000 * 60));
+        return `冷却中 (${remainingTime}分钟)`;
+      }
+      return '可偷菜';
+    };
+
+    return playerData;
   }
 }
 
