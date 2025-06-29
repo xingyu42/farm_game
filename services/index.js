@@ -7,6 +7,9 @@
 const Config = require('../models/Config');
 const redisClient = require('../common/redisClient');
 
+// 导入业务服务
+const PlayerService = require('./PlayerService');
+
 class ServiceContainer {
   constructor() {
     this.services = {};
@@ -30,8 +33,10 @@ class ServiceContainer {
     // 初始化Redis客户端
     await redisClient.init(config.redis || {});
 
-    // TODO: 在后续任务中，这里将依次实例化各个服务
-    // this.services.playerService = new PlayerService(redisClient, config);
+    // 实例化PlayerService
+    this.services.playerService = new PlayerService(redisClient, config);
+
+    // TODO: 在后续任务中，这里将依次实例化其他服务
     // this.services.inventoryService = new InventoryService(redisClient, config);
     // this.services.landService = new LandService(redisClient, config);
     // this.services.timeService = new TimeService(redisClient, config);
