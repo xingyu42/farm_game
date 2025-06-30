@@ -12,6 +12,7 @@ const PlayerService = require('./PlayerService');
 const { PlantingService } = require('./PlantingService');
 const { InventoryService } = require('./InventoryService');
 const { ShopService } = require('./ShopService');
+const { LandService } = require('./LandService');
 
 class ServiceContainer {
   constructor() {
@@ -53,8 +54,14 @@ class ServiceContainer {
       this.services.playerService
     );
 
+    // 实例化LandService (需要依赖PlayerService)
+    this.services.landService = new LandService(
+      redisClient, 
+      config, 
+      this.services.playerService
+    );
+
     // TODO: 在后续任务中，这里将依次实例化其他服务
-    // this.services.landService = new LandService(redisClient, config);
     // this.services.timeService = new TimeService(redisClient, config);
 
     this.initialized = true;

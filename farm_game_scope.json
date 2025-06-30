@@ -3,7 +3,7 @@
     "filename": "farm_game_scope.json",
     "baseDirectory": "D:/Dev/farm_game",
     "projectRoot": "D:/Dev/farm_game",
-    "lastUpdated": "2025-06-30T04:39:28.133Z"
+    "lastUpdated": "2025-06-30T05:26:05.273Z"
   },
   "fileTree": {
     "path": "D:\\Dev\\farm_game",
@@ -56,6 +56,18 @@
             ],
             "packageDependencies": [],
             "dependents": []
+          },
+          {
+            "path": "D:/Dev/farm_game/apps/land_management.js",
+            "name": "land_management.js",
+            "isDirectory": false,
+            "dependencies": [
+              "D:/Dev/farm_game/services/index.js"
+            ],
+            "packageDependencies": [],
+            "dependents": [],
+            "summary": "",
+            "importance": 3
           },
           {
             "path": "D:\\Dev\\farm_game\\apps\\player.js",
@@ -534,7 +546,7 @@
             "path": "D:\\Dev\\farm_game\\services\\index.js",
             "name": "index.js",
             "isDirectory": false,
-            "importance": 10,
+            "importance": 9,
             "dependencies": [
               "D:\\Dev\\farm_game\\models\\Config.js",
               "D:\\Dev\\farm_game\\common\\redisClient.js",
@@ -546,7 +558,8 @@
             "packageDependencies": [],
             "dependents": [
               "D:\\Dev\\farm_game\\apps\\inventory.js",
-              "D:\\Dev\\farm_game\\apps\\shop.js"
+              "D:\\Dev\\farm_game\\apps\\shop.js",
+              "D:/Dev/farm_game/apps/land_management.js"
             ]
           },
           {
@@ -559,6 +572,16 @@
             "dependents": [
               "D:\\Dev\\farm_game\\services\\index.js"
             ]
+          },
+          {
+            "path": "D:/Dev/farm_game/services/LandService.js",
+            "name": "LandService.js",
+            "isDirectory": false,
+            "dependencies": [],
+            "packageDependencies": [],
+            "dependents": [],
+            "summary": "",
+            "importance": 2
           },
           {
             "path": "D:\\Dev\\farm_game\\services\\PlantingService.js",
