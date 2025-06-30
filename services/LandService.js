@@ -199,6 +199,271 @@ class LandService {
       throw error;
     }
   }
+
+  /**
+   * 获取土地品质进阶信息
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID (1-based)
+   * @returns {Object} 进阶信息
+   */
+  async getLandQualityUpgradeInfo(userId, landId) {
+    try {
+      const playerData = await this.playerService.getPlayerData(userId);
+      
+      // 验证土地ID
+      if (landId < 1 || landId > playerData.landCount) {
+        return {
+          canUpgrade: false,
+          error: `无效的土地编号 ${landId}，您只有 ${playerData.landCount} 块土地`
+        };
+      }
+      
+      // 获取土地数据
+      const landKey = `land_${landId}`;
+      const land = playerData.lands?.[landKey];
+      
+      if (!land) {
+        return {
+          canUpgrade: false,
+          error: `土地 ${landId} 数据不存在`
+        };
+      }
+      
+      const currentQuality = land.quality || 'normal';
+      
+      // 获取品质配置
+      const qualityConfig = this.config.land?.quality || {};
+      const currentConfig = qualityConfig[currentQuality];
+      
+      if (!currentConfig) {
+        return {
+          canUpgrade: false,
+          error: `未知的土地品质: ${currentQuality}`
+        };
+      }
+      
+      // 确定下一个品质级别
+      const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
+      const currentIndex = qualityOrder.indexOf(currentQuality);
+      
+      if (currentIndex === -1 || currentIndex >= qualityOrder.length - 1) {
+        return {
+          canUpgrade: false,
+          reason: '土地已达到最高品质',
+          currentQuality,
+          currentQualityName: currentConfig.name
+        };
+      }
+      
+      const nextQuality = qualityOrder[currentIndex + 1];
+      const nextConfig = qualityConfig[nextQuality];
+      
+      if (!nextConfig) {
+        return {
+          canUpgrade: false,
+          error: `下一级品质配置不存在: ${nextQuality}`
+        };
+      }
+      
+      // 检查进阶条件
+      const meetsLevelRequirement = playerData.level >= nextConfig.levelRequired;
+      const meetsGoldRequirement = playerData.coins >= nextConfig.goldCost;
+      
+      // 检查材料需求
+      let meetsMaterialRequirement = true;
+      const materialIssues = [];
+      
+      if (nextConfig.materials && nextConfig.materials.length > 0) {
+        for (const material of nextConfig.materials) {
+          const inventory = playerData.inventory || {};
+          const currentQuantity = inventory[material.item_id]?.quantity || 0;
+          
+          if (currentQuantity < material.quantity) {
+            meetsMaterialRequirement = false;
+            materialIssues.push(`缺少 ${this._getItemName(material.item_id)} ${material.quantity - currentQuantity} 个`);
+          }
+        }
+      }
+      
+      const meetsAllRequirements = meetsLevelRequirement && meetsGoldRequirement && meetsMaterialRequirement;
+      
+      return {
+        canUpgrade: true,
+        landId,
+        currentQuality,
+        currentQualityName: currentConfig.name,
+        nextQuality,
+        nextQualityName: nextConfig.name,
+        requirements: {
+          level: nextConfig.levelRequired,
+          gold: nextConfig.goldCost,
+          materials: nextConfig.materials || []
+        },
+        meetsAllRequirements,
+        meetsLevelRequirement,
+        meetsGoldRequirement,
+        meetsMaterialRequirement,
+        materialIssues,
+        playerStatus: {
+          level: playerData.level,
+          coins: playerData.coins,
+          inventory: playerData.inventory || {}
+        }
+      };
+    } catch (error) {
+      this.logger.error(`[LandService] 获取土地品质进阶信息失败 [${userId}, ${landId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 执行土地品质进阶
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID (1-based)
+   * @returns {Object} 进阶结果
+   */
+  async upgradeLandQuality(userId, landId) {
+    try {
+      // 获取进阶信息
+      const upgradeInfo = await this.getLandQualityUpgradeInfo(userId, landId);
+      
+      if (!upgradeInfo.canUpgrade) {
+        return {
+          success: false,
+          message: upgradeInfo.error || upgradeInfo.reason || '无法进阶'
+        };
+      }
+      
+      if (!upgradeInfo.meetsAllRequirements) {
+        const issues = [];
+        
+        if (!upgradeInfo.meetsLevelRequirement) {
+          issues.push(`等级不足，需要 ${upgradeInfo.requirements.level} 级，当前 ${upgradeInfo.playerStatus.level} 级`);
+        }
+        
+        if (!upgradeInfo.meetsGoldRequirement) {
+          issues.push(`金币不足，需要 ${upgradeInfo.requirements.gold} 金币，当前 ${upgradeInfo.playerStatus.coins} 金币`);
+        }
+        
+        if (upgradeInfo.materialIssues.length > 0) {
+          issues.push(...upgradeInfo.materialIssues);
+        }
+        
+        return {
+          success: false,
+          message: `进阶条件不满足：${issues.join('；')}`
+        };
+      }
+      
+      // 执行进阶（Redis事务）
+      const playerKey = this.redis.generateKey('player', userId);
+      
+      // 获取当前玩家数据进行二次验证
+      const playerData = await this.redis.get(playerKey);
+      
+      if (!playerData) {
+        return {
+          success: false,
+          message: '玩家不存在'
+        };
+      }
+      
+      // 再次验证条件（防止并发问题）
+      if (playerData.level < upgradeInfo.requirements.level || playerData.coins < upgradeInfo.requirements.gold) {
+        return {
+          success: false,
+          message: '进阶条件已不满足，请重试'
+        };
+      }
+      
+      // 验证材料
+      for (const material of upgradeInfo.requirements.materials) {
+        const currentQuantity = playerData.inventory?.[material.item_id]?.quantity || 0;
+        if (currentQuantity < material.quantity) {
+          return {
+            success: false,
+            message: `材料不足：${this._getItemName(material.item_id)}`
+          };
+        }
+      }
+      
+      // 扣除金币
+      playerData.coins -= upgradeInfo.requirements.gold;
+      
+      // 消耗材料
+      for (const material of upgradeInfo.requirements.materials) {
+        if (playerData.inventory && playerData.inventory[material.item_id]) {
+          playerData.inventory[material.item_id].quantity -= material.quantity;
+          
+          // 如果数量为0，删除物品记录
+          if (playerData.inventory[material.item_id].quantity <= 0) {
+            delete playerData.inventory[material.item_id];
+          }
+        }
+      }
+      
+      // 更新土地品质
+      const landKey = `land_${landId}`;
+      if (!playerData.lands) {
+        playerData.lands = {};
+      }
+      if (!playerData.lands[landKey]) {
+        playerData.lands[landKey] = {};
+      }
+      
+      playerData.lands[landKey].quality = upgradeInfo.nextQuality;
+      playerData.lands[landKey].lastUpgraded = Date.now();
+      
+      // 保存数据
+      playerData.lastUpdated = Date.now();
+      await this.redis.set(playerKey, playerData);
+      
+      this.logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
+      
+      return {
+        success: true,
+        message: `🎉 土地 ${landId} 成功进阶为${upgradeInfo.nextQualityName}！`,
+        landId,
+        fromQuality: upgradeInfo.currentQuality,
+        toQuality: upgradeInfo.nextQuality,
+        fromQualityName: upgradeInfo.currentQualityName,
+        toQualityName: upgradeInfo.nextQualityName,
+        costGold: upgradeInfo.requirements.gold,
+        materialsCost: upgradeInfo.requirements.materials,
+        remainingCoins: playerData.coins
+      };
+    } catch (error) {
+      this.logger.error(`[LandService] 土地品质进阶失败 [${userId}, ${landId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取物品名称（辅助方法）
+   * @param {string} itemId 物品ID
+   * @returns {string} 物品名称
+   */
+  _getItemName(itemId) {
+    try {
+      // 尝试从各个配置分类中查找物品
+      const itemsConfig = this.config.items || {};
+      
+      // 查找顺序：landMaterials, seeds, tools, fertilizers
+      const categories = ['landMaterials', 'seeds', 'tools', 'fertilizers'];
+      
+      for (const category of categories) {
+        if (itemsConfig[category] && itemsConfig[category][itemId]) {
+          return itemsConfig[category][itemId].name || itemId;
+        }
+      }
+      
+      // 如果都找不到，返回ID
+      return itemId;
+    } catch (error) {
+      this.logger.warn(`[LandService] 获取物品名称失败 [${itemId}]: ${error.message}`);
+      return itemId;
+    }
+  }
 }
 
 module.exports = { LandService }; 
