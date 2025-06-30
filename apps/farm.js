@@ -1,10 +1,9 @@
 // {{CHENGQI:
-// Action: Added; Timestamp: 2025-01-30; Reason: Shrimp Task ID: #ab881598-451c-498e-9305-7566f7991892, Creating farm management app module for plugin architecture;
+// Action: Modified; Timestamp: 2025-06-30; Reason: Shrimp Task ID: #5cc38447, unifying service access pattern using serviceContainer;
 // }}
 // {{START MODIFICATIONS}}
 
-import { PlayerService } from '../services/PlayerService.js'
-import { PlantingService } from '../services/PlantingService.js'
+import serviceContainer from '../services/index.js'
 import { Config } from '../models/Config.js'
 
 /**
@@ -70,25 +69,15 @@ export class farm extends plugin {
       ]
     })
     
-    // 初始化配置和服务
+    // 初始化配置
     this.config = new Config()
-    this.plantingService = null
-    this.playerService = null
   }
 
   /**
-   * 初始化服务实例
+   * 确保服务容器已初始化
    */
-  async _initServices() {
-    if (!this.plantingService) {
-      // 初始化服务，使用框架的redis和logger
-      const redisClient = require('../common/redisClient')
-      this.plantingService = new PlantingService(redisClient, this.config, logger)
-    }
-    if (!this.playerService) {
-      const redisClient = require('../common/redisClient')
-      this.playerService = new PlayerService(redisClient, this.config, logger)
-    }
+  async _ensureServicesInitialized() {
+    await serviceContainer.init()
   }
 
   /**
@@ -97,7 +86,11 @@ export class farm extends plugin {
   async showMyFarm(e) {
     try {
       const userId = e.user_id
-      const playerService = new PlayerService()
+      
+      // 确保服务已初始化
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
@@ -131,7 +124,11 @@ export class farm extends plugin {
       }
       
       const targetUserId = atUser[0]
-      const playerService = new PlayerService()
+      
+      // 确保服务已初始化
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 检查目标玩家是否存在
       const targetPlayerData = await playerService.getPlayerData(targetUserId)
@@ -288,7 +285,7 @@ export class farm extends plugin {
   async showFarmInfo(e) {
     try {
       const userId = e.user_id
-      const playerService = new PlayerService()
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
@@ -329,10 +326,12 @@ export class farm extends plugin {
       const [, landId, cropName] = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/)
       const userId = e.user_id
       
-      await this._initServices()
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
-      await this.playerService.ensurePlayer(userId)
+      await playerService.ensurePlayer(userId)
       
       // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
@@ -342,7 +341,8 @@ export class farm extends plugin {
       }
       
       // 调用种植服务
-      const result = await this.plantingService.plantCrop(userId, parseInt(landId), cropType)
+      const plantingService = serviceContainer.getService('plantingService')
+      const result = await plantingService.plantCrop(userId, parseInt(landId), cropType)
       
       e.reply(result.message)
       return true
@@ -361,10 +361,12 @@ export class farm extends plugin {
       const [, cropName, landId] = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/)
       const userId = e.user_id
       
-      await this._initServices()
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
-      await this.playerService.ensurePlayer(userId)
+      await playerService.ensurePlayer(userId)
       
       // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
@@ -374,7 +376,8 @@ export class farm extends plugin {
       }
       
       // 调用种植服务
-      const result = await this.plantingService.plantCrop(userId, parseInt(landId), cropType)
+      const plantingService = serviceContainer.getService('plantingService')
+      const result = await plantingService.plantCrop(userId, parseInt(landId), cropType)
       
       e.reply(result.message)
       return true
@@ -392,7 +395,9 @@ export class farm extends plugin {
     try {
       const [, landId] = e.msg.match(/^#(nc)?浇水\s+(\d+)$/)
       const userId = e.user_id
-      const playerService = new PlayerService()
+      
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
 
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
@@ -414,7 +419,9 @@ export class farm extends plugin {
     try {
       const [, landId] = e.msg.match(/^#(nc)?施肥\s+(\d+)$/)
       const userId = e.user_id
-      const playerService = new PlayerService()
+      
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
 
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
@@ -436,7 +443,9 @@ export class farm extends plugin {
     try {
       const [, landId] = e.msg.match(/^#(nc)?除虫\s+(\d+)$/)
       const userId = e.user_id
-      const playerService = new PlayerService()
+      
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
 
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
@@ -459,13 +468,16 @@ export class farm extends plugin {
       const [, landId] = e.msg.match(/^#(nc)?收获\s+(\d+)$/)
       const userId = e.user_id
       
-      await this._initServices()
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
-      await this.playerService.ensurePlayer(userId)
+      await playerService.ensurePlayer(userId)
       
       // 调用收获服务
-      const result = await this.plantingService.harvestCrop(userId, parseInt(landId))
+      const plantingService = serviceContainer.getService('plantingService')
+      const result = await plantingService.harvestCrop(userId, parseInt(landId))
       
       e.reply(result.message)
       return true
@@ -483,13 +495,16 @@ export class farm extends plugin {
     try {
       const userId = e.user_id
       
-      await this._initServices()
+      await this._ensureServicesInitialized()
+      
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
-      await this.playerService.ensurePlayer(userId)
+      await playerService.ensurePlayer(userId)
       
       // 调用收获服务（不指定landId表示收获全部）
-      const result = await this.plantingService.harvestCrop(userId)
+      const plantingService = serviceContainer.getService('plantingService')
+      const result = await plantingService.harvestCrop(userId)
       
       e.reply(result.message)
       return true
@@ -505,8 +520,9 @@ export class farm extends plugin {
    */
   async updateCropsStatus() {
     try {
-      await this._initServices()
-      await this.plantingService.updateAllCropsStatus()
+      await this._ensureServicesInitialized()
+      const plantingService = serviceContainer.getService('plantingService')
+      await plantingService.updateAllCropsStatus()
     } catch (error) {
       logger.error('[农场游戏] 更新作物状态失败:', error)
     }

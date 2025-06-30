@@ -1,9 +1,9 @@
 // {{CHENGQI:
-// Action: Added; Timestamp: 2025-01-30; Reason: Shrimp Task ID: #1cec7b17-185f-4f50-a90f-d7dbe3ac487a, Creating core player commands and service integration;
+// Action: Modified; Timestamp: 2025-06-30; Reason: Shrimp Task ID: #5cc38447, unifying service access pattern using serviceContainer;
 // }}
 // {{START MODIFICATIONS}}
 
-import { PlayerService } from '../services/PlayerService.js'
+import serviceContainer from '../services/index.js'
 
 /**
  * 玩家系统核心命令处理器
@@ -34,6 +34,13 @@ export class player extends plugin {
   }
 
   /**
+   * 确保服务容器已初始化
+   */
+  async _ensureServicesInitialized() {
+    await serviceContainer.init()
+  }
+
+  /**
    * 显示玩家信息（核心功能）
    * 首次交互时自动注册玩家
    */
@@ -41,7 +48,10 @@ export class player extends plugin {
     try {
       const userId = e.user_id
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
-      const playerService = new PlayerService()
+      
+      // 确保服务已初始化
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册（自动注册机制）
       await playerService.ensurePlayer(userId, userName)
@@ -97,7 +107,10 @@ export class player extends plugin {
     try {
       const userId = e.user_id
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
-      const playerService = new PlayerService()
+      
+      // 确保服务已初始化
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
       
       // 检查玩家是否已存在
       const existingPlayer = await playerService.getPlayerData(userId)
@@ -143,7 +156,10 @@ export class player extends plugin {
     try {
       const userId = e.user_id
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
-      const playerService = new PlayerService()
+      
+      // 确保服务已初始化
+      await this._ensureServicesInitialized()
+      const playerService = serviceContainer.getService('playerService')
       
       // 确保玩家已注册
       await playerService.ensurePlayer(userId, userName)

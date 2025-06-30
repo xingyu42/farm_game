@@ -87,6 +87,11 @@ class PlantingService {
       const now = Date.now();
       const harvestTime = now + actualGrowTime;
 
+      // 添加到收获计划
+      const scheduleKey = this.redis.generateKey('schedule', 'harvest');
+      const scheduleMember = `${userId}:${landId}`;
+      await this.redis.client.zAdd(scheduleKey, { score: harvestTime, value: scheduleMember });
+
       // 开始事务
       await this.redis.multi();
 
@@ -237,6 +242,11 @@ class PlantingService {
           stealable: false
         };
 
+        // 从收获计划中移除
+        const scheduleKey = this.redis.generateKey('schedule', 'harvest');
+        const scheduleMember = `${userId}:${land.id}`;
+        await this.redis.client.zRem(scheduleKey, scheduleMember);
+
         harvestedCrops.push({
           landId: landIndex + 1,
           cropName: this._getCropName(land.crop, cropsConfig),
@@ -300,43 +310,72 @@ class PlantingService {
    */
   async updateAllCropsStatus() {
     try {
-      // 这个方法会被定时任务调用，用于更新作物成熟状态
+      const scheduleKey = this.redis.generateKey('schedule', 'harvest');
       const now = Date.now();
-      let updatedPlayers = 0;
+      let updatedPlayersCount = 0;
+      let updatedLandsCount = 0;
 
-      // 获取所有玩家的keys
-      const playerKeys = await this.redis.keys(this.redis.generateKey('player', '*'));
-      
-      for (const playerKey of playerKeys) {
-        const playerData = await this.redis.get(playerKey);
-        if (!playerData || !playerData.lands) continue;
+      // 1. 高效获取所有到期的作物成员
+      const dueMembers = await this.redis.client.zRange(scheduleKey, 0, now, { BY: 'SCORE' });
 
-        let hasUpdates = false;
+      if (!dueMembers || dueMembers.length === 0) {
+        this.logger.info('[PlantingService] 没有需要更新的作物状态');
+        return { success: true, updatedPlayers: 0, updatedLands: 0 };
+      }
 
-        for (let i = 0; i < playerData.lands.length; i++) {
-          const land = playerData.lands[i];
-          
-          if (land.crop && land.harvestTime && land.status === 'growing') {
-            if (now >= land.harvestTime) {
-              // 作物成熟
+      // 2. 按玩家ID对需要更新的土地进行分组
+      const updatesByUser = {};
+      for (const member of dueMembers) {
+        const [userId, landId] = member.split(':');
+        if (!updatesByUser[userId]) {
+          updatesByUser[userId] = [];
+        }
+        updatesByUser[userId].push(parseInt(landId, 10));
+      }
+
+      // 3. 批量处理每个玩家的更新
+      for (const userId in updatesByUser) {
+        const playerKey = this.redis.generateKey('player', userId);
+        
+        // 使用分布式锁确保数据一致性
+        await this.redis.withLock(userId, async () => {
+          const playerData = await this.redis.get(playerKey);
+          if (!playerData || !playerData.lands) return;
+
+          let hasUpdates = false;
+          const landIdsToUpdate = updatesByUser[userId];
+
+          for (const landId of landIdsToUpdate) {
+            const landIndex = landId - 1;
+            if (landIndex < 0 || landIndex >= playerData.lands.length) continue;
+            
+            const land = playerData.lands[landIndex];
+            if (land.crop && land.status === 'growing' && now >= land.harvestTime) {
               land.status = 'mature';
               land.stealable = true;
               hasUpdates = true;
+              updatedLandsCount++;
             }
           }
-        }
 
-        if (hasUpdates) {
-          await this.redis.set(playerKey, this.redis.serialize(playerData));
-          updatedPlayers++;
-        }
+          if (hasUpdates) {
+            await this.redis.set(playerKey, this.redis.serialize(playerData));
+            updatedPlayersCount++;
+          }
+        }, 'updateCrops');
       }
 
-      this.logger.info(`[PlantingService] 更新了${updatedPlayers}个玩家的作物状态`);
+      // 4. 从计划中移除已处理的成员
+      if (dueMembers.length > 0) {
+        await this.redis.client.zRem(scheduleKey, dueMembers);
+      }
+
+      this.logger.info(`[PlantingService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态`);
       
       return {
         success: true,
-        updatedPlayers: updatedPlayers
+        updatedPlayers: updatedPlayersCount,
+        updatedLands: updatedLandsCount
       };
 
     } catch (error) {
