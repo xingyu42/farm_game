@@ -1,6 +1,10 @@
 /**
  * 玩家服务 - 管理玩家核心数据（根据PRD v3.2设计）
  * 包含：等级、经验、金币、土地、仓库、签到、防御状态等
+ * 
+ * {{CHENGQI:
+ * Action: Enhanced; Timestamp: 2025-06-30T19:12:48+08:00; Reason: Shrimp Task ID: #9826d906, optimizing Redis storage structure to use Hash for better performance;
+ * }}
  */
 
 class PlayerService {
@@ -8,6 +12,18 @@ class PlayerService {
     this.redis = redisClient;
     this.config = config;
     this.logger = logger || console;
+    
+    // 定义简单字段（存储为Hash字段）
+    this.simpleFields = [
+      'name', 'level', 'experience', 'coins', 'landCount', 'maxLandCount',
+      'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
+      'createdAt', 'lastUpdated', 'lastActiveTime'
+    ];
+    
+    // 定义复杂字段（JSON序列化后存储）
+    this.complexFields = [
+      'lands', 'inventory', 'stats', 'signIn', 'protection', 'stealing', 'statistics'
+    ];
   }
 
   /**
@@ -20,13 +36,13 @@ class PlayerService {
       // 生成玩家数据的Redis Key
       const playerKey = this.redis.generateKey('player', userId);
       
-      // 尝试从Redis获取玩家数据
-      let playerData = await this.redis.get(playerKey);
+      // 尝试从Redis Hash获取玩家数据
+      let playerData = await this._getPlayerFromHash(playerKey);
       
       // 如果玩家不存在，创建新玩家
       if (!playerData) {
         playerData = this._createNewPlayer();
-        await this.redis.set(playerKey, playerData);
+        await this._savePlayerToHash(playerKey, playerData);
         this.logger.info(`[PlayerService] 创建新玩家: ${userId}`);
         
         // 发放初始礼包
@@ -36,6 +52,205 @@ class PlayerService {
       return playerData;
     } catch (error) {
       this.logger.error(`[PlayerService] 获取玩家数据失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 从Redis Hash读取玩家数据
+   * @param {string} playerKey Redis Key
+   * @returns {Object|null} 玩家数据或null
+   */
+  async _getPlayerFromHash(playerKey) {
+    try {
+      // 检查Hash是否存在
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
+        return null;
+      }
+      
+      // 获取所有Hash字段
+      const hashData = await this.redis.client.hGetAll(playerKey);
+      
+      if (!hashData || Object.keys(hashData).length === 0) {
+        return null;
+      }
+      
+      // 重构玩家数据对象
+      const playerData = {};
+      
+      // 处理简单字段
+      for (const field of this.simpleFields) {
+        if (hashData[field] !== undefined) {
+          // 数值字段转换
+          if (['level', 'experience', 'coins', 'landCount', 'maxLandCount', 
+               'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
+               'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
+            playerData[field] = parseInt(hashData[field]) || 0;
+          } else {
+            playerData[field] = hashData[field] || '';
+          }
+        }
+      }
+      
+      // 处理复杂字段（JSON反序列化）
+      for (const field of this.complexFields) {
+        if (hashData[field]) {
+          try {
+            playerData[field] = JSON.parse(hashData[field]);
+          } catch (error) {
+            this.logger.warn(`[PlayerService] 解析复杂字段失败 [${field}]: ${error.message}`);
+            playerData[field] = this._getDefaultComplexField(field);
+          }
+        } else {
+          playerData[field] = this._getDefaultComplexField(field);
+        }
+      }
+      
+      // 向后兼容：gold属性
+      Object.defineProperty(playerData, 'gold', {
+        get: function() { return this.coins; },
+        set: function(value) { this.coins = value; }
+      });
+      
+      return playerData;
+    } catch (error) {
+      this.logger.error(`[PlayerService] 从Hash读取玩家数据失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 将玩家数据保存到Redis Hash
+   * @param {string} playerKey Redis Key
+   * @param {Object} playerData 玩家数据
+   */
+  async _savePlayerToHash(playerKey, playerData) {
+    try {
+      const hashData = {};
+      
+      // 处理简单字段
+      for (const field of this.simpleFields) {
+        if (playerData[field] !== undefined) {
+          hashData[field] = playerData[field].toString();
+        }
+      }
+      
+      // 处理复杂字段（JSON序列化）
+      for (const field of this.complexFields) {
+        if (playerData[field] !== undefined) {
+          hashData[field] = JSON.stringify(playerData[field]);
+        }
+      }
+      
+      // 使用HMSET设置所有字段
+      await this.redis.client.hSet(playerKey, hashData);
+      
+    } catch (error) {
+      this.logger.error(`[PlayerService] 保存玩家数据到Hash失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取复杂字段的默认值
+   * @param {string} field 字段名
+   * @returns {any} 默认值
+   */
+  _getDefaultComplexField(field) {
+    const landConfig = this.config.land?.default || {};
+    
+    switch (field) {
+      case 'lands':
+        return new Array(landConfig.startingLands || 6).fill(null).map((_, i) => ({
+          id: i + 1,
+          crop: null,
+          quality: 'normal',
+          plantTime: null,
+          harvestTime: null,
+          status: 'empty'
+        }));
+      case 'inventory':
+        return {};
+      case 'stats':
+        return {
+          total_signin_days: 0,
+          total_income: 0,
+          total_expenses: 0,
+          consecutive_signin_days: 0
+        };
+      case 'signIn':
+        return {
+          lastSignDate: null,
+          consecutiveDays: 0,
+          totalSignDays: 0
+        };
+      case 'protection':
+        return {
+          dogFood: {
+            type: null,
+            effectEndTime: 0,
+            defenseBonus: 0
+          },
+          farmProtection: {
+            endTime: 0
+          }
+        };
+      case 'stealing':
+        return {
+          lastStealTime: 0,
+          cooldownEndTime: 0
+        };
+      case 'statistics':
+        return {
+          totalHarvested: 0,
+          totalStolenFrom: 0,
+          totalStolenBy: 0,
+          totalMoneyEarned: 0,
+          totalMoneySpent: 0
+        };
+      default:
+        return {};
+    }
+  }
+
+  /**
+   * 高效更新单个简单字段
+   * @param {string} userId 用户ID
+   * @param {string} field 字段名
+   * @param {any} value 新值
+   */
+  async _updateSimpleField(userId, field, value) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+      await this.redis.client.hSet(playerKey, field, value.toString());
+    } catch (error) {
+      this.logger.error(`[PlayerService] 更新简单字段失败 [${userId}][${field}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 高效更新多个简单字段
+   * @param {string} userId 用户ID
+   * @param {Object} fieldUpdates 字段更新映射
+   */
+  async _updateSimpleFields(userId, fieldUpdates) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+      const hashUpdates = {};
+      
+      for (const [field, value] of Object.entries(fieldUpdates)) {
+        if (this.simpleFields.includes(field)) {
+          hashUpdates[field] = value.toString();
+        }
+      }
+      
+      if (Object.keys(hashUpdates).length > 0) {
+        await this.redis.client.hSet(playerKey, hashUpdates);
+      }
+    } catch (error) {
+      this.logger.error(`[PlayerService] 批量更新简单字段失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -68,8 +283,7 @@ class PlayerService {
       // 如果提供了用户名且玩家名称为空，更新名称
       if (userName && !playerData.name) {
         playerData.name = userName;
-        const playerKey = this.redis.generateKey('player', userId);
-        await this.redis.set(playerKey, this.redis.serialize(playerData));
+        await this._updateSimpleField(userId, 'name', userName);
       }
       
       return playerData;
@@ -88,17 +302,17 @@ class PlayerService {
   async createPlayer(userId, userName) {
     try {
       // 检查玩家是否已存在
-      const existingPlayer = await this.getPlayerData(userId);
+      const playerKey = this.redis.generateKey('player', userId);
+      const existingPlayer = await this._getPlayerFromHash(playerKey);
       if (existingPlayer) {
-        return existingPlayer;
+        return this._addPlayerDataMethods(existingPlayer);
       }
       
       // 创建新玩家
       const playerData = this._createNewPlayer();
       playerData.name = userName;
       
-      const playerKey = this.redis.generateKey('player', userId);
-      await this.redis.set(playerKey, this.redis.serialize(playerData));
+      await this._savePlayerToHash(playerKey, playerData);
       
       this.logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
       
@@ -261,7 +475,16 @@ class PlayerService {
         playerData.coins = newCoins;
         playerData.lastUpdated = Date.now();
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新：简单字段和复杂字段分别处理
+        const simpleUpdates = {
+          coins: newCoins,
+          lastUpdated: Date.now()
+        };
+        const complexUpdates = {
+          statistics: JSON.stringify(playerData.statistics)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 金币变化: ${amount > 0 ? '+' : ''}${actualChange}, 当前: ${newCoins}`);
         return playerData;
@@ -303,7 +526,19 @@ class PlayerService {
         playerData.level = newLevel;
         playerData.lastUpdated = Date.now();
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新：准备更新数据
+        const simpleUpdates = {
+          level: newLevel,
+          experience: playerData.experience,
+          coins: playerData.coins,
+          maxLandCount: playerData.maxLandCount,
+          lastUpdated: Date.now()
+        };
+        const complexUpdates = {
+          statistics: JSON.stringify(playerData.statistics)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
         
@@ -487,7 +722,18 @@ class PlayerService {
         
         playerData.lastUpdated = Date.now();
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          coins: playerData.coins,
+          experience: playerData.experience,
+          lastUpdated: Date.now()
+        };
+        const complexUpdates = {
+          signIn: JSON.stringify(playerData.signIn),
+          statistics: JSON.stringify(playerData.statistics)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 签到成功，连续 ${playerData.signIn.consecutiveDays} 天`);
         
@@ -558,7 +804,15 @@ class PlayerService {
         
         playerData.lastUpdated = now;
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          lastUpdated: now
+        };
+        const complexUpdates = {
+          protection: JSON.stringify(playerData.protection)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 使用 ${dogFoodType} 狗粮，防御 ${dogFoodConfig.defenseBonus}%，持续 ${dogFoodConfig.duration} 分钟`);
         
@@ -629,7 +883,15 @@ class PlayerService {
         playerData.stealing.cooldownEndTime = now + (cooldownMinutes * 60 * 1000);
         playerData.lastUpdated = now;
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          lastUpdated: now
+        };
+        const complexUpdates = {
+          stealing: JSON.stringify(playerData.stealing)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 偷菜冷却 ${cooldownMinutes} 分钟`);
         return playerData;
@@ -656,7 +918,15 @@ class PlayerService {
         playerData.protection.farmProtection.endTime = now + (protectionMinutes * 60 * 1000);
         playerData.lastUpdated = now;
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          lastUpdated: now
+        };
+        const complexUpdates = {
+          protection: JSON.stringify(playerData.protection)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 农场保护 ${protectionMinutes} 分钟`);
         return playerData;
@@ -689,7 +959,16 @@ class PlayerService {
         playerData.lastUpdated = Date.now();
         playerData.lastActiveTime = Date.now();
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          lastUpdated: Date.now(),
+          lastActiveTime: Date.now()
+        };
+        const complexUpdates = {
+          statistics: JSON.stringify(playerData.statistics)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         return playerData;
       });
@@ -754,7 +1033,17 @@ class PlayerService {
         playerData.statistics.totalMoneySpent += landConfig.goldCost;
         playerData.lastUpdated = Date.now();
         
-        multi.set(playerKey, this.redis.serialize(playerData));
+        // 使用Hash更新
+        const simpleUpdates = {
+          coins: playerData.coins,
+          landCount: playerData.landCount,
+          lastUpdated: Date.now()
+        };
+        const complexUpdates = {
+          statistics: JSON.stringify(playerData.statistics)
+        };
+        
+        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
         
@@ -828,6 +1117,93 @@ class PlayerService {
     };
 
     return playerData;
+  }
+
+  /**
+   * 数据迁移：将旧的JSON存储转换为Hash存储
+   * @param {string} userId 用户ID
+   * @returns {Object} 迁移结果
+   */
+  async migratePlayerDataToHash(userId) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+      
+      // 检查是否已经是Hash结构
+      const isHash = await this.redis.client.type(playerKey);
+      if (isHash === 'hash') {
+        this.logger.info(`[PlayerService] 玩家 ${userId} 数据已经是Hash结构，无需迁移`);
+        return { success: true, message: '数据已经是Hash结构' };
+      }
+      
+      // 获取旧的JSON数据
+      const oldJsonData = await this.redis.get(playerKey);
+      if (!oldJsonData) {
+        this.logger.info(`[PlayerService] 玩家 ${userId} 无数据，无需迁移`);
+        return { success: true, message: '无数据需要迁移' };
+      }
+      
+      // 删除旧数据并保存为Hash结构
+      await this.redis.del(playerKey);
+      await this._savePlayerToHash(playerKey, oldJsonData);
+      
+      this.logger.info(`[PlayerService] 玩家 ${userId} 数据成功迁移到Hash结构`);
+      return { 
+        success: true, 
+        message: '数据迁移成功',
+        oldType: 'string',
+        newType: 'hash'
+      };
+      
+    } catch (error) {
+      this.logger.error(`[PlayerService] 玩家数据迁移失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量迁移所有玩家数据
+   * @returns {Object} 迁移统计结果
+   */
+  async migrateAllPlayersToHash() {
+    try {
+      const pattern = this.redis.generateKey('player', '*');
+      const keys = await this.redis.client.keys(pattern);
+      
+      let migrated = 0;
+      let skipped = 0;
+      let failed = 0;
+      
+      for (const key of keys) {
+        try {
+          // 从key中提取userId
+          const userId = key.split(':')[2]; // farm_game:player:userId
+          const result = await this.migratePlayerDataToHash(userId);
+          
+          if (result.success && result.message !== '数据已经是Hash结构') {
+            migrated++;
+          } else {
+            skipped++;
+          }
+        } catch (error) {
+          failed++;
+          this.logger.error(`[PlayerService] 迁移失败 [${key}]: ${error.message}`);
+        }
+      }
+      
+      const summary = {
+        total: keys.length,
+        migrated,
+        skipped,
+        failed
+      };
+      
+      this.logger.info(`[PlayerService] 批量迁移完成: ${JSON.stringify(summary)}`);
+      return summary;
+      
+    } catch (error) {
+      this.logger.error(`[PlayerService] 批量迁移失败: ${error.message}`);
+      throw error;
+    }
   }
 }
 
