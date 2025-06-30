@@ -1,5 +1,6 @@
 node_modules/
-
 coverage/
-
 .cursor/
+
+config.json
+FileScopeMCP-tree.json
