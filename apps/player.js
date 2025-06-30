@@ -18,15 +18,15 @@ export class player extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^#nc(我的信息|信息|个人信息|玩家信息)$',
+          reg: '^#(nc)?(我的信息|信息|个人信息|玩家信息)$',
           fnc: 'showPlayerInfo'
         },
         {
-          reg: '^#nc(注册|开始游戏|加入游戏)$',
+          reg: '^#(nc)?(注册|开始游戏|加入游戏)$',
           fnc: 'registerPlayer'
         },
         {
-          reg: '^#nc签到$',
+          reg: '^#(nc)?签到$',
           fnc: 'dailySignIn'
         }
       ]

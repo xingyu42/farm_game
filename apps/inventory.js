@@ -18,7 +18,7 @@ export class InventoryCommands extends plugin {
       priority: 100,
       rule: [
         {
-          reg: '^#nc仓库$',
+          reg: '^#(nc)?仓库$',
           fnc: 'viewInventory'
         }
       ]

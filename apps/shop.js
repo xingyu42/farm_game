@@ -18,23 +18,23 @@ export class ShopCommands extends plugin {
       priority: 100,
       rule: [
         {
-          reg: '^#nc商店$',
+          reg: '^#(nc)?商店$',
           fnc: 'viewShop'
         },
         {
-          reg: '^#nc市场$',
+          reg: '^#(nc)?市场$',
           fnc: 'viewMarket'
         },
         {
-          reg: '^#nc购买\\s+(.+?)\\s*(\\d+)?$',
+          reg: '^#(nc)?购买\\s+(.+?)\\s*(\\d+)?$',
           fnc: 'buyItem'
         },
         {
-          reg: '^#nc出售\\s+(.+?)\\s*(\\d+)?$',
+          reg: '^#(nc)?出售\\s+(.+?)\\s*(\\d+)?$',
           fnc: 'sellItem'
         },
         {
-          reg: '^#nc出售全部$',
+          reg: '^#(nc)?出售全部$',
           fnc: 'sellAllCrops'
         }
       ]
@@ -150,7 +150,7 @@ export class ShopCommands extends plugin {
   async buyItem(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#nc购买\s+(.+?)\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?购买\s+(.+?)\s*(\d+)?$/);
       
       if (!match) {
         await e.reply('❌ 格式错误！使用: #nc购买 [物品名] [数量]');
@@ -199,7 +199,7 @@ export class ShopCommands extends plugin {
   async sellItem(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#nc出售\s+(.+?)\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?出售\s+(.+?)\s*(\d+)?$/);
       
       if (!match) {
         await e.reply('❌ 格式错误！使用: #nc出售 [物品名] [数量]');

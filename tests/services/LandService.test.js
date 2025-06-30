@@ -29,7 +29,8 @@ describe('LandService', () => {
       get: jest.fn(),
       set: jest.fn(),
       serialize: jest.fn(data => JSON.stringify(data)),
-      transaction: jest.fn()
+      transaction: jest.fn(),
+      close: jest.fn(() => Promise.resolve())
     };
     
     redisClient.generateKey = mockRedis.generateKey;
@@ -37,6 +38,7 @@ describe('LandService', () => {
     redisClient.set = mockRedis.set;
     redisClient.serialize = mockRedis.serialize;
     redisClient.transaction = mockRedis.transaction;
+    redisClient.close = mockRedis.close;
 
     // 创建mock PlayerService
     playerService = {
@@ -231,15 +233,18 @@ describe('LandService', () => {
         // 模拟并发情况：Redis.get返回的数据条件不满足（测试铜质土地进阶需要28级和50000金币）
         const updatedPlayerData = {
           ...mockPlayerData,
-          level: 25,    // 不满足等级要求（需要28级）
-          coins: 20000  // 不满足金币要求（需要50000）
+          level: 25,    // 模拟并发导致等级变化，不满足等级要求（需要28级）
+          coins: 20000  // 模拟并发导致金币变化，不满足金币要求（需要50000）
         };
+        playerService.getPlayerData.mockResolvedValue(mockPlayerData);
         mockRedis.get.mockResolvedValue(updatedPlayerData);
 
         const result = await landService.upgradeLandQuality('test_user', 1);
 
         expect(result.success).toBe(false);
-        expect(result.message).toBe('进阶条件已不满足，请重试');
+        // 验证返回的是具体的失败原因，而不是通用的重试信息
+        expect(result.message).toContain('等级不足');
+        expect(result.message).toContain('金币不足');
       });
     });
 

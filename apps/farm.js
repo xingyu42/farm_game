@@ -20,43 +20,43 @@ export class farm extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^#nc我的农场$',
+          reg: '^#(nc)?我的农场$',
           fnc: 'showMyFarm'
         },
         {
-          reg: '^@(.+?) #nc农场$',
+          reg: '^@(.+?) #(nc)?农场$',
           fnc: 'showOtherFarm'
         },
         {
-          reg: '^#nc(农场|信息|我的信息)$',
+          reg: '^#(nc)?(农场|信息|我的信息)$',
           fnc: 'showFarmInfo'
         },
         {
-          reg: '^#nc种植\\s+(\\d+)\\s+(.+)$',
+          reg: '^#(nc)?种植\\s+(\\d+)\\s+(.+)$',
           fnc: 'plantCrop'
         },
         {
-          reg: '^#nc种植\\s+(.+)\\s+(\\d+)$',
+          reg: '^#(nc)?种植\\s+(.+)\\s+(\\d+)$',
           fnc: 'plantCropReverse'
         },
         {
-          reg: '^#nc浇水\\s+(\\d+)$',
+          reg: '^#(nc)?浇水\\s+(\\d+)$',
           fnc: 'waterCrop'
         },
         {
-          reg: '^#nc施肥\\s+(\\d+)$',
+          reg: '^#(nc)?施肥\\s+(\\d+)$',
           fnc: 'fertilizeCrop'
         },
         {
-          reg: '^#nc除虫\\s+(\\d+)$',
+          reg: '^#(nc)?除虫\\s+(\\d+)$',
           fnc: 'pesticideCrop'
         },
         {
-          reg: '^#nc收获\\s+(\\d+)$',
+          reg: '^#(nc)?收获\\s+(\\d+)$',
           fnc: 'harvestCrop'
         },
         {
-          reg: '^#nc收获$',
+          reg: '^#(nc)?收获$',
           fnc: 'harvestAllCrops'
         }
       ],
@@ -326,7 +326,7 @@ export class farm extends plugin {
    */
   async plantCrop(e) {
     try {
-      const [, landId, cropName] = e.msg.match(/^#nc种植\s+(\d+)\s+(.+)$/)
+      const [, landId, cropName] = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/)
       const userId = e.user_id
       
       await this._initServices()
@@ -358,7 +358,7 @@ export class farm extends plugin {
    */
   async plantCropReverse(e) {
     try {
-      const [, cropName, landId] = e.msg.match(/^#nc种植\s+(.+)\s+(\d+)$/)
+      const [, cropName, landId] = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/)
       const userId = e.user_id
       
       await this._initServices()
@@ -390,7 +390,7 @@ export class farm extends plugin {
    */
   async waterCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#nc浇水\s+(\d+)$/)
+      const [, landId] = e.msg.match(/^#(nc)?浇水\s+(\d+)$/)
       const userId = e.user_id
       const playerService = new PlayerService()
 
@@ -412,7 +412,7 @@ export class farm extends plugin {
    */
   async fertilizeCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#nc施肥\s+(\d+)$/)
+      const [, landId] = e.msg.match(/^#(nc)?施肥\s+(\d+)$/)
       const userId = e.user_id
       const playerService = new PlayerService()
 
@@ -434,7 +434,7 @@ export class farm extends plugin {
    */
   async pesticideCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#nc除虫\s+(\d+)$/)
+      const [, landId] = e.msg.match(/^#(nc)?除虫\s+(\d+)$/)
       const userId = e.user_id
       const playerService = new PlayerService()
 
@@ -456,7 +456,7 @@ export class farm extends plugin {
    */
   async harvestCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#nc收获\s+(\d+)$/)
+      const [, landId] = e.msg.match(/^#(nc)?收获\s+(\d+)$/)
       const userId = e.user_id
       
       await this._initServices()

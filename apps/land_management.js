@@ -18,19 +18,19 @@ export class LandManagementCommands extends plugin {
       priority: 100,
       rule: [
         {
-          reg: '^#nc土地扩张$',
+          reg: '^#(nc)?土地扩张$',
           fnc: 'expandLand'
         },
         {
-          reg: '^#nc土地信息$',
+          reg: '^#(nc)?土地信息$',
           fnc: 'viewLandInfo'
         },
         {
-          reg: '^#nc土地进阶\\s*(\\d+)?$',
+          reg: '^#(nc)?土地进阶\\s*(\\d+)?$',
           fnc: 'upgradeLandQuality'
         },
         {
-          reg: '^#nc土地品质\\s*(\\d+)?$',
+          reg: '^#(nc)?土地品质\\s*(\\d+)?$',
           fnc: 'viewLandQualityInfo'
         }
       ]
@@ -142,7 +142,7 @@ export class LandManagementCommands extends plugin {
   async upgradeLandQuality(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#nc土地进阶\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?土地进阶\s*(\d+)?$/);
       
       if (!match || !match[1]) {
         await e.reply('请指定要进阶的土地编号，例如：#nc土地进阶 1');
@@ -200,7 +200,7 @@ export class LandManagementCommands extends plugin {
   async viewLandQualityInfo(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#nc土地品质\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?土地品质\s*(\d+)?$/);
       
       // 确保服务已初始化
       await serviceContainer.init();
