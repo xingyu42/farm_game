@@ -9,6 +9,9 @@ const redisClient = require('../common/redisClient');
 
 // 导入业务服务
 const PlayerService = require('./PlayerService');
+const { PlantingService } = require('./PlantingService');
+const { InventoryService } = require('./InventoryService');
+const { ShopService } = require('./ShopService');
 
 class ServiceContainer {
   constructor() {
@@ -36,12 +39,23 @@ class ServiceContainer {
     // 实例化PlayerService
     this.services.playerService = new PlayerService(redisClient, config);
 
+    // 实例化PlantingService
+    this.services.plantingService = new PlantingService(redisClient, config);
+
+    // 实例化InventoryService
+    this.services.inventoryService = new InventoryService(redisClient, config);
+
+    // 实例化ShopService (需要依赖InventoryService和PlayerService)
+    this.services.shopService = new ShopService(
+      redisClient, 
+      config, 
+      this.services.inventoryService, 
+      this.services.playerService
+    );
+
     // TODO: 在后续任务中，这里将依次实例化其他服务
-    // this.services.inventoryService = new InventoryService(redisClient, config);
     // this.services.landService = new LandService(redisClient, config);
     // this.services.timeService = new TimeService(redisClient, config);
-    // this.services.shopService = new ShopService(redisClient, config);
-    // this.services.plantingService = new PlantingService(redisClient, config);
 
     this.initialized = true;
   }

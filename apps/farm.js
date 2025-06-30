@@ -4,6 +4,7 @@
 // {{START MODIFICATIONS}}
 
 import { PlayerService } from '../services/PlayerService.js'
+import { PlantingService } from '../services/PlantingService.js'
 import { Config } from '../models/Config.js'
 
 /**
@@ -35,6 +36,10 @@ export class farm extends plugin {
           fnc: 'plantCrop'
         },
         {
+          reg: '^#nc种植\\s+(.+)\\s+(\\d+)$',
+          fnc: 'plantCropReverse'
+        },
+        {
           reg: '^#nc浇水\\s+(\\d+)$',
           fnc: 'waterCrop'
         },
@@ -51,14 +56,39 @@ export class farm extends plugin {
           fnc: 'harvestCrop'
         },
         {
-          reg: '^#nc收获全部$',
+          reg: '^#nc收获$',
           fnc: 'harvestAllCrops'
+        }
+      ],
+      // 添加定时任务，每分钟检查作物状态
+      task: [
+        {
+          cron: '0 * * * * ?',  // 每分钟执行一次
+          name: '更新作物状态',
+          fnc: () => this.updateCropsStatus()
         }
       ]
     })
     
-    // 初始化配置
+    // 初始化配置和服务
     this.config = new Config()
+    this.plantingService = null
+    this.playerService = null
+  }
+
+  /**
+   * 初始化服务实例
+   */
+  async _initServices() {
+    if (!this.plantingService) {
+      // 初始化服务，使用框架的redis和logger
+      const redisClient = require('../common/redisClient')
+      this.plantingService = new PlantingService(redisClient, this.config, logger)
+    }
+    if (!this.playerService) {
+      const redisClient = require('../common/redisClient')
+      this.playerService = new PlayerService(redisClient, this.config, logger)
+    }
   }
 
   /**
@@ -298,14 +328,55 @@ export class farm extends plugin {
     try {
       const [, landId, cropName] = e.msg.match(/^#nc种植\s+(\d+)\s+(.+)$/)
       const userId = e.user_id
-      const playerService = new PlayerService()
-
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
       
-      // TODO: 实现种植逻辑
-      // 这里需要调用种植服务，但由于种植服务还未完成，先返回提示
-      e.reply(`种植功能开发中，将在第${landId}块土地种植${cropName}`)
+      await this._initServices()
+      
+      // 确保玩家已注册
+      await this.playerService.ensurePlayer(userId)
+      
+      // 解析作物类型（支持中文名称）
+      const cropType = await this._parseCropType(cropName)
+      if (!cropType) {
+        e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
+        return true
+      }
+      
+      // 调用种植服务
+      const result = await this.plantingService.plantCrop(userId, parseInt(landId), cropType)
+      
+      e.reply(result.message)
+      return true
+    } catch (error) {
+      logger.error('[农场游戏] 种植作物失败:', error)
+      e.reply('种植失败，请稍后重试')
+      return true
+    }
+  }
+
+  /**
+   * 种植作物（反向参数顺序）
+   */
+  async plantCropReverse(e) {
+    try {
+      const [, cropName, landId] = e.msg.match(/^#nc种植\s+(.+)\s+(\d+)$/)
+      const userId = e.user_id
+      
+      await this._initServices()
+      
+      // 确保玩家已注册
+      await this.playerService.ensurePlayer(userId)
+      
+      // 解析作物类型（支持中文名称）
+      const cropType = await this._parseCropType(cropName)
+      if (!cropType) {
+        e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
+        return true
+      }
+      
+      // 调用种植服务
+      const result = await this.plantingService.plantCrop(userId, parseInt(landId), cropType)
+      
+      e.reply(result.message)
       return true
     } catch (error) {
       logger.error('[农场游戏] 种植作物失败:', error)
@@ -387,13 +458,16 @@ export class farm extends plugin {
     try {
       const [, landId] = e.msg.match(/^#nc收获\s+(\d+)$/)
       const userId = e.user_id
-      const playerService = new PlayerService()
-
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
       
-      // TODO: 实现收获逻辑
-      e.reply(`收获功能开发中，将收获第${landId}块土地的作物`)
+      await this._initServices()
+      
+      // 确保玩家已注册
+      await this.playerService.ensurePlayer(userId)
+      
+      // 调用收获服务
+      const result = await this.plantingService.harvestCrop(userId, parseInt(landId))
+      
+      e.reply(result.message)
       return true
     } catch (error) {
       logger.error('[农场游戏] 收获作物失败:', error)
@@ -408,19 +482,69 @@ export class farm extends plugin {
   async harvestAllCrops(e) {
     try {
       const userId = e.user_id
-      const playerService = new PlayerService()
-
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
       
-      // TODO: 实现收获全部逻辑
-      e.reply('收获全部功能开发中，将收获所有成熟的作物')
+      await this._initServices()
+      
+      // 确保玩家已注册
+      await this.playerService.ensurePlayer(userId)
+      
+      // 调用收获服务（不指定landId表示收获全部）
+      const result = await this.plantingService.harvestCrop(userId)
+      
+      e.reply(result.message)
       return true
     } catch (error) {
       logger.error('[农场游戏] 收获全部失败:', error)
       e.reply('收获全部失败，请稍后重试')
       return true
     }
+  }
+
+  /**
+   * 定时更新作物状态
+   */
+  async updateCropsStatus() {
+    try {
+      await this._initServices()
+      await this.plantingService.updateAllCropsStatus()
+    } catch (error) {
+      logger.error('[农场游戏] 更新作物状态失败:', error)
+    }
+  }
+
+  /**
+   * 解析作物类型（支持中文名称映射）
+   * @param {string} cropName 作物名称
+   * @returns {string|null} 作物类型ID
+   */
+  async _parseCropType(cropName) {
+    const cropsConfig = await this.config.getCropsConfig()
+    
+    // 直接匹配作物ID
+    if (cropsConfig[cropName]) {
+      return cropName
+    }
+    
+    // 匹配中文名称
+    for (const [cropId, config] of Object.entries(cropsConfig)) {
+      if (config.name === cropName || 
+          config.name === cropName.replace('种子', '') ||
+          cropName.includes(config.name)) {
+        return cropId
+      }
+    }
+    
+    // 特殊处理常见别名
+    const aliasMap = {
+      '胡萝卜': 'carrot',
+      '萝卜': 'carrot', 
+      '西红柿': 'tomato',
+      '番茄': 'tomato',
+      '小麦': 'wheat',
+      '麦子': 'wheat'
+    }
+    
+    return aliasMap[cropName] || null
   }
 }
 

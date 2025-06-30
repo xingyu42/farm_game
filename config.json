@@ -1,0 +1,15 @@
+{
+  "baseDirectory": "D:/Dev/farm_game",
+  "excludePatterns": [],
+  "fileWatching": {
+    "enabled": true,
+    "debounceMs": 500,
+    "ignoreDotFiles": true,
+    "autoRebuildTree": true,
+    "maxWatchedDirectories": 1000,
+    "watchForNewFiles": true,
+    "watchForDeleted": true,
+    "watchForChanged": true
+  },
+  "version": "1.0.0"
+}

@@ -225,10 +225,9 @@ class PlayerService {
       const initialGift = this.config.items?.initial_gift || [];
       
       if (initialGift.length > 0) {
-        // 这里应该调用InventoryService来添加物品
-        // 暂时记录日志，实际实现需要等InventoryService完成
         this.logger.info(`[PlayerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);
-        // TODO: await inventoryService.addItems(userId, initialGift);
+        // 注意：这里不能直接调用InventoryService，因为会造成循环依赖
+        // 初始礼包将由外部服务在玩家创建后调用
       }
     } catch (error) {
       this.logger.error(`[PlayerService] 发放初始礼包失败 [${userId}]: ${error.message}`);
