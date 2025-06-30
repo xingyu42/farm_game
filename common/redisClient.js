@@ -7,7 +7,8 @@
  * }}
  */
 
-const redis = require('redis');
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #787dc7f8, converting CommonJS require to ES Modules import; Principle_Applied: ModuleSystem-Standardization;}}
+import redis from 'redis';
 
 class RedisClient {
   constructor() {
@@ -365,4 +366,5 @@ class RedisClient {
 }
 
 // 导出单例实例
-module.exports = new RedisClient(); 
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #787dc7f8, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
+export default new RedisClient();

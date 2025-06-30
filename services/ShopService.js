@@ -393,4 +393,5 @@ class ShopService {
   }
 }
 
-module.exports = { ShopService }; 
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export; Principle_Applied: ModuleSystem-Standardization;}}
+export { ShopService };

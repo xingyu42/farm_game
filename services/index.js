@@ -3,16 +3,17 @@
  * 所有业务服务将在这里实例化和导出
  */
 
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3777483d, converting CommonJS require statements to ES Modules imports with .js extensions; Principle_Applied: ModuleSystem-Standardization;}}
 // 导入配置和通用工具
-const Config = require('../models/Config');
-const redisClient = require('../common/redisClient');
+import Config from '../models/Config.js';
+import redisClient from '../common/redisClient.js';
 
 // 导入业务服务
-const PlayerService = require('./PlayerService');
-const { PlantingService } = require('./PlantingService');
-const { InventoryService } = require('./InventoryService');
-const { ShopService } = require('./ShopService');
-const { LandService } = require('./LandService');
+import PlayerService from './PlayerService.js';
+import { PlantingService } from './PlantingService.js';
+import { InventoryService } from './InventoryService.js';
+import { ShopService } from './ShopService.js';
+import { LandService } from './LandService.js';
 
 class ServiceContainer {
   constructor() {
@@ -113,4 +114,5 @@ class ServiceContainer {
 // 导出单例实例
 const serviceContainer = new ServiceContainer();
 
-module.exports = serviceContainer; 
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3777483d, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
+export default serviceContainer;

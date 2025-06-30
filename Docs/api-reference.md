@@ -501,30 +501,6 @@ pm2:
   script: 'node lib/main.js'
 ```
 
-#### pm2.config.cjs
-
-```javascript
-const fs = require('fs')
-const yaml = require('yaml')
-const data = fs.readFileSync('./alemon.config.yaml', 'utf8')
-const config = yaml.parse(data)
-const app = config?.pm2 ?? {}
-
-module.exports = {
-  apps: [
-    {
-      ...app,
-      env: {
-        NODE_ENV: 'production',
-        ...(app?.env ?? {})
-      }
-    }
-  ]
-}
-```
-
----
-
 ## 注意事项
 
 ### 全局变量

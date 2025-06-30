@@ -4,7 +4,8 @@
 // {{START MODIFICATIONS}}
 
 import serviceContainer from '../services/index.js'
-import { Config } from '../models/Config.js'
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3adecc60, fixing Config import to use default import instead of named import; Principle_Applied: ModuleSystem-Standardization;}}
+import Config from '../models/Config.js'
 
 /**
  * 农场管理功能模块
