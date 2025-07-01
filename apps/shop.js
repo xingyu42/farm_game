@@ -156,9 +156,10 @@ export class ShopCommands extends plugin {
         await e.reply('❌ 格式错误！使用: #nc购买 [物品名] [数量]');
         return true;
       }
-      
-      const itemName = match[1].trim();
-      const quantity = parseInt(match[2]) || 1;
+
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const itemName = match[2].trim();
+      const quantity = parseInt(match[3]) || 1;
       
       if (quantity <= 0) {
         await e.reply('❌ 购买数量必须大于0');
@@ -205,9 +206,10 @@ export class ShopCommands extends plugin {
         await e.reply('❌ 格式错误！使用: #nc出售 [物品名] [数量]');
         return true;
       }
-      
-      const itemName = match[1].trim();
-      const quantity = parseInt(match[2]) || 1;
+
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const itemName = match[2].trim();
+      const quantity = parseInt(match[3]) || 1;
       
       if (quantity <= 0) {
         await e.reply('❌ 出售数量必须大于0');

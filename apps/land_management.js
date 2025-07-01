@@ -143,13 +143,14 @@ export class LandManagementCommands extends plugin {
     try {
       const userId = e.user_id.toString();
       const match = e.msg.match(/^#(nc)?土地进阶\s*(\d+)?$/);
-      
-      if (!match || !match[1]) {
+
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      if (!match || !match[2]) {
         await e.reply('请指定要进阶的土地编号，例如：#nc土地进阶 1');
         return true;
       }
-      
-      const landId = parseInt(match[1]);
+
+      const landId = parseInt(match[2]);
       
       // 确保服务已初始化
       await serviceContainer.init();
@@ -210,29 +211,30 @@ export class LandManagementCommands extends plugin {
       
       // 确保玩家存在
       const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      
-      if (!match || !match[1]) {
+
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      if (!match || !match[2]) {
         // 显示所有土地的品质概览
         let message = `🏞️ 土地品质概览\n`;
         message += '━━━━━━━━━━━━━━━━━━━━\n';
-        
+
         for (let i = 1; i <= playerData.landCount; i++) {
-          const landKey = `land_${i}`;
-          const land = playerData.lands?.[landKey] || {};
+          // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing data structure access to use array instead of object; Principle_Applied: DataStructure-Consistency;}}
+          const land = playerData.lands?.[i - 1] || {};
           const quality = land.quality || 'normal';
           const qualityIcon = this._getQualityIcon(quality);
-          
+
           message += `${qualityIcon} 土地${i}: ${this._getQualityName(quality)}\n`;
         }
-        
+
         message += '\n💡 使用 #nc土地品质 数字 查看详细信息';
         message += '\n💡 使用 #nc土地进阶 数字 进行品质进阶';
-        
+
         await e.reply(message);
         return true;
       }
-      
-      const landId = parseInt(match[1]);
+
+      const landId = parseInt(match[2]);
       
       // 获取土地品质进阶信息
       const upgradeInfo = await landService.getLandQualityUpgradeInfo(userId, landId);

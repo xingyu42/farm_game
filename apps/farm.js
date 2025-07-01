@@ -324,7 +324,8 @@ export class farm extends plugin {
    */
   async plantCrop(e) {
     try {
-      const [, landId, cropName] = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , landId, cropName] = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -359,7 +360,8 @@ export class farm extends plugin {
    */
   async plantCropReverse(e) {
     try {
-      const [, cropName, landId] = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , cropName, landId] = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -394,7 +396,8 @@ export class farm extends plugin {
    */
   async waterCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#(nc)?浇水\s+(\d+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , landId] = e.msg.match(/^#(nc)?浇水\s+(\d+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -418,7 +421,8 @@ export class farm extends plugin {
    */
   async fertilizeCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#(nc)?施肥\s+(\d+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , landId] = e.msg.match(/^#(nc)?施肥\s+(\d+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -442,7 +446,8 @@ export class farm extends plugin {
    */
   async pesticideCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#(nc)?除虫\s+(\d+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , landId] = e.msg.match(/^#(nc)?除虫\s+(\d+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -466,7 +471,8 @@ export class farm extends plugin {
    */
   async harvestCrop(e) {
     try {
-      const [, landId] = e.msg.match(/^#(nc)?收获\s+(\d+)$/)
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
+      const [, , landId] = e.msg.match(/^#(nc)?收获\s+(\d+)$/)
       const userId = e.user_id
       
       await this._ensureServicesInitialized()

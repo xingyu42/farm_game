@@ -409,6 +409,7 @@ class Land {
   }
 }
 
-module.exports = Land;
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:35:24 +08:00; Reason: Shrimp Task ID: #9e864eaf, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
+export default Land;
 
-// {{END MODIFICATIONS}} 
+// {{END MODIFICATIONS}}

@@ -209,19 +209,26 @@ class LandService {
   async getLandQualityUpgradeInfo(userId, landId) {
     try {
       const playerData = await this.playerService.getPlayerData(userId);
-      
-      // 验证土地ID
-      if (landId < 1 || landId > playerData.landCount) {
+
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:18:25 +08:00; Reason: Shrimp Task ID: #7d70e3a3, fixing data structure inconsistency - changing object access to array access; Principle_Applied: DataStructure-Consistency;}}
+      // 验证土地ID和数据结构
+      if (!Array.isArray(playerData.lands)) {
         return {
           canUpgrade: false,
-          error: `无效的土地编号 ${landId}，您只有 ${playerData.landCount} 块土地`
+          error: `玩家土地数据结构异常，请联系管理员`
         };
       }
-      
-      // 获取土地数据
-      const landKey = `land_${landId}`;
-      const land = playerData.lands?.[landKey];
-      
+
+      if (landId < 1 || landId > playerData.lands.length) {
+        return {
+          canUpgrade: false,
+          error: `无效的土地编号 ${landId}，您只有 ${playerData.lands.length} 块土地`
+        };
+      }
+
+      // 获取土地数据 - 修复：使用数组索引而非对象键
+      const land = playerData.lands[landId - 1];
+
       if (!land) {
         return {
           canUpgrade: false,
@@ -402,17 +409,39 @@ class LandService {
         }
       }
       
-      // 更新土地品质
-      const landKey = `land_${landId}`;
-      if (!playerData.lands) {
-        playerData.lands = {};
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:18:25 +08:00; Reason: Shrimp Task ID: #7d70e3a3, fixing data structure inconsistency - changing object access to array access; Principle_Applied: DataStructure-Consistency;}}
+      // 更新土地品质 - 修复：使用数组索引而非对象键
+      if (!Array.isArray(playerData.lands)) {
+        return {
+          success: false,
+          message: '玩家土地数据结构异常，请联系管理员'
+        };
       }
-      if (!playerData.lands[landKey]) {
-        playerData.lands[landKey] = {};
+
+      // 确保土地索引有效
+      if (landId < 1 || landId > playerData.lands.length) {
+        return {
+          success: false,
+          message: `无效的土地编号 ${landId}`
+        };
       }
-      
-      playerData.lands[landKey].quality = upgradeInfo.nextQuality;
-      playerData.lands[landKey].lastUpgraded = Date.now();
+
+      // 使用数组索引访问土地数据
+      const landIndex = landId - 1;
+      if (!playerData.lands[landIndex]) {
+        // 如果土地对象不存在，初始化它
+        playerData.lands[landIndex] = {
+          id: landId,
+          crop: null,
+          quality: 'normal',
+          plantTime: null,
+          harvestTime: null,
+          status: 'empty'
+        };
+      }
+
+      playerData.lands[landIndex].quality = upgradeInfo.nextQuality;
+      playerData.lands[landIndex].lastUpgraded = Date.now();
       
       // 保存数据
       playerData.lastUpdated = Date.now();
