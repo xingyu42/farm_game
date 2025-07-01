@@ -7,27 +7,23 @@
  * }}
  */
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #787dc7f8, converting CommonJS require to ES Modules import; Principle_Applied: ModuleSystem-Standardization;}}
-import redis from 'redis';
 
 class RedisClient {
   constructor() {
-    // 在实际使用时，可以通过配置注入Redis连接
-    this.client = null;
+    // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:52:15 +08:00; Reason: Using framework-provided Redis connection instead of creating new one; Principle_Applied: Framework-Integration-Optimization;}}
+    // 直接使用Miao-Yunzai框架提供的Redis连接
+    this.client = global.redis;
     this.keyPrefix = 'farm_game';
     this.lockPrefix = 'lock';
     this.defaultLockTTL = 30; // 默认锁30秒过期
   }
 
   /**
-   * 初始化Redis连接
-   * @param {Object} config Redis配置
+   * 检查Redis连接是否可用
+   * @returns {boolean} 连接状态
    */
-  async init(config = {}) {
-    if (!this.client) {
-      this.client = redis.createClient(config);
-      await this.client.connect();
-    }
+  isConnected() {
+    return this.client && this.client.isReady;
   }
 
   /**
@@ -74,16 +70,16 @@ class RedisClient {
    * @returns {Promise<any>} 事务执行结果
    */
   async transaction(transactionFn) {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
     }
 
     const multi = this.client.multi();
-    
+
     try {
       // 执行事务函数，传入multi实例
       await transactionFn(multi);
-      
+
       // 执行事务
       const results = await multi.exec();
       return results;
@@ -99,12 +95,12 @@ class RedisClient {
    * @param {number} ttl 可选的过期时间（秒）
    */
   async set(key, value, ttl = null) {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
     }
 
     const serializedValue = this.serialize(value);
-    
+
     if (ttl) {
       await this.client.setEx(key, ttl, serializedValue);
     } else {
@@ -118,8 +114,8 @@ class RedisClient {
    * @returns {any} 反序列化的数据
    */
   async get(key) {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
     }
 
     const value = await this.client.get(key);
@@ -131,8 +127,8 @@ class RedisClient {
    * @param {string} key Redis键
    */
   async del(key) {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
     }
 
     return await this.client.del(key);
@@ -144,8 +140,8 @@ class RedisClient {
    * @returns {boolean} 是否存在
    */
   async exists(key) {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
     }
 
     return (await this.client.exists(key)) === 1;
@@ -354,15 +350,6 @@ class RedisClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  /**
-   * 关闭连接
-   */
-  async close() {
-    if (this.client) {
-      await this.client.quit();
-      this.client = null;
-    }
-  }
 }
 
 // 导出单例实例

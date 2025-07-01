@@ -35,8 +35,6 @@ class ServiceContainer {
       config = Config;
     }
 
-    // 初始化Redis客户端
-    await redisClient.init(config.redis || {});
 
     // 实例化PlayerService
     this.services.playerService = new PlayerService(redisClient, config);
@@ -99,12 +97,9 @@ class ServiceContainer {
   }
 
   /**
-   * 关闭所有服务和连接
+   * 关闭所有服务
    */
   async shutdown() {
-    // 关闭Redis连接
-    await redisClient.close();
-
     // 清理服务
     this.services = {};
     this.initialized = false;
