@@ -17,20 +17,21 @@ export class LandManagementCommands extends plugin {
       event: 'message',
       priority: 100,
       rule: [
+        // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading regex to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
         {
-          reg: '^#(nc)?土地扩张$',
+          reg: '^#(?<nc>nc)?土地扩张$',
           fnc: 'expandLand'
         },
         {
-          reg: '^#(nc)?土地信息$',
+          reg: '^#(?<nc>nc)?土地信息$',
           fnc: 'viewLandInfo'
         },
         {
-          reg: '^#(nc)?土地进阶\\s*(\\d+)?$',
+          reg: '^#(?<nc>nc)?土地进阶\\s*(?<landId>\\d+)?$',
           fnc: 'upgradeLandQuality'
         },
         {
-          reg: '^#(nc)?土地品质\\s*(\\d+)?$',
+          reg: '^#(?<nc>nc)?土地品质\\s*(?<landId>\\d+)?$',
           fnc: 'viewLandQualityInfo'
         }
       ]
@@ -142,15 +143,15 @@ export class LandManagementCommands extends plugin {
   async upgradeLandQuality(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(nc)?土地进阶\s*(\d+)?$/);
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      const match = e.msg.match(/^#(?<nc>nc)?土地进阶\s*(?<landId>\d+)?$/);
 
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
-      if (!match || !match[2]) {
+      if (!match || !match.groups || !match.groups.landId) {
         await e.reply('请指定要进阶的土地编号，例如：#nc土地进阶 1');
         return true;
       }
 
-      const landId = parseInt(match[2]);
+      const landId = parseInt(match.groups.landId);
       
       // 确保服务已初始化
       await serviceContainer.init();
@@ -201,19 +202,19 @@ export class LandManagementCommands extends plugin {
   async viewLandQualityInfo(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(nc)?土地品质\s*(\d+)?$/);
-      
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      const match = e.msg.match(/^#(?<nc>nc)?土地品质\s*(?<landId>\d+)?$/);
+
       // 确保服务已初始化
       await serviceContainer.init();
-      
+
       const landService = serviceContainer.getService('landService');
       const playerService = serviceContainer.getService('playerService');
-      
+
       // 确保玩家存在
       const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
 
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing regex capture group index error due to optional (nc)? group; Principle_Applied: RegexPattern-IndexCorrection;}}
-      if (!match || !match[2]) {
+      if (!match || !match.groups || !match.groups.landId) {
         // 显示所有土地的品质概览
         let message = `🏞️ 土地品质概览\n`;
         message += '━━━━━━━━━━━━━━━━━━━━\n';
@@ -234,7 +235,7 @@ export class LandManagementCommands extends plugin {
         return true;
       }
 
-      const landId = parseInt(match[2]);
+      const landId = parseInt(match.groups.landId);
       
       // 获取土地品质进阶信息
       const upgradeInfo = await landService.getLandQualityUpgradeInfo(userId, landId);

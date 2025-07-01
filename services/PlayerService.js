@@ -1062,6 +1062,191 @@ class PlayerService {
     }
   }
 
+  // {{CHENGQI: Action: Added; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, implementing smart land management methods for improved land access; Principle_Applied: CodeStructure-Optimization;}}
+  /**
+   * 智能土地访问方法 - 通过索引获取土地
+   * @param {string} userId 用户ID
+   * @param {number} index 土地索引（0-based）
+   * @returns {Object|null} 土地数据或null
+   */
+  async getLandByIndex(userId, index) {
+    try {
+      const playerData = await this.getPlayer(userId);
+
+      // 边界检查
+      if (!Array.isArray(playerData.lands)) {
+        this.logger.warn(`[PlayerService] 玩家 ${userId} 土地数据结构异常`);
+        return null;
+      }
+
+      if (index < 0 || index >= playerData.lands.length) {
+        this.logger.warn(`[PlayerService] 土地索引越界 [${userId}]: index=${index}, length=${playerData.lands.length}`);
+        return null;
+      }
+
+      return playerData.lands[index];
+    } catch (error) {
+      this.logger.error(`[PlayerService] 获取土地失败 [${userId}, index=${index}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 智能土地访问方法 - 通过土地ID获取土地
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID（1-based）
+   * @returns {Object|null} 土地数据或null
+   */
+  async getLandById(userId, landId) {
+    try {
+      const playerData = await this.getPlayer(userId);
+
+      // 边界检查
+      if (!Array.isArray(playerData.lands)) {
+        this.logger.warn(`[PlayerService] 玩家 ${userId} 土地数据结构异常`);
+        return null;
+      }
+
+      if (landId < 1 || landId > playerData.lands.length) {
+        this.logger.warn(`[PlayerService] 土地ID越界 [${userId}]: landId=${landId}, length=${playerData.lands.length}`);
+        return null;
+      }
+
+      return playerData.lands[landId - 1];
+    } catch (error) {
+      this.logger.error(`[PlayerService] 获取土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 智能土地更新方法 - 更新指定土地的属性
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID（1-based）
+   * @param {Object} updates 要更新的属性
+   * @returns {Object} 更新结果
+   */
+  async updateLand(userId, landId, updates) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+
+      return await this.redis.transaction(async (multi) => {
+        const playerData = await this.getPlayer(userId);
+
+        // 边界检查
+        if (!Array.isArray(playerData.lands)) {
+          return {
+            success: false,
+            message: '玩家土地数据结构异常'
+          };
+        }
+
+        if (landId < 1 || landId > playerData.lands.length) {
+          return {
+            success: false,
+            message: `无效的土地ID ${landId}，有效范围: 1-${playerData.lands.length}`
+          };
+        }
+
+        const landIndex = landId - 1;
+        const land = playerData.lands[landIndex];
+
+        if (!land) {
+          return {
+            success: false,
+            message: `土地 ${landId} 数据不存在`
+          };
+        }
+
+        // 应用更新
+        const updatedLand = { ...land, ...updates };
+        playerData.lands[landIndex] = updatedLand;
+        playerData.lastUpdated = Date.now();
+
+        // 保存到Redis
+        const complexUpdates = {
+          lands: JSON.stringify(playerData.lands),
+          lastUpdated: playerData.lastUpdated
+        };
+
+        multi.hSet(playerKey, complexUpdates);
+
+        this.logger.info(`[PlayerService] 玩家 ${userId} 土地 ${landId} 更新成功`);
+
+        return {
+          success: true,
+          message: `土地 ${landId} 更新成功`,
+          landId,
+          updatedLand,
+          updates
+        };
+      });
+    } catch (error) {
+      this.logger.error(`[PlayerService] 更新土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取所有土地信息
+   * @param {string} userId 用户ID
+   * @returns {Array} 土地数组
+   */
+  async getAllLands(userId) {
+    try {
+      const playerData = await this.getPlayer(userId);
+
+      if (!Array.isArray(playerData.lands)) {
+        this.logger.warn(`[PlayerService] 玩家 ${userId} 土地数据结构异常`);
+        return [];
+      }
+
+      return playerData.lands;
+    } catch (error) {
+      this.logger.error(`[PlayerService] 获取所有土地失败 [${userId}]: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * 验证土地ID是否有效
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID（1-based）
+   * @returns {Object} 验证结果
+   */
+  async validateLandId(userId, landId) {
+    try {
+      const playerData = await this.getPlayer(userId);
+
+      if (!Array.isArray(playerData.lands)) {
+        return {
+          valid: false,
+          message: '玩家土地数据结构异常'
+        };
+      }
+
+      if (landId < 1 || landId > playerData.lands.length) {
+        return {
+          valid: false,
+          message: `无效的土地ID ${landId}，有效范围: 1-${playerData.lands.length}`
+        };
+      }
+
+      return {
+        valid: true,
+        landId,
+        landIndex: landId - 1,
+        totalLands: playerData.lands.length
+      };
+    } catch (error) {
+      this.logger.error(`[PlayerService] 验证土地ID失败 [${userId}, landId=${landId}]: ${error.message}`);
+      return {
+        valid: false,
+        message: '验证失败'
+      };
+    }
+  }
+
   /**
    * 获取等级信息
    * @param {number} level 等级

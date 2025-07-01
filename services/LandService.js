@@ -208,27 +208,18 @@ class LandService {
    */
   async getLandQualityUpgradeInfo(userId, landId) {
     try {
-      const playerData = await this.playerService.getPlayerData(userId);
-
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:18:25 +08:00; Reason: Shrimp Task ID: #7d70e3a3, fixing data structure inconsistency - changing object access to array access; Principle_Applied: DataStructure-Consistency;}}
-      // 验证土地ID和数据结构
-      if (!Array.isArray(playerData.lands)) {
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, using smart land access methods for improved code structure; Principle_Applied: CodeStructure-Optimization;}}
+      // 使用智能土地访问方法验证土地ID
+      const validation = await this.playerService.validateLandId(userId, landId);
+      if (!validation.valid) {
         return {
           canUpgrade: false,
-          error: `玩家土地数据结构异常，请联系管理员`
+          error: validation.message
         };
       }
 
-      if (landId < 1 || landId > playerData.lands.length) {
-        return {
-          canUpgrade: false,
-          error: `无效的土地编号 ${landId}，您只有 ${playerData.lands.length} 块土地`
-        };
-      }
-
-      // 获取土地数据 - 修复：使用数组索引而非对象键
-      const land = playerData.lands[landId - 1];
-
+      // 使用智能土地访问方法获取土地数据
+      const land = await this.playerService.getLandById(userId, landId);
       if (!land) {
         return {
           canUpgrade: false,
@@ -409,43 +400,19 @@ class LandService {
         }
       }
       
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:18:25 +08:00; Reason: Shrimp Task ID: #7d70e3a3, fixing data structure inconsistency - changing object access to array access; Principle_Applied: DataStructure-Consistency;}}
-      // 更新土地品质 - 修复：使用数组索引而非对象键
-      if (!Array.isArray(playerData.lands)) {
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, using smart land update method for improved code structure; Principle_Applied: CodeStructure-Optimization;}}
+      // 使用智能土地更新方法
+      const updateResult = await this.playerService.updateLand(userId, landId, {
+        quality: upgradeInfo.nextQuality,
+        lastUpgraded: Date.now()
+      });
+
+      if (!updateResult.success) {
         return {
           success: false,
-          message: '玩家土地数据结构异常，请联系管理员'
+          message: updateResult.message
         };
       }
-
-      // 确保土地索引有效
-      if (landId < 1 || landId > playerData.lands.length) {
-        return {
-          success: false,
-          message: `无效的土地编号 ${landId}`
-        };
-      }
-
-      // 使用数组索引访问土地数据
-      const landIndex = landId - 1;
-      if (!playerData.lands[landIndex]) {
-        // 如果土地对象不存在，初始化它
-        playerData.lands[landIndex] = {
-          id: landId,
-          crop: null,
-          quality: 'normal',
-          plantTime: null,
-          harvestTime: null,
-          status: 'empty'
-        };
-      }
-
-      playerData.lands[landIndex].quality = upgradeInfo.nextQuality;
-      playerData.lands[landIndex].lastUpgraded = Date.now();
-      
-      // 保存数据
-      playerData.lastUpdated = Date.now();
-      await this.redis.set(playerKey, playerData);
       
       this.logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
       
