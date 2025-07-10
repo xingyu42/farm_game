@@ -23,12 +23,12 @@ levels:
     4:
       experience: 450 # 升到4级需要的总经验
       description: "专业农夫"
-      unlocks: ["land_expansion_1"]
+      unlocks: []
 
     5:
       experience: 700 # 升到5级需要的总经验
       description: "农场主"
-      unlocks: ["premium_fertilizer", "land_expansion_2"]
+      unlocks: ["premium_fertilizer"]
 
     6:
       experience: 1000
@@ -38,7 +38,7 @@ levels:
     7:
       experience: 1350
       description: "农业专家"
-      unlocks: ["land_expansion_3"]
+      unlocks: []
 
     8:
       experience: 1750
@@ -48,12 +48,12 @@ levels:
     9:
       experience: 2200
       description: "作物大师"
-      unlocks: ["land_expansion_4"]
+      unlocks: []
 
     10:
       experience: 2700
       description: "丰收之王"
-      unlocks: ["special_tools"]
+      unlocks: []
 
     # 高级等级（11-30）
     15:
@@ -122,7 +122,6 @@ levels:
   rewards:
     levelUp:
       coins: 50 # 每次升级获得金币
-      landSlots: 1 # 每次升级增加土地槽位
 
   # 经验来源配置
   experienceSources:

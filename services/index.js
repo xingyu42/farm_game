@@ -3,7 +3,6 @@
  * 所有业务服务将在这里实例化和导出
  */
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3777483d, converting CommonJS require statements to ES Modules imports with .js extensions; Principle_Applied: ModuleSystem-Standardization;}}
 // 导入配置和通用工具
 import Config from '../models/Config.js';
 import redisClient from '../common/redisClient.js';

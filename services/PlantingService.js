@@ -19,7 +19,7 @@ class PlantingService {
   async plantCrop(userId, landId, cropType) {
     try {
       // 获取作物配置
-      const cropsConfig = await this.config.getCropsConfig();
+      const cropsConfig = this.config.crops;
       const cropConfig = cropsConfig[cropType];
       
       if (!cropConfig) {
@@ -160,8 +160,8 @@ class PlantingService {
       }
 
       const now = Date.now();
-      const cropsConfig = await this.config.getCropsConfig();
-      const landConfig = await this.config.getLandConfig();
+      const cropsConfig = this.config.crops;
+      const landConfig = this.config.land;
       
       let harvestedCrops = [];
       let totalExp = 0;

@@ -1,10 +1,9 @@
+
+import Player from '../models/Player.js';
 /**
  * 玩家服务 - 管理玩家核心数据（根据PRD v3.2设计）
  * 包含：等级、经验、金币、土地、仓库、签到、防御状态等
- * 
- * {{CHENGQI:
- * Action: Enhanced; Timestamp: 2025-06-30T19:12:48+08:00; Reason: Shrimp Task ID: #9826d906, optimizing Redis storage structure to use Hash for better performance;
- * }}
+ *
  */
 
 class PlayerService {
@@ -59,7 +58,7 @@ class PlayerService {
   /**
    * 从Redis Hash读取玩家数据
    * @param {string} playerKey Redis Key
-   * @returns {Object|null} 玩家数据或null
+   * @returns {Player|null} Player实例或null
    */
   async _getPlayerFromHash(playerKey) {
     try {
@@ -68,52 +67,60 @@ class PlayerService {
       if (!exists) {
         return null;
       }
-      
+
       // 获取所有Hash字段
       const hashData = await this.redis.client.hGetAll(playerKey);
-      
+
       if (!hashData || Object.keys(hashData).length === 0) {
         return null;
       }
-      
-      // 重构玩家数据对象
-      const playerData = {};
-      
-      // 处理简单字段
-      for (const field of this.simpleFields) {
-        if (hashData[field] !== undefined) {
-          // 数值字段转换
-          if (['level', 'experience', 'coins', 'landCount', 'maxLandCount', 
-               'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-               'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
-            playerData[field] = parseInt(hashData[field]) || 0;
-          } else {
-            playerData[field] = hashData[field] || '';
+
+      // 使用Player.fromRawData创建Player实例
+      try {
+        const playerInstance = Player.fromRawData(hashData, this.config);
+        return playerInstance;
+      } catch (playerError) {
+        this.logger.warn(`[PlayerService] Player.fromRawData失败，回退到传统方法: ${playerError.message}`);
+
+        // 回退到原来的数据处理方式
+        const playerData = {};
+
+        // 处理简单字段
+        for (const field of this.simpleFields) {
+          if (hashData[field] !== undefined) {
+            // 数值字段转换
+            if (['level', 'experience', 'coins', 'landCount', 'maxLandCount',
+                 'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
+                 'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
+              playerData[field] = parseInt(hashData[field])
+            } else {
+              playerData[field] = hashData[field]
+            }
           }
         }
-      }
-      
-      // 处理复杂字段（JSON反序列化）
-      for (const field of this.complexFields) {
-        if (hashData[field]) {
-          try {
-            playerData[field] = JSON.parse(hashData[field]);
-          } catch (error) {
-            this.logger.warn(`[PlayerService] 解析复杂字段失败 [${field}]: ${error.message}`);
+
+        // 处理复杂字段（JSON反序列化）
+        for (const field of this.complexFields) {
+          if (hashData[field]) {
+            try {
+              playerData[field] = JSON.parse(hashData[field]);
+            } catch (error) {
+              this.logger.warn(`[PlayerService] 解析复杂字段失败 [${field}]: ${error.message}`);
+              playerData[field] = this._getDefaultComplexField(field);
+            }
+          } else {
             playerData[field] = this._getDefaultComplexField(field);
           }
-        } else {
-          playerData[field] = this._getDefaultComplexField(field);
         }
+
+        // 向后兼容：gold属性
+        Object.defineProperty(playerData, 'gold', {
+          get: function() { return this.coins; },
+          set: function(value) { this.coins = value; }
+        });
+
+        return playerData;
       }
-      
-      // 向后兼容：gold属性
-      Object.defineProperty(playerData, 'gold', {
-        get: function() { return this.coins; },
-        set: function(value) { this.coins = value; }
-      });
-      
-      return playerData;
     } catch (error) {
       this.logger.error(`[PlayerService] 从Hash读取玩家数据失败: ${error.message}`);
       throw error;
@@ -123,29 +130,35 @@ class PlayerService {
   /**
    * 将玩家数据保存到Redis Hash
    * @param {string} playerKey Redis Key
-   * @param {Object} playerData 玩家数据
+   * @param {Object|Player} playerData 玩家数据或Player实例
    */
   async _savePlayerToHash(playerKey, playerData) {
     try {
-      const hashData = {};
-      
-      // 处理简单字段
-      for (const field of this.simpleFields) {
-        if (playerData[field] !== undefined) {
-          hashData[field] = playerData[field].toString();
+      let hashData = {};
+
+      // 如果是Player实例，使用其toHashData方法
+      if (playerData instanceof Player) {
+        hashData = playerData.toHashData();
+      } else {
+        // 原来的处理方式（向后兼容）
+        // 处理简单字段
+        for (const field of this.simpleFields) {
+          if (playerData[field] !== undefined) {
+            hashData[field] = playerData[field].toString();
+          }
+        }
+
+        // 处理复杂字段（JSON序列化）
+        for (const field of this.complexFields) {
+          if (playerData[field] !== undefined) {
+            hashData[field] = JSON.stringify(playerData[field]);
+          }
         }
       }
-      
-      // 处理复杂字段（JSON序列化）
-      for (const field of this.complexFields) {
-        if (playerData[field] !== undefined) {
-          hashData[field] = JSON.stringify(playerData[field]);
-        }
-      }
-      
+
       // 使用HMSET设置所有字段
       await this.redis.client.hSet(playerKey, hashData);
-      
+
     } catch (error) {
       this.logger.error(`[PlayerService] 保存玩家数据到Hash失败: ${error.message}`);
       throw error;
@@ -158,11 +171,11 @@ class PlayerService {
    * @returns {any} 默认值
    */
   _getDefaultComplexField(field) {
-    const landConfig = this.config.land?.default || {};
+    const landConfig = this.config.land?.default
     
     switch (field) {
       case 'lands':
-        return new Array(landConfig.startingLands || 6).fill(null).map((_, i) => ({
+        return new Array(landConfig.startingLands).fill(null).map((_, i) => ({
           id: i + 1,
           crop: null,
           quality: 'normal',
@@ -256,6 +269,39 @@ class PlayerService {
   }
 
   /**
+   * 智能序列化玩家数据为Redis Hash格式
+   * 统一处理Player实例和普通对象的序列化逻辑，确保数据一致性
+   * @param {Object|Player} playerData 玩家数据对象或Player实例
+   * @returns {Object} Redis Hash格式的数据对象
+   * @private
+   */
+  _serializePlayerForHash(playerData) {
+    if (playerData instanceof Player) {
+      // 如果是Player实例，使用其toHashData方法
+      return playerData.toHashData();
+    } else {
+      // 如果是普通对象，使用手动构建逻辑（与_savePlayerToHash保持一致）
+      const hashData = {};
+
+      // 处理简单字段
+      for (const field of this.simpleFields) {
+        if (playerData[field] !== undefined) {
+          hashData[field] = playerData[field].toString();
+        }
+      }
+
+      // 处理复杂字段（JSON序列化）
+      for (const field of this.complexFields) {
+        if (playerData[field] !== undefined) {
+          hashData[field] = JSON.stringify(playerData[field]);
+        }
+      }
+
+      return hashData;
+    }
+  }
+
+  /**
    * 获取增强后的玩家数据（包含辅助方法）
    * @param {string} userId 用户ID
    * @returns {Object} 增强后的玩家数据
@@ -345,9 +391,9 @@ class PlayerService {
    * @returns {Object} 新玩家数据
    */
   _createNewPlayer() {
-    const defaultConfig = this.config.levels?.default || {};
-    const landConfig = this.config.land?.default || {};
-    const inventoryConfig = this.config.items?.inventory || {};
+    const defaultConfig = this.config.levels?.default
+    const landConfig = this.config.land?.default
+    const inventoryConfig = this.config.items?.inventory
     
     const now = Date.now();
     
@@ -356,15 +402,15 @@ class PlayerService {
       name: '',                                         // 玩家名称
       level: 1,
       experience: 0,
-      coins: defaultConfig.startingCoins || 100,       // 保持coins兼容性
+      coins: defaultConfig.startingCoins,       // 保持coins兼容性
       
       // 向后兼容的金币访问
       get gold() { return this.coins; },
       set gold(value) { this.coins = value; },
       
       // 土地系统
-      landCount: landConfig.startingLands || 6,        // 当前土地数量
-      lands: new Array(landConfig.startingLands || 6).fill(null).map((_, i) => ({
+      landCount: landConfig.startingLands,        // 当前土地数量
+      lands: new Array(landConfig.startingLands).fill(null).map((_, i) => ({
         id: i + 1,
         crop: null,
         quality: 'normal',
@@ -372,13 +418,13 @@ class PlayerService {
         harvestTime: null,
         status: 'empty'
       })),
-      maxLandCount: landConfig.maxLands || 24,         // 最大土地数量
+      maxLandCount: landConfig.maxLands,         // 最大土地数量（绝对上限，由土地扩展系统管理）
       
       // 仓库系统
       inventory: {},                                   // 仓库物品
-      inventoryCapacity: inventoryConfig.startingCapacity || 20,  // 保持原字段名
-      inventory_capacity: inventoryConfig.startingCapacity || 20, // 新字段名
-      maxInventoryCapacity: inventoryConfig.maxCapacity || 200,
+      inventoryCapacity: inventoryConfig.startingCapacity,  // 保持原字段名
+      inventory_capacity: inventoryConfig.startingCapacity, // 新字段名
+      maxInventoryCapacity: inventoryConfig.maxCapacity,
       
       // 统计数据（向后兼容）
       stats: {
@@ -436,7 +482,7 @@ class PlayerService {
    */
   async _giveInitialGift(userId, playerData) {
     try {
-      const initialGift = this.config.items?.initial_gift || [];
+      const initialGift = this.config.items?.initial_gift
       
       if (initialGift.length > 0) {
         this.logger.info(`[PlayerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);
@@ -474,17 +520,9 @@ class PlayerService {
         
         playerData.coins = newCoins;
         playerData.lastUpdated = Date.now();
-        
-        // 使用Hash更新：简单字段和复杂字段分别处理
-        const simpleUpdates = {
-          coins: newCoins,
-          lastUpdated: Date.now()
-        };
-        const complexUpdates = {
-          statistics: JSON.stringify(playerData.statistics)
-        };
-        
-        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
+
+        // 使用智能序列化统一处理Player实例和普通对象
+        multi.hSet(playerKey, this._serializePlayerForHash(playerData));
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 金币变化: ${amount > 0 ? '+' : ''}${actualChange}, 当前: ${newCoins}`);
         return playerData;
@@ -525,20 +563,9 @@ class PlayerService {
         
         playerData.level = newLevel;
         playerData.lastUpdated = Date.now();
-        
-        // 使用Hash更新：准备更新数据
-        const simpleUpdates = {
-          level: newLevel,
-          experience: playerData.experience,
-          coins: playerData.coins,
-          maxLandCount: playerData.maxLandCount,
-          lastUpdated: Date.now()
-        };
-        const complexUpdates = {
-          statistics: JSON.stringify(playerData.statistics)
-        };
-        
-        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
+
+        // 使用智能序列化统一处理Player实例和普通对象
+        multi.hSet(playerKey, this._serializePlayerForHash(playerData));
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
         
@@ -567,14 +594,14 @@ class PlayerService {
   async _handleLevelUp(playerData, oldLevel, newLevel) {
     const rewards = this._getLevelUpRewards(oldLevel, newLevel);
     const unlockedItems = this._getUnlockedItems(oldLevel, newLevel);
-    
+
     // 应用奖励
     playerData.coins += rewards.totalCoins;
-    playerData.maxLandCount += rewards.landSlots;
-    
+    // 注意：土地槽位现在只通过土地扩展系统管理，不再通过等级奖励增加
+
     // 更新统计
     playerData.statistics.totalMoneyEarned += rewards.totalCoins;
-    
+
     return {
       oldLevel,
       newLevel,
@@ -589,7 +616,7 @@ class PlayerService {
    * @returns {Object} 等级信息
    */
   _calculateLevel(experience) {
-    const levels = this.config.levels?.levels?.requirements || {};
+    const levels = this.config.levels?.levels?.requirements
     
     let currentLevel = 1;
     const maxLevel = Math.max(...Object.keys(levels).map(Number));
@@ -613,16 +640,15 @@ class PlayerService {
    * @returns {Object} 奖励信息
    */
   _getLevelUpRewards(oldLevel, newLevel) {
-    const levelUpRewards = this.config.levels?.levels?.rewards?.levelUp || {};
-    const coinsPerLevel = levelUpRewards.coins || 50;
-    const landSlotsPerLevel = levelUpRewards.landSlots || 1;
-    
+    const levelUpRewards = this.config.levels?.levels?.rewards?.levelUp
+    const coinsPerLevel = levelUpRewards.coins || 0
+
     const levelsGained = newLevel - oldLevel;
-    
+
     return {
       levelsGained,
-      totalCoins: coinsPerLevel * levelsGained,
-      landSlots: landSlotsPerLevel * levelsGained
+      totalCoins: coinsPerLevel * levelsGained
+      // 注意：landSlots奖励已移除，土地槽位现在只通过土地扩展系统管理
     };
   }
 
@@ -633,7 +659,7 @@ class PlayerService {
    * @returns {Array} 解锁的物品列表
    */
   _getUnlockedItems(oldLevel, newLevel) {
-    const levels = this.config.levels?.levels?.requirements || {};
+    const levels = this.config.levels?.levels?.requirements
     const unlockedItems = [];
     
     for (let level = oldLevel + 1; level <= newLevel; level++) {
@@ -654,16 +680,16 @@ class PlayerService {
   async getPlayerLevelInfo(userId) {
     try {
       const playerData = await this.getPlayer(userId);
-      const levels = this.config.levels?.levels?.requirements || {};
+      const levels = this.config.levels?.levels?.requirements
       const maxLevel = Math.max(...Object.keys(levels).map(Number));
       
-      const currentLevelConfig = levels[playerData.level] || {};
-      const nextLevelConfig = levels[playerData.level + 1] || null;
+      const currentLevelConfig = levels[playerData.level]
+      const nextLevelConfig = levels[playerData.level + 1]
       
       return {
         currentLevel: playerData.level,
         currentExp: playerData.experience,
-        currentLevelDescription: currentLevelConfig.description || '',
+        currentLevelDescription: currentLevelConfig.description,
         nextLevelExp: nextLevelConfig ? nextLevelConfig.experience : null,
         expToNextLevel: nextLevelConfig ? Math.max(0, nextLevelConfig.experience - playerData.experience) : 0,
         maxLevel,
@@ -721,19 +747,9 @@ class PlayerService {
         playerData.statistics.totalMoneyEarned += rewards.coins;
         
         playerData.lastUpdated = Date.now();
-        
-        // 使用Hash更新
-        const simpleUpdates = {
-          coins: playerData.coins,
-          experience: playerData.experience,
-          lastUpdated: Date.now()
-        };
-        const complexUpdates = {
-          signIn: JSON.stringify(playerData.signIn),
-          statistics: JSON.stringify(playerData.statistics)
-        };
-        
-        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
+
+        // 使用智能序列化统一处理Player实例和普通对象
+        multi.hSet(playerKey, this._serializePlayerForHash(playerData));
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 签到成功，连续 ${playerData.signIn.consecutiveDays} 天`);
         
@@ -958,17 +974,9 @@ class PlayerService {
         
         playerData.lastUpdated = Date.now();
         playerData.lastActiveTime = Date.now();
-        
-        // 使用Hash更新
-        const simpleUpdates = {
-          lastUpdated: Date.now(),
-          lastActiveTime: Date.now()
-        };
-        const complexUpdates = {
-          statistics: JSON.stringify(playerData.statistics)
-        };
-        
-        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
+
+        // 使用智能序列化统一处理Player实例和普通对象
+        multi.hSet(playerKey, this._serializePlayerForHash(playerData));
         
         return playerData;
       });
@@ -1032,18 +1040,9 @@ class PlayerService {
         playerData.landCount += 1;
         playerData.statistics.totalMoneySpent += landConfig.goldCost;
         playerData.lastUpdated = Date.now();
-        
-        // 使用Hash更新
-        const simpleUpdates = {
-          coins: playerData.coins,
-          landCount: playerData.landCount,
-          lastUpdated: Date.now()
-        };
-        const complexUpdates = {
-          statistics: JSON.stringify(playerData.statistics)
-        };
-        
-        multi.hSet(playerKey, {...simpleUpdates, ...complexUpdates});
+
+        // 使用智能序列化统一处理Player实例和普通对象
+        multi.hSet(playerKey, this._serializePlayerForHash(playerData));
         
         this.logger.info(`[PlayerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
         
@@ -1263,7 +1262,7 @@ class PlayerService {
       return {
         level: level + 1,
         experienceRequired: levelConfig.experienceRequired,
-        rewards: levelConfig.rewards || {}
+        rewards: levelConfig.rewards
       };
     } catch (error) {
       this.logger.error(`[PlayerService] 获取等级信息失败 [Level ${level}]: ${error.message}`);
@@ -1272,12 +1271,44 @@ class PlayerService {
   }
 
   /**
-   * 获取仓库使用情况（方法添加到PlayerData原型）
+   * 将普通玩家数据对象转换为Player类实例
+   * 替代原来的动态方法注入，提供类型安全和更好的可维护性
+   * @param {Object} playerData 普通玩家数据对象
+   * @returns {Player} Player类实例，向后兼容原有接口
    */
   _addPlayerDataMethods(playerData) {
+    try {
+      // 如果已经是Player实例，直接返回
+      if (playerData instanceof Player) {
+        return playerData;
+      }
+
+      // 使用Player.fromObjectData创建Player实例
+      const playerInstance = Player.fromObjectData(playerData, this.config);
+
+      // 确保向后兼容：Player实例应该可以像普通对象一样访问属性
+      // 这已经通过Player类的设计实现了
+
+      return playerInstance;
+    } catch (error) {
+      this.logger.error(`[PlayerService] 转换Player实例失败: ${error.message}`);
+
+      // 如果转换失败，回退到原来的动态方法注入方式
+      this.logger.warn(`[PlayerService] 回退到动态方法注入模式`);
+      return this._addPlayerDataMethodsLegacy(playerData);
+    }
+  }
+
+  /**
+   * 原来的动态方法注入实现（作为回退方案）
+   * @param {Object} playerData 玩家数据
+   * @returns {Object} 增强后的玩家数据
+   * @private
+   */
+  _addPlayerDataMethodsLegacy(playerData) {
     // 获取仓库使用情况
     playerData.getInventoryUsage = function() {
-      const inventorySize = Object.values(this.inventory || {}).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      const inventorySize = Object.values(this.inventory).reduce((sum, item) => sum + (item.quantity), 0);
       return inventorySize;
     };
 
@@ -1306,5 +1337,4 @@ class PlayerService {
 
 }
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
 export default PlayerService;

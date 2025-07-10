@@ -9,7 +9,7 @@ default:
 # 土地扩张配置（PRD要求）
 expansion:
   7:
-    levelRequired: 5
+    levelRequired: 5 
     goldCost: 1000
   8:
     levelRequired: 7

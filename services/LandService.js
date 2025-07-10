@@ -444,8 +444,8 @@ class LandService {
       // 尝试从各个配置分类中查找物品
       const itemsConfig = this.config.items || {};
       
-      // 查找顺序：landMaterials, seeds, tools, fertilizers
-      const categories = ['landMaterials', 'seeds', 'tools', 'fertilizers'];
+      // 查找顺序：landMaterials, seeds, fertilizers
+      const categories = ['landMaterials', 'seeds', 'fertilizers'];
       
       for (const category of categories) {
         if (itemsConfig[category] && itemsConfig[category][itemId]) {

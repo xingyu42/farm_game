@@ -1,4 +1,3 @@
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #4ea4d1c9, converting CommonJS require statements to ES Modules imports; Principle_Applied: ModuleSystem-Standardization;}}
 import YAML from 'yaml';
 import chokidar from 'chokidar';
 import fs from 'fs';
@@ -77,18 +76,6 @@ class Config {
   /** 获取土地设置 */
   get land() {
     return this.getDefOrConfig('land');
-  }
-
-  /** 获取土地扩展设置 - 为了兼容性保留 */
-  get land_expansion() {
-    const landConfig = this.getDefOrConfig('land');
-    return landConfig?.expansion || {};
-  }
-
-  /** 获取土地质量设置 - 为了兼容性保留 */
-  get land_quality() {
-    const landConfig = this.getDefOrConfig('land');
-    return landConfig?.quality || {};
   }
 
   /**
@@ -243,5 +230,4 @@ class Config {
 }
 
 // 导出类和默认实例
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #4ea4d1c9, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
 export default new Config();

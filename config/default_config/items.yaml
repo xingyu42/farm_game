@@ -2,24 +2,6 @@
 # 定义商店物品、道具等
 
 items:
-  # 农具类
-  tools:
-    hoe:
-      name: "锄头"
-      type: "tool"
-      price: 100
-      durability: 100
-      description: "用于翻耕土地的基础工具"
-      requiredLevel: 1
-
-    watering_can:
-      name: "洒水壶"
-      type: "tool"
-      price: 150
-      durability: 80
-      description: "给作物浇水，加快生长速度"
-      requiredLevel: 2
-
   # 肥料类
   fertilizers:
     basic_fertilizer:
@@ -92,24 +74,6 @@ seeds:
     sellPrice: 1
     category: "seeds"
     description: "基础的谷物种子"
-
-# 农具配置
-tools:
-  watering_can:
-    name: "浇水壶"
-    price: 50
-    sellPrice: 20
-    category: "tools"
-    description: "给作物浇水的工具"
-    durability: 100
-
-  hoe:
-    name: "锄头"
-    price: 80
-    sellPrice: 30
-    category: "tools"
-    description: "翻耕土地的工具"
-    durability: 120
 
 # 肥料配置
 fertilizers:
@@ -220,8 +184,6 @@ shop:
   categories:
     - name: "种子"
       items: ["carrot_seed", "tomato_seed", "wheat_seed"]
-    - name: "农具"
-      items: ["watering_can", "hoe"]
     - name: "肥料"
       items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
     - name: "防御"

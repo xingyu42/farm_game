@@ -1,13 +1,10 @@
+
+
+import Calculator from '../utils/calculator.js';
 /**
  * 仓库服务 - 管理玩家物品仓库（根据PRD v3.2设计）
  * 包含：物品添加、移除、查询、仓库扩容等功能
  */
-
-// [INTERNAL_ACTION: Fetching current time via mcp.server_time.]
-// {{CHENGQI:
-// Action: Created; Timestamp: 2025-06-30T12:22:31+08:00; Reason: Shrimp Task ID: #faf85478, implementing inventory management system for T5;
-// }}
-
 class InventoryService {
   constructor(redisClient, config, logger = null) {
     this.redis = redisClient;
@@ -242,7 +239,6 @@ class InventoryService {
       const categories = {
         seeds: '种子',
         crops: '作物',
-        tools: '农具',
         fertilizer: '肥料',
         defense: '防御',
         materials: '材料',
@@ -289,12 +285,13 @@ class InventoryService {
 
   /**
    * 计算仓库使用量
+   * 使用统一的Calculator.calculateInventoryUsage方法，与Player类保持一致
    * @param {Object} inventory 仓库数据
    * @returns {number} 使用量
    * @private
    */
   _calculateInventoryUsage(inventory) {
-    return Object.values(inventory).reduce((sum, item) => sum + (item.quantity || 0), 0);
+    return Calculator.calculateInventoryUsage(inventory);
   }
 
   /**
@@ -307,7 +304,7 @@ class InventoryService {
     const itemsConfig = this.config.items || {};
     
     // 搜索所有类别
-    const categories = ['seeds', 'tools', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
+    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
     
     for (const category of categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {

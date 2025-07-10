@@ -56,7 +56,7 @@ class Item {
     let itemConfig = null;
     
     // 查找物品配置（支持不同类别）
-    for (const category of ['crops', 'seeds', 'materials', 'tools', 'landMaterials']) {
+    for (const category of ['crops', 'seeds', 'materials', 'landMaterials']) {
       if (config.items[category] && config.items[category][itemId]) {
         itemConfig = {
           ...config.items[category][itemId],

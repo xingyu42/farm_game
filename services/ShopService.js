@@ -299,7 +299,7 @@ class ShopService {
       const itemsConfig = this.config.items || {};
       const prices = [];
       
-      const categories = ['seeds', 'tools', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
+      const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
       
       for (const category of categories) {
         if (itemsConfig[category]) {
@@ -339,7 +339,7 @@ class ShopService {
    */
   _findItemByName(itemName) {
     const itemsConfig = this.config.items || {};
-    const categories = ['seeds', 'tools', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
+    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
     
     for (const category of categories) {
       if (itemsConfig[category]) {
@@ -362,7 +362,7 @@ class ShopService {
    */
   _getItemInfo(itemId) {
     const itemsConfig = this.config.items || {};
-    const categories = ['seeds', 'tools', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
+    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
     
     for (const category of categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {
@@ -382,7 +382,6 @@ class ShopService {
   _getCategoryDisplayName(category) {
     const displayNames = {
       seeds: '种子',
-      tools: '农具',
       fertilizers: '肥料',
       dogFood: '防御',
       landMaterials: '材料',

@@ -1,10 +1,4 @@
-// {{CHENGQI:
-// Action: Modified; Timestamp: 2025-06-30; Reason: Shrimp Task ID: #5cc38447, unifying service access pattern using serviceContainer;
-// }}
-// {{START MODIFICATIONS}}
-
 import serviceContainer from '../services/index.js'
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3adecc60, fixing Config import to use default import instead of named import; Principle_Applied: ModuleSystem-Standardization;}}
 import Config from '../models/Config.js'
 
 /**
@@ -19,7 +13,6 @@ export class farm extends plugin {
       event: 'message',
       priority: 5000,
       rule: [
-        // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading regex to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
         {
           reg: '^#(?<nc>nc)?我的农场$',
           fnc: 'showMyFarm'
@@ -72,7 +65,7 @@ export class farm extends plugin {
     })
     
     // 初始化配置
-    this.config = new Config()
+    this.config = Config
   }
 
   /**
@@ -168,8 +161,8 @@ export class farm extends plugin {
     ]
 
     // 获取作物配置
-    const cropsConfig = await this.config.getCropsConfig()
-    const landConfig = await this.config.getLandConfig()
+    const cropsConfig = this.config.crops
+    const landConfig = this.config.land
     
     // 显示每块土地的状态
     for (let i = 0; i < playerData.lands.length; i++) {
@@ -572,7 +565,7 @@ export class farm extends plugin {
    * @returns {string|null} 作物类型ID
    */
   async _parseCropType(cropName) {
-    const cropsConfig = await this.config.getCropsConfig()
+    const cropsConfig = this.config.crops
     
     // 直接匹配作物ID
     if (cropsConfig[cropName]) {

@@ -287,29 +287,68 @@ class Calculator {
   }
 
   /**
+   * 计算仓库使用量（统一方法）
+   * 统一PlayerService._addPlayerDataMethods.getInventoryUsage和InventoryService._calculateInventoryUsage的逻辑
+   * @param {Object} inventory 仓库物品对象
+   * @returns {number} 仓库使用量
+   * @static
+   * @example
+   * // 对象格式仓库
+   * Calculator.calculateInventoryUsage({
+   *   'wheat': { quantity: 10, name: '小麦' },
+   *   'corn': { quantity: 5, name: '玉米' }
+   * }); // 返回 15
+   *
+   * // 直接数值格式仓库
+   * Calculator.calculateInventoryUsage({
+   *   'wheat': 10,
+   *   'corn': 5
+   * }); // 返回 15
+   */
+  static calculateInventoryUsage(inventory) {
+    if (!inventory || typeof inventory !== 'object') {
+      return 0;
+    }
+
+    return Object.values(inventory).reduce((sum, item) => {
+      // 处理两种数据格式：
+      // 1. 直接数值：{ itemId: quantity }
+      // 2. 对象格式：{ itemId: { quantity: number, ... } }
+      if (typeof item === 'number') {
+        return sum + (item || 0);
+      } else if (typeof item === 'object' && item !== null) {
+        return sum + (item.quantity || 0);
+      }
+      return sum;
+    }, 0);
+  }
+
+  /**
    * 计算仓库容量需求
    * @param {Object} inventory 仓库物品
    * @param {Object} itemsToAdd 要添加的物品
    * @returns {Object} 容量计算结果
    */
   calculateInventorySpace(inventory, itemsToAdd = {}) {
-    let currentUsed = 0;
-    let afterAddUsed = 0;
-
-    // 计算当前已使用容量
-    for (const quantity of Object.values(inventory)) {
-      currentUsed += quantity || 0;
-    }
+    // 使用统一的计算方法
+    const currentUsed = Calculator.calculateInventoryUsage(inventory);
 
     // 计算添加物品后的容量
     const combinedInventory = { ...inventory };
     for (const [itemId, quantity] of Object.entries(itemsToAdd)) {
-      combinedInventory[itemId] = (combinedInventory[itemId] || 0) + quantity;
+      if (typeof combinedInventory[itemId] === 'object' && combinedInventory[itemId] !== null) {
+        // 对象格式
+        combinedInventory[itemId] = {
+          ...combinedInventory[itemId],
+          quantity: (combinedInventory[itemId].quantity || 0) + quantity
+        };
+      } else {
+        // 直接数值格式
+        combinedInventory[itemId] = (combinedInventory[itemId] || 0) + quantity;
+      }
     }
 
-    for (const quantity of Object.values(combinedInventory)) {
-      afterAddUsed += quantity || 0;
-    }
+    const afterAddUsed = Calculator.calculateInventoryUsage(combinedInventory);
 
     return {
       currentUsed,
@@ -383,7 +422,7 @@ class Calculator {
     const items = this.config?.items || {};
     
     // 查找各个类别中的物品
-    for (const category of ['crops', 'seeds', 'materials', 'tools', 'landMaterials']) {
+    for (const category of ['crops', 'seeds', 'materials', 'landMaterials']) {
       if (items[category] && items[category][itemId]) {
         return items[category][itemId];
       }
@@ -450,14 +489,18 @@ class Calculator {
         'qualityUpgrade',
         'shopPrice',
         'inventorySpace',
+        'inventoryUsage',
         'stealYield'
+      ],
+      staticMethods: [
+        'calculateInventoryUsage'
       ],
       configModules: this.config ? Object.keys(this.config) : []
     };
   }
 }
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #b795c240, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 19:48:40 +08:00; Reason: Shrimp Task ID: #10c63387, adding static calculateInventoryUsage method to unify inventory calculation logic; Principle_Applied: DRY-CodeReuse-Standardization;}}
 export default Calculator;
 
 // {{END MODIFICATIONS}}

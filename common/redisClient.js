@@ -2,15 +2,11 @@
  * Redis客户端工具类
  * 提供Key生成、JSON处理、事务封装、分布式锁等核心功能
  * 
- * {{CHENGQI:
- * Action: Enhanced; Timestamp: 2025-06-30T14:41:00+08:00; Reason: Shrimp Task ID: #5492e748, enhancing existing Redis client with distributed locking for T8;
- * }}
  */
 
 
 class RedisClient {
   constructor() {
-    // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:52:15 +08:00; Reason: Using framework-provided Redis connection instead of creating new one; Principle_Applied: Framework-Integration-Optimization;}}
     // 直接使用Miao-Yunzai框架提供的Redis连接
     this.client = global.redis;
     this.keyPrefix = 'farm_game';
@@ -353,5 +349,4 @@ class RedisClient {
 }
 
 // 导出单例实例
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #787dc7f8, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
 export default new RedisClient();
