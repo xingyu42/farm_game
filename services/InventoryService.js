@@ -1,6 +1,8 @@
 
 
 import Calculator from '../utils/calculator.js';
+import { ItemResolver } from '../utils/ItemResolver.js';
+
 /**
  * 仓库服务 - 管理玩家物品仓库（根据PRD v3.2设计）
  * 包含：物品添加、移除、查询、仓库扩容等功能
@@ -10,6 +12,7 @@ class InventoryService {
     this.redis = redisClient;
     this.config = config;
     this.logger = logger || console;
+    this.itemResolver = new ItemResolver(config);
   }
 
   /**
@@ -295,51 +298,33 @@ class InventoryService {
   }
 
   /**
-   * 获取物品配置
+   * 获取物品配置（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {Object} 物品配置
    * @private
    */
   _getItemConfig(itemId) {
-    const itemsConfig = this.config.items || {};
-    
-    // 搜索所有类别
-    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
-    
-    for (const category of categories) {
-      if (itemsConfig[category] && itemsConfig[category][itemId]) {
-        return {
-          ...itemsConfig[category][itemId],
-          category: category === 'fertilizers' ? 'fertilizer' : 
-                   category === 'dogFood' ? 'defense' :
-                   category === 'landMaterials' ? 'materials' : category
-        };
-      }
-    }
-    
-    return null;
+    return this.itemResolver.findItemById(itemId);
   }
 
   /**
-   * 获取物品名称
+   * 获取物品名称（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {string} 物品名称
    * @private
    */
   _getItemName(itemId) {
-    const itemConfig = this._getItemConfig(itemId);
-    return itemConfig?.name || itemId;
+    return this.itemResolver.getItemName(itemId);
   }
 
   /**
-   * 获取物品售价
+   * 获取物品售价（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {number} 售价
    * @private
    */
   _getItemSellPrice(itemId) {
-    const itemConfig = this._getItemConfig(itemId);
-    return itemConfig?.sellPrice || 0;
+    return this.itemResolver.getItemSellPrice(itemId);
   }
 }
 

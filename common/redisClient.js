@@ -43,7 +43,8 @@ class RedisClient {
     try {
       return JSON.stringify(data);
     } catch (error) {
-      throw new Error(`Serialization failed: ${error.message}`);
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Serialization failed: ${error.message}`, { cause: error });
     }
   }
 
@@ -56,7 +57,8 @@ class RedisClient {
     try {
       return jsonStr ? JSON.parse(jsonStr) : null;
     } catch (error) {
-      throw new Error(`Deserialization failed: ${error.message}`);
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Deserialization failed: ${error.message}`, { cause: error });
     }
   }
 
@@ -76,11 +78,26 @@ class RedisClient {
       // 执行事务函数，传入multi实例
       await transactionFn(multi);
 
-      // 执行事务
+      // 执行事务并检查结果
       const results = await multi.exec();
+
+      // 检查事务执行结果
+      if (!results) {
+        throw new Error('Transaction was discarded (WATCH key was modified)');
+      }
+
+      // 检查每个命令的执行结果
+      for (let i = 0; i < results.length; i++) {
+        const [err, result] = results[i];
+        if (err) {
+          throw new Error(`Transaction command ${i} failed: ${err.message}`, { cause: err });
+        }
+      }
+
       return results;
     } catch (error) {
-      throw new Error(`Transaction failed: ${error.message}`);
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Transaction failed: ${error.message}`, { cause: error });
     }
   }
 
@@ -164,13 +181,14 @@ class RedisClient {
   async acquireLock(userId, operation = 'general', ttl = this.defaultLockTTL, maxRetries = 3) {
     const lockKey = this.generateLockKey(userId, operation);
     const lockValue = `${Date.now()}_${Math.random()}`;
-    const retryInterval = 100; // 重试间隔100ms
+    const baseRetryInterval = 100; // 基础重试间隔100ms
+    const maxRetryInterval = 2000; // 最大重试间隔2秒
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // 尝试获取锁（SET NX EX）
         const result = await this.client.set(lockKey, lockValue, 'EX', ttl, 'NX');
-        
+
         if (result === 'OK') {
           return {
             success: true,
@@ -180,13 +198,32 @@ class RedisClient {
           };
         }
 
-        // 锁被占用，等待后重试
+        // 锁被占用，使用指数退避策略等待后重试
         if (attempt < maxRetries - 1) {
-          await this._sleep(retryInterval * (attempt + 1));
+          // 指数退避：2^attempt * baseInterval，但不超过maxRetryInterval
+          const exponentialDelay = Math.min(
+            baseRetryInterval * Math.pow(2, attempt),
+            maxRetryInterval
+          );
+          // 添加随机抖动，避免惊群效应
+          const jitter = Math.random() * 0.1 * exponentialDelay;
+          const finalDelay = exponentialDelay + jitter;
+
+          await this._sleep(finalDelay);
         }
       } catch (error) {
         if (attempt === maxRetries - 1) {
-          throw error;
+          // 保留原始错误堆栈跟踪
+          throw new Error(`Lock acquisition failed after ${maxRetries} attempts: ${error.message}`, { cause: error });
+        }
+
+        // 对于非最后一次尝试，也使用指数退避
+        if (attempt < maxRetries - 1) {
+          const exponentialDelay = Math.min(
+            baseRetryInterval * Math.pow(2, attempt),
+            maxRetryInterval
+          );
+          await this._sleep(exponentialDelay);
         }
       }
     }
@@ -217,7 +254,8 @@ class RedisClient {
       const result = await this.client.eval(luaScript, 1, lockKey, lockValue);
       return result === 1;
     } catch (error) {
-      throw error;
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Failed to release lock ${lockKey}: ${error.message}`, { cause: error });
     }
   }
 
@@ -278,7 +316,8 @@ class RedisClient {
         preparedData
       };
     } catch (error) {
-      throw error;
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Batch operation failed: ${error.message}`, { cause: error });
     }
   }
 
@@ -292,7 +331,8 @@ class RedisClient {
       const values = await this.client.mget(...keys);
       return values.map(value => value ? this.deserialize(value) : null);
     } catch (error) {
-      throw error;
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Batch get failed for keys [${keys.join(', ')}]: ${error.message}`, { cause: error });
     }
   }
 
@@ -319,7 +359,8 @@ class RedisClient {
       await multi.exec();
       return true;
     } catch (error) {
-      throw error;
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Batch set failed: ${error.message}`, { cause: error });
     }
   }
 
@@ -333,7 +374,8 @@ class RedisClient {
     try {
       return await this.client.incrby(key, increment);
     } catch (error) {
-      throw error;
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Increment failed for key ${key}: ${error.message}`, { cause: error });
     }
   }
 

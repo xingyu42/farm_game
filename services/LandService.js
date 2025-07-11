@@ -7,12 +7,15 @@
 // Action: Created; Timestamp: 2025-06-30T12:30:00+08:00; Reason: Shrimp Task ID: #b7430efe, implementing land management service for T6;
 // }}
 
+import { ItemResolver } from '../utils/ItemResolver.js';
+
 class LandService {
   constructor(redisClient, config, playerService, logger = null) {
     this.redis = redisClient;
     this.config = config;
     this.playerService = playerService;
     this.logger = logger || console;
+    this.itemResolver = new ItemResolver(config);
   }
 
   /**
@@ -435,26 +438,13 @@ class LandService {
   }
 
   /**
-   * 获取物品名称（辅助方法）
+   * 获取物品名称（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {string} 物品名称
    */
   _getItemName(itemId) {
     try {
-      // 尝试从各个配置分类中查找物品
-      const itemsConfig = this.config.items || {};
-      
-      // 查找顺序：landMaterials, seeds, fertilizers
-      const categories = ['landMaterials', 'seeds', 'fertilizers'];
-      
-      for (const category of categories) {
-        if (itemsConfig[category] && itemsConfig[category][itemId]) {
-          return itemsConfig[category][itemId].name || itemId;
-        }
-      }
-      
-      // 如果都找不到，返回ID
-      return itemId;
+      return this.itemResolver.getItemName(itemId);
     } catch (error) {
       this.logger.warn(`[LandService] 获取物品名称失败 [${itemId}]: ${error.message}`);
       return itemId;

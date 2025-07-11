@@ -12,6 +12,7 @@ crops:
     experience: 5 # 获得经验
     requiredLevel: 1 # 所需等级
     description: "营养丰富的胡萝卜，生长速度快"
+    aliases: ["萝卜"] # 别名配置
 
   # 西红柿 - 中等作物
   tomato:
@@ -23,6 +24,7 @@ crops:
     experience: 12 # 获得经验
     requiredLevel: 3 # 所需等级
     description: "酸甜可口的西红柿，深受喜爱"
+    aliases: ["番茄"] # 别名配置
 
   # 小麦 - 粮食作物
   wheat:
@@ -34,3 +36,4 @@ crops:
     experience: 8 # 获得经验
     requiredLevel: 2 # 所需等级
     description: "基础粮食作物，用途广泛"
+    aliases: ["麦子"] # 别名配置

@@ -7,6 +7,8 @@
 // Action: Created; Timestamp: 2025-06-30T12:22:31+08:00; Reason: Shrimp Task ID: #faf85478, implementing shop system for T5;
 // }}
 
+import { ItemResolver } from '../utils/ItemResolver.js';
+
 class ShopService {
   constructor(redisClient, config, inventoryService, playerService, logger = null) {
     this.redis = redisClient;
@@ -14,6 +16,7 @@ class ShopService {
     this.inventoryService = inventoryService;
     this.playerService = playerService;
     this.logger = logger || console;
+    this.itemResolver = new ItemResolver(config);
   }
 
   /**
@@ -37,8 +40,8 @@ class ShopService {
         const categoryItems = [];
         
         for (const itemId of categoryInfo.items) {
-          const itemInfo = this._getItemInfo(itemId);
-          
+          const itemInfo = this.itemResolver.getItemInfo(itemId);
+
           if (itemInfo && itemInfo.price !== undefined) {
             categoryItems.push({
               id: itemId,
@@ -76,16 +79,16 @@ class ShopService {
   async buyItem(userId, itemName, quantity = 1) {
     try {
       // 查找物品ID
-      const itemId = this._findItemByName(itemName);
-      
+      const itemId = this.itemResolver.findItemByName(itemName);
+
       if (!itemId) {
         return {
           success: false,
           message: `商店中没有找到 "${itemName}"，请检查物品名称`
         };
       }
-      
-      const itemInfo = this._getItemInfo(itemId);
+
+      const itemInfo = this.itemResolver.getItemInfo(itemId);
       
       if (!itemInfo || itemInfo.price === undefined) {
         return {
@@ -169,16 +172,16 @@ class ShopService {
   async sellItem(userId, itemName, quantity = 1) {
     try {
       // 查找物品ID
-      const itemId = this._findItemByName(itemName);
-      
+      const itemId = this.itemResolver.findItemByName(itemName);
+
       if (!itemId) {
         return {
           success: false,
           message: `未找到 "${itemName}"，请检查物品名称`
         };
       }
-      
-      const itemInfo = this._getItemInfo(itemId);
+
+      const itemInfo = this.itemResolver.getItemInfo(itemId);
       
       if (!itemInfo || itemInfo.sellPrice === undefined) {
         return {
@@ -332,63 +335,33 @@ class ShopService {
   }
 
   /**
-   * 根据名称查找物品ID
+   * 根据名称查找物品ID（使用统一的ItemResolver）
    * @param {string} itemName 物品名称
    * @returns {string|null} 物品ID
    * @private
    */
   _findItemByName(itemName) {
-    const itemsConfig = this.config.items || {};
-    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
-    
-    for (const category of categories) {
-      if (itemsConfig[category]) {
-        for (const [itemId, itemInfo] of Object.entries(itemsConfig[category])) {
-          if (itemInfo.name === itemName) {
-            return itemId;
-          }
-        }
-      }
-    }
-    
-    return null;
+    return this.itemResolver.findItemByName(itemName);
   }
 
   /**
-   * 获取物品信息
+   * 获取物品信息（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {Object|null} 物品信息
    * @private
    */
   _getItemInfo(itemId) {
-    const itemsConfig = this.config.items || {};
-    const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
-    
-    for (const category of categories) {
-      if (itemsConfig[category] && itemsConfig[category][itemId]) {
-        return itemsConfig[category][itemId];
-      }
-    }
-    
-    return null;
+    return this.itemResolver.getItemInfo(itemId);
   }
 
   /**
-   * 获取类别显示名称
+   * 获取类别显示名称（使用统一的ItemResolver）
    * @param {string} category 类别key
    * @returns {string} 显示名称
    * @private
    */
   _getCategoryDisplayName(category) {
-    const displayNames = {
-      seeds: '种子',
-      fertilizers: '肥料',
-      dogFood: '防御',
-      landMaterials: '材料',
-      crops: '作物'
-    };
-    
-    return displayNames[category] || category;
+    return this.itemResolver.getCategoryDisplayName(category);
   }
 }
 

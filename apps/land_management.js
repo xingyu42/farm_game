@@ -8,6 +8,7 @@
 // }}
 
 import serviceContainer from '../services/index.js';
+import { ItemResolver } from '../utils/ItemResolver.js';
 
 export class LandManagementCommands extends plugin {
   constructor() {
@@ -322,15 +323,12 @@ export class LandManagementCommands extends plugin {
   }
 
   /**
-   * 获取物品名称（临时方法，应该从配置获取）
+   * 获取物品名称（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    */
   _getItemName(itemId) {
-    const itemNames = {
-      copper_essence: '铜质精华',
-      silver_essence: '银质精华',
-      gold_essence: '金质精华'
-    };
-    return itemNames[itemId] || itemId;
+    const config = serviceContainer.getService('config');
+    const itemResolver = new ItemResolver(config);
+    return itemResolver.getItemName(itemId);
   }
 } 

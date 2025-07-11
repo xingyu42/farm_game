@@ -2,26 +2,156 @@
 # 定义商店物品、道具等
 
 items:
-  # 肥料类
+  # 种子配置
+  seeds:
+    carrot_seed:
+      name: "胡萝卜种子"
+      price: 5
+      sellPrice: 2
+      category: "seeds"
+      description: "常见的蔬菜种子"
+
+    tomato_seed:
+      name: "西红柿种子"
+      price: 8
+      sellPrice: 3
+      category: "seeds"
+      description: "营养丰富的蔬菜种子"
+
+    wheat_seed:
+      name: "小麦种子"
+      price: 3
+      sellPrice: 1
+      category: "seeds"
+      description: "基础的谷物种子"
+
+  # 肥料配置
   fertilizers:
-    basic_fertilizer:
-      name: "基础肥料"
-      type: "consumable"
-      price: 20
-      effect: "growth_speed"
-      effectValue: 0.2 # 20%生长速度提升
-      description: "提高作物生长速度20%"
+    fertilizer_normal:
+      name: "普通肥料"
+      price: 10
+      sellPrice: 4
+      category: "fertilizer"
+      description: "加速作物生长"
+      aliases: ["普通", "基础肥料", "普通化肥"] # 别名配置
+      effect:
+        speedBonus: 0.2 # 加速20%
 
-    premium_fertilizer:
+    fertilizer_premium:
       name: "高级肥料"
-      type: "consumable"
-      price: 50
-      effect: "yield_boost"
-      effectValue: 0.5 # 50%产量提升
-      description: "提高作物产量50%"
-      requiredLevel: 5
+      price: 25
+      sellPrice: 10
+      category: "fertilizer"
+      description: "显著加速作物生长"
+      aliases: ["高级", "优质肥料", "高级化肥"] # 别名配置
+      effect:
+        speedBonus: 0.4 # 加速40%
 
-# 物品系统配置（根据PRD v3.2设计）
+    fertilizer_deluxe:
+      name: "顶级肥料"
+      price: 50
+      sellPrice: 20
+      category: "fertilizer"
+      description: "极大加速作物生长"
+      aliases: ["顶级", "豪华肥料", "顶级化肥", "最好的"] # 别名配置
+      effect:
+        speedBonus: 0.6 # 加速60%
+
+  # 狗粮配置（防御系统）
+  dogFood:
+    normal:
+      name: "普通狗粮"
+      price: 30
+      sellPrice: 12
+      category: "defense"
+      description: "提供基础防御"
+      defenseBonus: 20 # 防御加成20%
+      duration: 30 # 持续30分钟
+
+    premium:
+      name: "高级狗粮"
+      price: 80
+      sellPrice: 32
+      category: "defense"
+      description: "提供中等防御"
+      defenseBonus: 35 # 防御加成35%
+      duration: 60 # 持续60分钟
+
+    deluxe:
+      name: "优质狗粮"
+      price: 150
+      sellPrice: 60
+      category: "defense"
+      description: "提供强力防御"
+      defenseBonus: 50 # 防御加成50%
+      duration: 120 # 持续120分钟
+
+  # 土地进阶材料
+  landMaterials:
+    copper_essence:
+      name: "铜质精华"
+      price: 10000 # 商店价格（稀有）
+      sellPrice: 3000
+      category: "materials"
+      description: "用于土地品质进阶的珍贵材料"
+      rarity: "rare"
+
+    silver_essence:
+      name: "银质精华"
+      price: 50000 # 商店价格（超稀有）
+      sellPrice: 15000
+      category: "materials"
+      description: "用于土地品质进阶的传奇材料"
+      rarity: "legendary"
+
+    gold_essence:
+      name: "金质精华"
+      price: 200000 # 商店价格（传说）
+      sellPrice: 60000
+      category: "materials"
+      description: "用于土地品质进阶的神话材料"
+      rarity: "mythic"
+
+  # 作物产出配置
+  crops:
+    carrot:
+      name: "胡萝卜"
+      sellPrice: 8
+      category: "crops"
+      baseExp: 5
+
+    tomato:
+      name: "西红柿"
+      sellPrice: 12
+      category: "crops"
+      baseExp: 8
+
+    wheat:
+      name: "小麦"
+      sellPrice: 5
+      category: "crops"
+      baseExp: 3
+
+  # 商店分类显示
+  shop:
+    categories:
+      - name: "种子"
+        items: ["carrot_seed", "tomato_seed", "wheat_seed"]
+      - name: "肥料"
+        items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
+      - name: "防御"
+        items: ["normal", "premium", "deluxe"]
+      - name: "材料"
+        items: ["copper_essence", "silver_essence", "gold_essence"]
+
+  # 初始礼包配置
+  initial_gift:
+    - item_id: "wheat_seed"
+      quantity: 10
+    - item_id: "carrot_seed"
+      quantity: 5
+    - item_id: "fertilizer_normal"
+      quantity: 3
 
 # 仓库系统配置
 inventory:
@@ -42,151 +172,3 @@ inventory:
       cost: 15000
     - capacity: 200
       cost: 25000
-
-# 初始礼包配置
-initial_gift:
-  - item_id: "wheat_seed"
-    quantity: 10
-  - item_id: "carrot_seed"
-    quantity: 5
-  - item_id: "fertilizer_normal"
-    quantity: 3
-
-# 种子配置
-seeds:
-  carrot_seed:
-    name: "胡萝卜种子"
-    price: 5
-    sellPrice: 2
-    category: "seeds"
-    description: "常见的蔬菜种子"
-
-  tomato_seed:
-    name: "西红柿种子"
-    price: 8
-    sellPrice: 3
-    category: "seeds"
-    description: "营养丰富的蔬菜种子"
-
-  wheat_seed:
-    name: "小麦种子"
-    price: 3
-    sellPrice: 1
-    category: "seeds"
-    description: "基础的谷物种子"
-
-# 肥料配置
-fertilizers:
-  fertilizer_normal:
-    name: "普通肥料"
-    price: 10
-    sellPrice: 4
-    category: "fertilizer"
-    description: "加速作物生长"
-    effect:
-      speedBonus: 0.2 # 加速20%
-
-  fertilizer_premium:
-    name: "高级肥料"
-    price: 25
-    sellPrice: 10
-    category: "fertilizer"
-    description: "显著加速作物生长"
-    effect:
-      speedBonus: 0.4 # 加速40%
-
-  fertilizer_deluxe:
-    name: "顶级肥料"
-    price: 50
-    sellPrice: 20
-    category: "fertilizer"
-    description: "极大加速作物生长"
-    effect:
-      speedBonus: 0.6 # 加速60%
-
-# 狗粮配置（防御系统）
-dogFood:
-  normal:
-    name: "普通狗粮"
-    price: 30
-    sellPrice: 12
-    category: "defense"
-    description: "提供基础防御"
-    defenseBonus: 20 # 防御加成20%
-    duration: 30 # 持续30分钟
-
-  premium:
-    name: "高级狗粮"
-    price: 80
-    sellPrice: 32
-    category: "defense"
-    description: "提供中等防御"
-    defenseBonus: 35 # 防御加成35%
-    duration: 60 # 持续60分钟
-
-  deluxe:
-    name: "优质狗粮"
-    price: 150
-    sellPrice: 60
-    category: "defense"
-    description: "提供强力防御"
-    defenseBonus: 50 # 防御加成50%
-    duration: 120 # 持续120分钟
-
-# 土地进阶材料
-landMaterials:
-  copper_essence:
-    name: "铜质精华"
-    price: 10000 # 商店价格（稀有）
-    sellPrice: 3000
-    category: "materials"
-    description: "用于土地品质进阶的珍贵材料"
-    rarity: "rare"
-
-  silver_essence:
-    name: "银质精华"
-    price: 50000 # 商店价格（超稀有）
-    sellPrice: 15000
-    category: "materials"
-    description: "用于土地品质进阶的传奇材料"
-    rarity: "legendary"
-
-  gold_essence:
-    name: "金质精华"
-    price: 200000 # 商店价格（传说）
-    sellPrice: 60000
-    category: "materials"
-    description: "用于土地品质进阶的神话材料"
-    rarity: "mythic"
-
-# 作物产出配置
-crops:
-  carrot:
-    name: "胡萝卜"
-    sellPrice: 8
-    category: "crops"
-    baseExp: 5
-
-  tomato:
-    name: "西红柿"
-    sellPrice: 12
-    category: "crops"
-    baseExp: 8
-
-  wheat:
-    name: "小麦"
-    sellPrice: 5
-    category: "crops"
-    baseExp: 3
-
-# 商店分类显示
-shop:
-  categories:
-    - name: "种子"
-      items: ["carrot_seed", "tomato_seed", "wheat_seed"]
-    - name: "肥料"
-      items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
-    - name: "防御"
-      items: ["normal", "premium", "deluxe"]
-    - name: "材料"
-      items: ["copper_essence", "silver_essence", "gold_essence"]

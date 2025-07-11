@@ -302,16 +302,17 @@ class PlayerService {
   }
 
   /**
-   * 获取增强后的玩家数据（包含辅助方法）
+   * 获取玩家数据（统一返回Player实例）
    * @param {string} userId 用户ID
-   * @returns {Object} 增强后的玩家数据
+   * @returns {Player} Player实例
    */
   async getPlayerData(userId) {
     try {
       const playerData = await this.getPlayer(userId);
-      return this._addPlayerDataMethods(playerData);
+      // 直接返回Player实例，无需动态方法注入
+      return playerData;
     } catch (error) {
-      this.logger.error(`[PlayerService] 获取增强玩家数据失败 [${userId}]: ${error.message}`);
+      this.logger.error(`[PlayerService] 获取玩家数据失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -320,18 +321,18 @@ class PlayerService {
    * 确保玩家存在（如果不存在则创建）
    * @param {string} userId 用户ID
    * @param {string} userName 用户名
-   * @returns {Object} 玩家数据
+   * @returns {Player} Player实例
    */
   async ensurePlayer(userId, userName = null) {
     try {
       const playerData = await this.getPlayerData(userId);
-      
+
       // 如果提供了用户名且玩家名称为空，更新名称
       if (userName && !playerData.name) {
         playerData.name = userName;
         await this._updateSimpleField(userId, 'name', userName);
       }
-      
+
       return playerData;
     } catch (error) {
       this.logger.error(`[PlayerService] 确保玩家存在失败 [${userId}]: ${error.message}`);
@@ -343,7 +344,7 @@ class PlayerService {
    * 创建玩家（显式创建）
    * @param {string} userId 用户ID
    * @param {string} userName 用户名
-   * @returns {Object} 新玩家数据
+   * @returns {Player} Player实例
    */
   async createPlayer(userId, userName) {
     try {
@@ -351,21 +352,23 @@ class PlayerService {
       const playerKey = this.redis.generateKey('player', userId);
       const existingPlayer = await this._getPlayerFromHash(playerKey);
       if (existingPlayer) {
-        return this._addPlayerDataMethods(existingPlayer);
+        // 直接返回Player实例，无需动态方法注入
+        return existingPlayer;
       }
-      
+
       // 创建新玩家
       const playerData = this._createNewPlayer();
       playerData.name = userName;
-      
+
       await this._savePlayerToHash(playerKey, playerData);
-      
+
       this.logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
-      
+
       // 发放初始礼包
       await this._giveInitialGift(userId, playerData);
-      
-      return this._addPlayerDataMethods(playerData);
+
+      // 重新获取玩家数据以确保返回Player实例
+      return await this.getPlayer(userId);
     } catch (error) {
       this.logger.error(`[PlayerService] 创建玩家失败 [${userId}]: ${error.message}`);
       throw error;
@@ -388,91 +391,11 @@ class PlayerService {
 
   /**
    * 创建新玩家数据
-   * @returns {Object} 新玩家数据
+   * @returns {Player} Player实例
    */
   _createNewPlayer() {
-    const defaultConfig = this.config.levels?.default
-    const landConfig = this.config.land?.default
-    const inventoryConfig = this.config.items?.inventory
-    
-    const now = Date.now();
-    
-    return {
-      // 基础信息
-      name: '',                                         // 玩家名称
-      level: 1,
-      experience: 0,
-      coins: defaultConfig.startingCoins,       // 保持coins兼容性
-      
-      // 向后兼容的金币访问
-      get gold() { return this.coins; },
-      set gold(value) { this.coins = value; },
-      
-      // 土地系统
-      landCount: landConfig.startingLands,        // 当前土地数量
-      lands: new Array(landConfig.startingLands).fill(null).map((_, i) => ({
-        id: i + 1,
-        crop: null,
-        quality: 'normal',
-        plantTime: null,
-        harvestTime: null,
-        status: 'empty'
-      })),
-      maxLandCount: landConfig.maxLands,         // 最大土地数量（绝对上限，由土地扩展系统管理）
-      
-      // 仓库系统
-      inventory: {},                                   // 仓库物品
-      inventoryCapacity: inventoryConfig.startingCapacity,  // 保持原字段名
-      inventory_capacity: inventoryConfig.startingCapacity, // 新字段名
-      maxInventoryCapacity: inventoryConfig.maxCapacity,
-      
-      // 统计数据（向后兼容）
-      stats: {
-        total_signin_days: 0,                         // 总签到天数
-        total_income: 0,                              // 总收入
-        total_expenses: 0,                            // 总支出
-        consecutive_signin_days: 0                    // 连续签到天数
-      },
-      
-      // 签到系统
-      signIn: {
-        lastSignDate: null,               // 最后签到日期
-        consecutiveDays: 0,               // 连续签到天数
-        totalSignDays: 0                  // 总签到天数
-      },
-      
-      // 防御系统
-      protection: {
-        dogFood: {
-          type: null,                     // 狗粮类型 (null/normal/premium/deluxe)
-          effectEndTime: 0,               // 防御效果结束时间
-          defenseBonus: 0                 // 防御加成百分比
-        },
-        farmProtection: {
-          endTime: 0                      // 农场保护结束时间
-        }
-      },
-      
-      // 偷菜系统
-      stealing: {
-        lastStealTime: 0,                 // 最后偷菜时间
-        cooldownEndTime: 0                // 冷却结束时间
-      },
-      
-      // 统计数据
-      statistics: {
-        totalHarvested: 0,                // 总收获次数
-        totalStolenFrom: 0,               // 被偷次数
-        totalStolenBy: 0,                 // 偷菜次数
-        totalMoneyEarned: 0,              // 总赚取金币
-        totalMoneySpent: 0                // 总花费金币
-      },
-      
-      // 时间戳
-      createdAt: now,
-      lastUpdated: now,
-      lastActiveTime: now
-    };
+    // 使用Player.createEmpty创建Player实例，确保统一的架构
+    return Player.createEmpty('', this.config);
   }
 
   /**
@@ -1270,70 +1193,8 @@ class PlayerService {
     }
   }
 
-  /**
-   * 将普通玩家数据对象转换为Player类实例
-   * 替代原来的动态方法注入，提供类型安全和更好的可维护性
-   * @param {Object} playerData 普通玩家数据对象
-   * @returns {Player} Player类实例，向后兼容原有接口
-   */
-  _addPlayerDataMethods(playerData) {
-    try {
-      // 如果已经是Player实例，直接返回
-      if (playerData instanceof Player) {
-        return playerData;
-      }
 
-      // 使用Player.fromObjectData创建Player实例
-      const playerInstance = Player.fromObjectData(playerData, this.config);
 
-      // 确保向后兼容：Player实例应该可以像普通对象一样访问属性
-      // 这已经通过Player类的设计实现了
-
-      return playerInstance;
-    } catch (error) {
-      this.logger.error(`[PlayerService] 转换Player实例失败: ${error.message}`);
-
-      // 如果转换失败，回退到原来的动态方法注入方式
-      this.logger.warn(`[PlayerService] 回退到动态方法注入模式`);
-      return this._addPlayerDataMethodsLegacy(playerData);
-    }
-  }
-
-  /**
-   * 原来的动态方法注入实现（作为回退方案）
-   * @param {Object} playerData 玩家数据
-   * @returns {Object} 增强后的玩家数据
-   * @private
-   */
-  _addPlayerDataMethodsLegacy(playerData) {
-    // 获取仓库使用情况
-    playerData.getInventoryUsage = function() {
-      const inventorySize = Object.values(this.inventory).reduce((sum, item) => sum + (item.quantity), 0);
-      return inventorySize;
-    };
-
-    // 获取狗粮防护状态
-    playerData.getDogFoodStatus = function() {
-      const now = Date.now();
-      if (this.protection?.dogFood?.effectEndTime > now) {
-        const remainingTime = Math.ceil((this.protection.dogFood.effectEndTime - now) / (1000 * 60));
-        return `${this.protection.dogFood.type} (${remainingTime}分钟)`;
-      }
-      return '无防护';
-    };
-
-    // 获取偷菜冷却状态
-    playerData.getStealCooldownStatus = function() {
-      const now = Date.now();
-      if (this.stealing?.cooldownEndTime > now) {
-        const remainingTime = Math.ceil((this.stealing.cooldownEndTime - now) / (1000 * 60));
-        return `冷却中 (${remainingTime}分钟)`;
-      }
-      return '可偷菜';
-    };
-
-    return playerData;
-  }
 
 }
 

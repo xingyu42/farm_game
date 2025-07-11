@@ -57,7 +57,7 @@ export class farm extends plugin {
       // 添加定时任务，每分钟检查作物状态
       task: [
         {
-          cron: '0 * * * * ?',  // 每分钟执行一次
+          cron: '0 * * * * *',  // 每分钟执行一次（修复：? 改为 *）
           name: '更新作物状态',
           fnc: () => this.updateCropsStatus()
         }
@@ -318,13 +318,26 @@ export class farm extends plugin {
    */
   async plantCrop(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(?<nc>nc)?种植\s+(?<landId>\d+)\s+(?<cropName>.+)$/);
-      if (!match || !match.groups) {
+      if (!match?.groups) {
         await e.reply('❌ 格式错误！使用: #种植 [土地编号] [作物名称]');
         return true;
       }
+
       const { landId, cropName } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
+
+      if (!cropName.trim()) {
+        await e.reply('❌ 作物名称不能为空');
+        return true;
+      }
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -343,7 +356,7 @@ export class farm extends plugin {
       
       // 调用种植服务
       const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.plantCrop(userId, parseInt(landId), cropType)
+      const result = await plantingService.plantCrop(userId, landIdNum, cropType)
       
       e.reply(result.message)
       return true
@@ -359,13 +372,26 @@ export class farm extends plugin {
    */
   async plantCropReverse(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(?<nc>nc)?种植\s+(?<cropName>.+)\s+(?<landId>\d+)$/);
-      if (!match || !match.groups) {
+      if (!match?.groups) {
         await e.reply('❌ 格式错误！使用: #种植 [作物名称] [土地编号]');
         return true;
       }
+
       const { cropName, landId } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
+
+      if (!cropName.trim()) {
+        await e.reply('❌ 作物名称不能为空');
+        return true;
+      }
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -384,7 +410,7 @@ export class farm extends plugin {
       
       // 调用种植服务
       const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.plantCrop(userId, parseInt(landId), cropType)
+      const result = await plantingService.plantCrop(userId, landIdNum, cropType)
       
       e.reply(result.message)
       return true
@@ -400,23 +426,39 @@ export class farm extends plugin {
    */
   async waterCrop(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(?<nc>nc)?浇水\s+(?<landId>\d+)$/);
-      if (!match || !match.groups) {
+      if (!match?.groups) {
         await e.reply('❌ 格式错误！使用: #浇水 [土地编号]');
         return true;
       }
+
       const { landId } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
       const playerService = serviceContainer.getService('playerService')
+      const plantingService = serviceContainer.getService('plantingService')
 
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
-      
-      // TODO: 实现浇水逻辑
-      e.reply(`浇水功能开发中，将为第${landId}块土地浇水`)
+
+      // 执行浇水
+      const result = await plantingService.waterCrop(userId, landIdNum)
+
+      if (result.success) {
+        await e.reply(result.message)
+      } else {
+        await e.reply(result.message)
+      }
+
       return true
     } catch (error) {
       logger.error('[农场游戏] 浇水失败:', error)
@@ -430,28 +472,57 @@ export class farm extends plugin {
    */
   async fertilizeCrop(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(?<nc>nc)?施肥\s+(?<landId>\d+)$/);
-      if (!match || !match.groups) {
-        await e.reply('❌ 格式错误！使用: #施肥 [土地编号]');
+      // 支持两种格式：
+      // #施肥 1          -> 自动选择最好的肥料
+      // #施肥 1 普通肥料  -> 使用指定肥料
+      const match = e.msg.match(/^#(?<nc>nc)?施肥\s+(?<landId>\d+)(?:\s+(?<fertilizer>.+))?$/);
+      if (!match?.groups) {
+        await e.reply('❌ 格式错误！\n使用方法：\n#施肥 [土地编号] - 自动选择最好的肥料\n#施肥 [土地编号] [肥料名称] - 使用指定肥料');
         return true;
       }
-      const { landId } = match.groups;
-      const userId = e.user_id
-      
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
+
+      const { landId, fertilizer } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
+
+      const userId = e.user_id;
+
+      await this._ensureServicesInitialized();
+      const playerService = serviceContainer.getService('playerService');
+      const plantingService = serviceContainer.getService('plantingService');
 
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      
-      // TODO: 实现施肥逻辑
-      e.reply(`施肥功能开发中，将为第${landId}块土地施肥`)
-      return true
+      await playerService.ensurePlayer(userId);
+
+      // 解析肥料类型（如果指定了）
+      let fertilizerType = null;
+      if (fertilizer) {
+        fertilizerType = await this._parseFertilizerType(fertilizer.trim());
+        if (!fertilizerType) {
+          await e.reply(`❌ 未知的肥料类型："${fertilizer}"\n可用肥料：普通肥料、高级肥料、顶级肥料`);
+          return true;
+        }
+      }
+
+      // 执行施肥
+      const result = await plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
+
+      if (result.success) {
+        await e.reply(result.message);
+      } else {
+        await e.reply(result.message);
+      }
+
+      return true;
     } catch (error) {
-      logger.error('[农场游戏] 施肥失败:', error)
-      e.reply('施肥失败，请稍后重试')
-      return true
+      logger.error('[农场游戏] 施肥失败:', error);
+      e.reply('施肥失败，请稍后重试');
+      return true;
     }
   }
 
@@ -460,23 +531,39 @@ export class farm extends plugin {
    */
   async pesticideCrop(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(?<nc>nc)?除虫\s+(?<landId>\d+)$/);
-      if (!match || !match.groups) {
+      if (!match?.groups) {
         await e.reply('❌ 格式错误！使用: #除虫 [土地编号]');
         return true;
       }
+
       const { landId } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
       const playerService = serviceContainer.getService('playerService')
+      const plantingService = serviceContainer.getService('plantingService')
 
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
-      
-      // TODO: 实现除虫逻辑
-      e.reply(`除虫功能开发中，将为第${landId}块土地除虫`)
+
+      // 执行除虫
+      const result = await plantingService.pesticideCrop(userId, landIdNum)
+
+      if (result.success) {
+        await e.reply(result.message)
+      } else {
+        await e.reply(result.message)
+      }
+
       return true
     } catch (error) {
       logger.error('[农场游戏] 除虫失败:', error)
@@ -490,13 +577,21 @@ export class farm extends plugin {
    */
   async harvestCrop(e) {
     try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
+      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(?<nc>nc)?收获\s+(?<landId>\d+)$/);
-      if (!match || !match.groups) {
+      if (!match?.groups) {
         await e.reply('❌ 格式错误！使用: #收获 [土地编号]');
         return true;
       }
+
       const { landId } = match.groups;
+
+      // 输入验证增强
+      const landIdNum = parseInt(landId);
+      if (isNaN(landIdNum) || landIdNum <= 0) {
+        await e.reply('❌ 土地编号必须为正整数');
+        return true;
+      }
       const userId = e.user_id
       
       await this._ensureServicesInitialized()
@@ -508,7 +603,7 @@ export class farm extends plugin {
       
       // 调用收获服务
       const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.harvestCrop(userId, parseInt(landId))
+      const result = await plantingService.harvestCrop(userId, landIdNum)
       
       e.reply(result.message)
       return true
@@ -560,38 +655,59 @@ export class farm extends plugin {
   }
 
   /**
-   * 解析作物类型（支持中文名称映射）
+   * 解析作物类型（支持中文名称映射和配置化别名）
    * @param {string} cropName 作物名称
    * @returns {string|null} 作物类型ID
    */
   async _parseCropType(cropName) {
     const cropsConfig = this.config.crops
-    
-    // 直接匹配作物ID
+
+    // 1. 直接匹配作物ID
     if (cropsConfig[cropName]) {
       return cropName
     }
-    
-    // 匹配中文名称
+
+    // 2. 统一匹配中文名称和配置化别名（仅精确匹配）
+    const normalizedCropName = cropName.replace('种子', '')
+
     for (const [cropId, config] of Object.entries(cropsConfig)) {
-      if (config.name === cropName || 
-          config.name === cropName.replace('种子', '') ||
-          cropName.includes(config.name)) {
-        return cropId
+      const matchTargets = [config.name, ...(config.aliases || [])]
+
+      for (const target of matchTargets) {
+        if (target === cropName || target === normalizedCropName) {
+          return cropId
+        }
       }
     }
-    
-    // 特殊处理常见别名
-    const aliasMap = {
-      '胡萝卜': 'carrot',
-      '萝卜': 'carrot', 
-      '西红柿': 'tomato',
-      '番茄': 'tomato',
-      '小麦': 'wheat',
-      '麦子': 'wheat'
+
+    return null
+  }
+
+  /**
+   * 解析肥料类型（支持中文名称映射和配置化别名）
+   * @param {string} fertilizerName 肥料名称
+   * @returns {string|null} 肥料类型ID
+   */
+  async _parseFertilizerType(fertilizerName) {
+    const itemsConfig = this.config.items
+    const fertilizersConfig = itemsConfig?.fertilizers || {}
+
+    // 2. 统一匹配中文名称和配置化别名
+    const normalizedFertilizerName = fertilizerName.replace('肥料', '')
+
+    for (const [fertilizerId, config] of Object.entries(fertilizersConfig)) {
+      // 构建匹配目标数组：名称 + 别名
+      const matchTargets = [config.name, ...(config.aliases || [])]
+
+      // 精确匹配
+      for (const target of matchTargets) {
+        if (target === fertilizerName || target === normalizedFertilizerName) {
+          return fertilizerId
+        }
+      }
     }
-    
-    return aliasMap[cropName] || null
+
+    return null
   }
 }
 

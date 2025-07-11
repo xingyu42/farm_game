@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// 注意：logger 是 Miao-Yunzai 框架提供的全局变量，无需导入
+
 /**
  * 文件存储操作工具类
  * 提供统一的文件读写接口，支持JSON数据持久化
@@ -26,7 +28,9 @@ export class FileStorage {
     try {
       await fs.mkdir(this.baseDir, { recursive: true })
     } catch (error) {
-      logger.error('[FileStorage] 初始化存储目录失败:', error)
+      logger.error(`[FileStorage] 初始化存储目录失败 ${this.baseDir}:`, error)
+      // 保留原始错误堆栈跟踪
+      throw new Error(`FileStorage initialization failed: ${error.message}`, { cause: error })
     }
   }
 
@@ -43,9 +47,14 @@ export class FileStorage {
       return JSON.parse(data)
     } catch (error) {
       if (error.code === 'ENOENT') {
+        logger.info(`[FileStorage] 文件不存在，返回默认值: ${filename}`)
         return defaultValue
       }
       logger.error(`[FileStorage] 读取文件失败 ${filename}:`, error)
+      // 对于JSON解析错误，抛出异常而不是返回默认值，保留原始堆栈
+      if (error instanceof SyntaxError) {
+        throw new Error(`JSON parse error in file ${filename}: ${error.message}`, { cause: error })
+      }
       return defaultValue
     }
   }
@@ -59,11 +68,14 @@ export class FileStorage {
   async writeJSON(filename, data) {
     try {
       const filePath = join(this.baseDir, filename)
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+      const jsonData = JSON.stringify(data, null, 2)
+      await fs.writeFile(filePath, jsonData, 'utf8')
+      logger.info(`[FileStorage] 成功写入文件: ${filename}`)
       return true
     } catch (error) {
       logger.error(`[FileStorage] 写入文件失败 ${filename}:`, error)
-      return false
+      // 对于关键操作失败，抛出异常而不是静默返回false
+      throw new Error(`Failed to write file ${filename}: ${error.message}`, { cause: error })
     }
   }
 
