@@ -128,22 +128,57 @@ class ShopService {
         };
       }
       
-      // 执行购买事务
-      const playerKey = this.redis.generateKey('player', userId);
-      
-      return await this.redis.transaction(async (multi) => {
-        // 扣除金币
-        const updateResult = await this.playerService.addCoins(userId, -totalCost);
-        
-        // 添加物品到仓库
-        const addResult = await this.inventoryService.addItem(userId, itemId, quantity);
-        
-        if (!addResult.success) {
-          throw new Error(`添加物品失败: ${addResult.message}`);
+      // 执行购买事务 - 使用正确的PlayerDataService事务模式
+      return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
+        // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
+        const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+
+        if (!playerData) {
+          throw new Error('玩家不存在');
         }
-        
+
+        // 在事务内再次检查金币（防止并发修改）
+        if (playerData.coins < totalCost) {
+          throw new Error(`金币不足！需要 ${totalCost} 金币，当前拥有: ${playerData.coins}`);
+        }
+
+        // 在事务内检查仓库容量
+        const currentUsage = this._calculateInventoryUsage(playerData.inventory || {});
+        const capacity = playerData.inventory_capacity || playerData.inventoryCapacity || 20;
+
+        if (currentUsage + quantity > capacity) {
+          throw new Error(`仓库容量不足！当前 ${currentUsage}/${capacity}，需要添加 ${quantity} 个物品`);
+        }
+
+        // 扣除金币 - 使用EconomyService的内部方法
+        const economyService = this.playerService.getEconomyService();
+        const actualChange = economyService._updateCoinsInTransaction(playerData, -totalCost);
+
+        // 添加物品到仓库 - 直接操作库存数据
+        if (!playerData.inventory) {
+          playerData.inventory = {};
+        }
+
+        if (playerData.inventory[itemId]) {
+          playerData.inventory[itemId].quantity += quantity;
+        } else {
+          const itemConfig = this.itemResolver.findItemById(itemId);
+          playerData.inventory[itemId] = {
+            quantity,
+            name: itemConfig?.name || itemId,
+            category: itemConfig?.category || 'unknown',
+            lastUpdated: Date.now()
+          };
+        }
+
+        playerData.lastUpdated = Date.now();
+
+        // 保存数据 - 使用正确的Hash写入方式
+        const serializer = this.playerService.getDataService().getSerializer();
+        multi.hSet(playerKey, serializer.serializeForHash(playerData));
+
         this.logger.info(`[ShopService] 玩家 ${userId} 购买: ${itemName} x${quantity}, 花费 ${totalCost} 金币`);
-        
+
         return {
           success: true,
           message: `成功购买 ${quantity} 个 ${itemName}，花费 ${totalCost} 金币`,
@@ -152,8 +187,8 @@ class ShopService {
             quantity,
             totalCost
           },
-          remainingCoins: updateResult.coins,
-          inventoryUsage: addResult.newUsage
+          remainingCoins: playerData.coins,
+          inventoryUsage: this._calculateInventoryUsage(playerData.inventory)
         };
       });
     } catch (error) {
@@ -203,20 +238,49 @@ class ShopService {
       
       const totalEarnings = itemInfo.sellPrice * quantity;
       
-      // 执行出售事务
-      return await this.redis.transaction(async (multi) => {
-        // 移除物品
-        const removeResult = await this.inventoryService.removeItem(userId, itemId, quantity);
-        
-        if (!removeResult.success) {
-          throw new Error(`移除物品失败: ${removeResult.message}`);
+      // 执行出售事务 - 使用正确的PlayerDataService事务模式
+      return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
+        // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
+        const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+
+        if (!playerData) {
+          throw new Error('玩家不存在');
         }
-        
-        // 添加金币
-        const updateResult = await this.playerService.addCoins(userId, totalEarnings);
-        
+
+        // 在事务内再次检查物品数量（防止并发修改）
+        if (!playerData.inventory || !playerData.inventory[itemId]) {
+          throw new Error(`仓库中没有 ${itemName}`);
+        }
+
+        const currentQuantity = playerData.inventory[itemId].quantity;
+        if (currentQuantity < quantity) {
+          throw new Error(`数量不足！仓库中有 ${currentQuantity} 个，要出售 ${quantity} 个`);
+        }
+
+        // 移除物品 - 直接操作库存数据
+        playerData.inventory[itemId].quantity -= quantity;
+        let remainingQuantity = playerData.inventory[itemId].quantity;
+
+        // 如果数量为0，删除物品记录
+        if (playerData.inventory[itemId].quantity <= 0) {
+          delete playerData.inventory[itemId];
+          remainingQuantity = 0;
+        } else {
+          playerData.inventory[itemId].lastUpdated = Date.now();
+        }
+
+        // 添加金币 - 使用EconomyService的内部方法
+        const economyService = this.playerService.getEconomyService();
+        const actualChange = economyService._updateCoinsInTransaction(playerData, totalEarnings);
+
+        playerData.lastUpdated = Date.now();
+
+        // 保存数据 - 使用正确的Hash写入方式
+        const serializer = this.playerService.getDataService().getSerializer();
+        multi.hSet(playerKey, serializer.serializeForHash(playerData));
+
         this.logger.info(`[ShopService] 玩家 ${userId} 出售: ${itemName} x${quantity}, 获得 ${totalEarnings} 金币`);
-        
+
         return {
           success: true,
           message: `成功出售 ${quantity} 个 ${itemName}，获得 ${totalEarnings} 金币`,
@@ -225,8 +289,8 @@ class ShopService {
             quantity,
             totalEarnings
           },
-          remainingQuantity: removeResult.remaining,
-          newCoins: updateResult.coins
+          remainingQuantity,
+          newCoins: playerData.coins
         };
       });
     } catch (error) {
@@ -270,16 +334,51 @@ class ShopService {
         };
       }
       
-      // 执行批量出售
-      return await this.redis.transaction(async (multi) => {
-        for (const crop of cropItems) {
-          await this.inventoryService.removeItem(userId, crop.id, crop.quantity);
+      // 执行批量出售 - 使用正确的PlayerDataService事务模式
+      return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
+        // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
+        const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+
+        if (!playerData) {
+          throw new Error('玩家不存在');
         }
-        
-        await this.playerService.addCoins(userId, totalEarnings);
-        
+
+        // 在事务内再次验证所有作物数量（防止并发修改）
+        for (const crop of cropItems) {
+          if (!playerData.inventory || !playerData.inventory[crop.id]) {
+            throw new Error(`仓库中没有 ${crop.name}`);
+          }
+
+          const currentQuantity = playerData.inventory[crop.id].quantity;
+          if (currentQuantity < crop.quantity) {
+            throw new Error(`${crop.name} 数量不足！仓库中有 ${currentQuantity} 个，要出售 ${crop.quantity} 个`);
+          }
+        }
+
+        // 移除所有作物 - 直接操作库存数据
+        for (const crop of cropItems) {
+          playerData.inventory[crop.id].quantity -= crop.quantity;
+
+          // 如果数量为0，删除物品记录
+          if (playerData.inventory[crop.id].quantity <= 0) {
+            delete playerData.inventory[crop.id];
+          } else {
+            playerData.inventory[crop.id].lastUpdated = Date.now();
+          }
+        }
+
+        // 添加金币 - 使用EconomyService的内部方法
+        const economyService = this.playerService.getEconomyService();
+        const actualChange = economyService._updateCoinsInTransaction(playerData, totalEarnings);
+
+        playerData.lastUpdated = Date.now();
+
+        // 保存数据 - 使用正确的Hash写入方式
+        const serializer = this.playerService.getDataService().getSerializer();
+        multi.hSet(playerKey, serializer.serializeForHash(playerData));
+
         this.logger.info(`[ShopService] 玩家 ${userId} 批量出售作物，获得 ${totalEarnings} 金币`);
-        
+
         return {
           success: true,
           message: `成功出售 ${cropItems.length} 种作物，获得 ${totalEarnings} 金币`,
@@ -362,6 +461,27 @@ class ShopService {
    */
   _getCategoryDisplayName(category) {
     return this.itemResolver.getCategoryDisplayName(category);
+  }
+
+  /**
+   * 计算仓库使用量（内部方法）
+   * @param {Object} inventory 仓库数据
+   * @returns {number} 使用量
+   * @private
+   */
+  _calculateInventoryUsage(inventory) {
+    if (!inventory || typeof inventory !== 'object') {
+      return 0;
+    }
+
+    let totalUsage = 0;
+    for (const item of Object.values(inventory)) {
+      if (item && typeof item.quantity === 'number') {
+        totalUsage += item.quantity;
+      }
+    }
+
+    return totalUsage;
   }
 }
 

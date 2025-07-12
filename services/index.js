@@ -8,7 +8,7 @@ import Config from '../models/Config.js';
 import redisClient from '../common/redisClient.js';
 
 // 导入业务服务
-import PlayerService from './PlayerService.js';
+import PlayerManagerService from './player/PlayerManagerService.js';
 import { PlantingService } from './PlantingService.js';
 import { InventoryService } from './InventoryService.js';
 import { ShopService } from './ShopService.js';
@@ -35,8 +35,8 @@ class ServiceContainer {
     }
 
 
-    // 实例化PlayerService
-    this.services.playerService = new PlayerService(redisClient, config);
+    // 实例化PlayerManagerService（新的重构后的服务）
+    this.services.playerService = new PlayerManagerService(redisClient, config);
 
     // 实例化PlantingService
     this.services.plantingService = new PlantingService(redisClient, config);
