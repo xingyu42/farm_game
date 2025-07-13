@@ -38,8 +38,13 @@ class ServiceContainer {
     // 实例化PlayerManagerService（新的重构后的服务）
     this.services.playerService = new PlayerManagerService(redisClient, config);
 
-    // 实例化PlantingService
-    this.services.plantingService = new PlantingService(redisClient, config);
+    // 实例化PlantingService（重构后需要 playerDataService 依赖）
+    this.services.plantingService = new PlantingService(
+      redisClient,
+      config,
+      null, // logger 使用默认值
+      this.services.playerService.getDataService() // 注入 PlayerDataService
+    );
 
     // 实例化InventoryService
     this.services.inventoryService = new InventoryService(redisClient, config);

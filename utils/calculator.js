@@ -501,6 +501,7 @@ class Calculator {
 }
 
 // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 19:48:40 +08:00; Reason: Shrimp Task ID: #10c63387, adding static calculateInventoryUsage method to unify inventory calculation logic; Principle_Applied: DRY-CodeReuse-Standardization;}}
-export default Calculator;
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-13 15:15:00 +08:00; Reason: PlantingService重构测试, adding named export for Calculator to support refactored services; Principle_Applied: ModuleSystem-Compatibility;}}
+export { Calculator };
 
 // {{END MODIFICATIONS}}
