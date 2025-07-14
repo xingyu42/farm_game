@@ -237,7 +237,7 @@ export class InventoryService {
     try {
       const inventory = await this.getInventory(userId);
       const items = [];
-      
+
       // 按类别分组物品
       const categories = {
         seeds: '种子',
@@ -247,23 +247,24 @@ export class InventoryService {
         materials: '材料',
         unknown: '其他'
       };
-      
+
       const groupedItems = {};
-      
+
       for (const [itemId, item] of Object.entries(inventory.items)) {
         const category = item.category || 'unknown';
         if (!groupedItems[category]) {
           groupedItems[category] = [];
         }
-        
+
         groupedItems[category].push({
           id: itemId,
           name: item.name,
           quantity: item.quantity,
-          sellPrice: this._getItemSellPrice(itemId)
+          sellPrice: this._getItemSellPrice(itemId),
+          locked: Boolean(item.locked) // 添加锁定状态
         });
       }
-      
+
       // 按类别顺序组织显示
       for (const [categoryKey, categoryName] of Object.entries(categories)) {
         if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
@@ -273,7 +274,7 @@ export class InventoryService {
           });
         }
       }
-      
+
       return {
         inventory: items,
         usage: inventory.usage,
@@ -469,14 +470,14 @@ export class InventoryService {
   async unlockItems(userId, itemIds) {
     try {
       const results = [];
-      
+
       for (const itemId of itemIds) {
         const result = await this.unlockItem(userId, itemId);
         results.push({ itemId, ...result });
       }
-      
+
       const successful = results.filter(r => r.success).length;
-      
+
       return {
         success: successful === itemIds.length,
         message: `批量解锁完成，成功解锁 ${successful}/${itemIds.length} 个物品`,
@@ -484,6 +485,42 @@ export class InventoryService {
       };
     } catch (error) {
       this.logger.error(`[InventoryService] 批量解锁物品失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取锁定物品列表
+   * @param {string} userId 用户ID
+   * @returns {Object} 锁定物品信息
+   */
+  async getLockedItems(userId) {
+    try {
+      const inventory = await this.getInventory(userId);
+      const lockedItems = [];
+
+      for (const [itemId, item] of Object.entries(inventory.items)) {
+        if (item.locked) {
+          lockedItems.push({
+            id: itemId,
+            name: item.name || this._getItemName(itemId),
+            quantity: item.quantity,
+            lockedAt: item.lockedAt,
+            category: item.category || 'unknown'
+          });
+        }
+      }
+
+      // 按锁定时间排序（最新的在前）
+      lockedItems.sort((a, b) => (b.lockedAt || 0) - (a.lockedAt || 0));
+
+      return {
+        items: lockedItems,
+        count: lockedItems.length,
+        isEmpty: lockedItems.length === 0
+      };
+    } catch (error) {
+      this.logger.error(`[InventoryService] 获取锁定物品列表失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }

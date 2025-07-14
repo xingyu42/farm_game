@@ -15,6 +15,7 @@ import { ShopService } from './ShopService.js';
 import { LandService } from './LandService.js';
 import { ProtectionService } from './ProtectionService.js';
 import { StealService } from './StealService.js';
+import { ItemResolver } from '../utils/ItemResolver.js';
 
 class ServiceContainer {
   constructor() {
@@ -36,6 +37,9 @@ class ServiceContainer {
       config = Config;
     }
 
+
+    // 实例化ItemResolver（通用工具服务）
+    this.services.itemResolver = new ItemResolver(config);
 
     // 实例化PlayerManagerService（新的重构后的服务）
     this.services.playerService = new PlayerManagerService(redisClient, config);

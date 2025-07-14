@@ -9,6 +9,9 @@
 
 import serviceContainer from '../services/index.js';
 
+// 使用全局logger，如果不存在则使用console
+const logger = global.logger || console;
+
 export class InventoryCommands extends plugin {
   constructor() {
     super({
@@ -20,6 +23,18 @@ export class InventoryCommands extends plugin {
         {
           reg: '^#(nc)?仓库$',
           fnc: 'viewInventory'
+        },
+        {
+          reg: '^#(nc)?锁定\\s+(.+)$',
+          fnc: 'lockItem'
+        },
+        {
+          reg: '^#(nc)?解锁\\s+(.+)$',
+          fnc: 'unlockItem'
+        },
+        {
+          reg: '^#(nc)?(查看锁定|锁定列表)$',
+          fnc: 'viewLockedItems'
         }
       ]
     });
@@ -56,26 +71,200 @@ export class InventoryCommands extends plugin {
       
       for (const category of inventoryData.inventory) {
         message += `📦 ${category.category}\n`;
-        
+
         for (const item of category.items) {
           const sellPriceText = item.sellPrice > 0 ? ` (售价: ${item.sellPrice}金币)` : '';
-          message += `   ${item.name} x${item.quantity}${sellPriceText}\n`;
+          const lockIcon = item.locked ? '🔒' : '';
+          message += `   ${lockIcon}${item.name} x${item.quantity}${sellPriceText}\n`;
         }
-        
+
         message += '\n';
       }
       
       message += '━━━━━━━━━━━━━━━━━━━━\n';
       message += '💡 使用 #nc出售 [物品名] [数量] 出售物品\n';
+      message += '💡 使用 #nc锁定 [物品名] 锁定物品\n';
+      message += '💡 使用 #nc查看锁定 查看锁定的物品\n';
       message += '💡 使用 #nc商店 查看可购买的物品';
-      
+
       await e.reply(message);
       return true;
-      
+
     } catch (error) {
       logger.error(`[InventoryCommands] 查看仓库失败: ${error.message}`);
       await e.reply('❌ 查看仓库失败，请稍后再试');
       return true;
     }
   }
-} 
+
+  /**
+   * 锁定物品
+   * @param {Object} e Miao-Yunzai事件对象
+   */
+  async lockItem(e) {
+    try {
+      const userId = e.user_id.toString();
+      const itemName = e.msg.replace(/^#(nc)?锁定\s+/, '').trim();
+
+      if (!itemName) {
+        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定 [物品名]');
+        return true;
+      }
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+
+      const inventoryService = serviceContainer.getService('inventoryService');
+      const playerService = serviceContainer.getService('playerService');
+
+      // 确保玩家存在
+      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+
+      // 查找物品ID
+      const itemResolver = serviceContainer.getService('itemResolver');
+      const itemId = itemResolver.findItemByName(itemName);
+
+      if (!itemId) {
+        await e.reply(`❌ 未找到物品 "${itemName}"\n💡 请检查物品名称是否正确`);
+        return true;
+      }
+
+      // 执行锁定
+      const result = await inventoryService.lockItem(userId, itemId);
+
+      if (result.success) {
+        await e.reply(`🔒 ${result.message}`);
+      } else {
+        await e.reply(`❌ ${result.message}`);
+      }
+
+      return true;
+
+    } catch (error) {
+      logger.error(`[InventoryCommands] 锁定物品失败: ${error.message}`);
+      await e.reply('❌ 锁定物品失败，请稍后再试');
+      return true;
+    }
+  }
+
+  /**
+   * 解锁物品
+   * @param {Object} e Miao-Yunzai事件对象
+   */
+  async unlockItem(e) {
+    try {
+      const userId = e.user_id.toString();
+      const itemName = e.msg.replace(/^#(nc)?解锁\s+/, '').trim();
+
+      if (!itemName) {
+        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁 [物品名]');
+        return true;
+      }
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+
+      const inventoryService = serviceContainer.getService('inventoryService');
+      const playerService = serviceContainer.getService('playerService');
+
+      // 确保玩家存在
+      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+
+      // 查找物品ID
+      const itemResolver = serviceContainer.getService('itemResolver');
+      const itemId = itemResolver.findItemByName(itemName);
+
+      if (!itemId) {
+        await e.reply(`❌ 未找到物品 "${itemName}"\n💡 请检查物品名称是否正确`);
+        return true;
+      }
+
+      // 执行解锁
+      const result = await inventoryService.unlockItem(userId, itemId);
+
+      if (result.success) {
+        await e.reply(`🔓 ${result.message}`);
+      } else {
+        await e.reply(`❌ ${result.message}`);
+      }
+
+      return true;
+
+    } catch (error) {
+      logger.error(`[InventoryCommands] 解锁物品失败: ${error.message}`);
+      await e.reply('❌ 解锁物品失败，请稍后再试');
+      return true;
+    }
+  }
+
+  /**
+   * 查看锁定的物品
+   * @param {Object} e Miao-Yunzai事件对象
+   */
+  async viewLockedItems(e) {
+    try {
+      const userId = e.user_id.toString();
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+
+      const inventoryService = serviceContainer.getService('inventoryService');
+      const playerService = serviceContainer.getService('playerService');
+
+      // 确保玩家存在
+      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+
+      // 获取锁定物品列表
+      const lockedData = await inventoryService.getLockedItems(userId);
+
+      if (lockedData.isEmpty) {
+        await e.reply('🔓 你没有锁定任何物品\n💡 使用 #nc锁定 [物品名] 来锁定物品');
+        return true;
+      }
+
+      // 构建锁定物品显示
+      let message = `🔒 锁定物品列表 (${lockedData.count} 个)\n`;
+      message += '━━━━━━━━━━━━━━━━━━━━\n';
+
+      // 按类别分组显示
+      const categories = {
+        seeds: '种子',
+        crops: '作物',
+        fertilizer: '肥料',
+        defense: '防御',
+        materials: '材料',
+        unknown: '其他'
+      };
+
+      const groupedItems = {};
+      for (const item of lockedData.items) {
+        const category = item.category || 'unknown';
+        if (!groupedItems[category]) {
+          groupedItems[category] = [];
+        }
+        groupedItems[category].push(item);
+      }
+
+      for (const [categoryKey, categoryName] of Object.entries(categories)) {
+        if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
+          message += `📦 ${categoryName}\n`;
+          for (const item of groupedItems[categoryKey]) {
+            message += `   🔒${item.name} x${item.quantity}\n`;
+          }
+          message += '\n';
+        }
+      }
+
+      message += '━━━━━━━━━━━━━━━━━━━━\n';
+      message += '💡 使用 #nc解锁 [物品名] 解锁物品';
+
+      await e.reply(message);
+      return true;
+
+    } catch (error) {
+      logger.error(`[InventoryCommands] 查看锁定物品失败: ${error.message}`);
+      await e.reply('❌ 查看锁定物品失败，请稍后再试');
+      return true;
+    }
+  }
+}
