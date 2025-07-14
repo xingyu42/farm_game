@@ -9,7 +9,9 @@
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "jest": {
     "testEnvironment": "node",
@@ -39,6 +41,8 @@
     "yaml": "^2.8.0"
   },
   "devDependencies": {
-    "jest": "^30.0.3"
+    "jest": "^30.0.3",
+    "eslint": "^9.18.0",
+    "@eslint/js": "^9.31.0"
   }
 }

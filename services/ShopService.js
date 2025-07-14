@@ -9,7 +9,7 @@
 
 import { ItemResolver } from '../utils/ItemResolver.js';
 
-class ShopService {
+export class ShopService {
   constructor(redisClient, config, inventoryService, playerService, logger = null) {
     this.redis = redisClient;
     this.config = config;
@@ -225,6 +225,15 @@ class ShopService {
         };
       }
       
+      // 检查物品是否被锁定
+      const isLocked = await this.inventoryService.isItemLocked(userId, itemId);
+      if (isLocked) {
+        return {
+          success: false,
+          message: `${itemName} 已被锁定，无法出售`
+        };
+      }
+      
       // 检查仓库中的物品数量
       const currentQuantity = await this.inventoryService.getItemQuantity(userId, itemId);
       
@@ -250,6 +259,11 @@ class ShopService {
         // 在事务内再次检查物品数量（防止并发修改）
         if (!playerData.inventory || !playerData.inventory[itemId]) {
           throw new Error(`仓库中没有 ${itemName}`);
+        }
+
+        // 在事务内再次检查物品是否被锁定
+        if (playerData.inventory[itemId].locked) {
+          throw new Error(`${itemName} 已被锁定，无法出售`);
         }
 
         const currentQuantity = playerData.inventory[itemId].quantity;
@@ -310,9 +324,9 @@ class ShopService {
       const cropItems = [];
       let totalEarnings = 0;
       
-      // 找出所有作物
+      // 找出所有作物（排除被锁定的）
       for (const [itemId, item] of Object.entries(inventory.items)) {
-        if (item.category === 'crops') {
+        if (item.category === 'crops' && !item.locked) {
           const itemInfo = this._getItemInfo(itemId);
           if (itemInfo && itemInfo.sellPrice) {
             const earnings = itemInfo.sellPrice * item.quantity;
@@ -343,10 +357,15 @@ class ShopService {
           throw new Error('玩家不存在');
         }
 
-        // 在事务内再次验证所有作物数量（防止并发修改）
+        // 在事务内再次验证所有作物数量和锁定状态（防止并发修改）
         for (const crop of cropItems) {
           if (!playerData.inventory || !playerData.inventory[crop.id]) {
             throw new Error(`仓库中没有 ${crop.name}`);
+          }
+
+          // 检查是否被锁定
+          if (playerData.inventory[crop.id].locked) {
+            throw new Error(`${crop.name} 已被锁定，无法出售`);
           }
 
           const currentQuantity = playerData.inventory[crop.id].quantity;
@@ -486,4 +505,3 @@ class ShopService {
 }
 
 // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export; Principle_Applied: ModuleSystem-Standardization;}}
-export { ShopService };

@@ -22,34 +22,46 @@ class Config {
 
   /** 初始化配置 */
   initCfg() {
-    let configPath = path.join(PROJECT_PATH, 'config', 'config');
-    let defaultPath = path.join(PROJECT_PATH, 'config', 'default_config');
+    try {
+      let configPath = path.join(PROJECT_PATH, 'config', 'config');
+      let defaultPath = path.join(PROJECT_PATH, 'config', 'default_config');
 
-    // 确保配置目录存在
-    if (!fs.existsSync(configPath)) {
-      fs.mkdirSync(configPath, { recursive: true });
-    }
-
-    // 确保默认配置目录存在
-    if (!fs.existsSync(defaultPath)) {
-      fs.mkdirSync(defaultPath, { recursive: true });
-    }
-
-    // 读取默认配置目录下的所有yaml文件
-    if (fs.existsSync(defaultPath)) {
-      const files = fs.readdirSync(defaultPath).filter(file => file.endsWith('.yaml'));
-      for (let file of files) {
-        const configFile = path.join(configPath, file);
-        const defaultFile = path.join(defaultPath, file);
-        
-        // 如果config目录下没有对应文件，从default_config复制
-        if (!fs.existsSync(configFile)) {
-          fs.copyFileSync(defaultFile, configFile);
-        }
-        
-        // 监听配置文件变化
-        this.watch(configFile, file.replace('.yaml', ''), 'config');
+      // 确保配置目录存在
+      if (!fs.existsSync(configPath)) {
+        fs.mkdirSync(configPath, { recursive: true });
       }
+
+      // 确保默认配置目录存在
+      if (!fs.existsSync(defaultPath)) {
+        fs.mkdirSync(defaultPath, { recursive: true });
+      }
+
+      // 读取默认配置目录下的所有yaml文件
+      if (fs.existsSync(defaultPath)) {
+        const files = fs.readdirSync(defaultPath).filter(file => file.endsWith('.yaml'));
+        for (let file of files) {
+          try {
+            const configFile = path.join(configPath, file);
+            const defaultFile = path.join(defaultPath, file);
+
+            // 如果config目录下没有对应文件，从default_config复制
+            if (!fs.existsSync(configFile)) {
+              fs.copyFileSync(defaultFile, configFile);
+              console.log(`[Config] 复制默认配置文件: ${file}`);
+            }
+
+            // 监听配置文件变化
+            this.watch(configFile, file.replace('.yaml', ''), 'config');
+          } catch (fileError) {
+            console.error(`[Config] 处理配置文件失败 [${file}]: ${fileError.message}`);
+            // 继续处理其他文件，不中断整个初始化过程
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[Config] 初始化配置失败: ${error.message}`);
+      // 配置初始化失败不应该导致整个应用崩溃
+      // 可以使用默认配置继续运行
     }
   }
 
@@ -76,6 +88,11 @@ class Config {
   /** 获取土地设置 */
   get land() {
     return this.getDefOrConfig('land');
+  }
+
+  /** 获取偷窃设置 */
+  get steal() {
+    return this.getDefOrConfig('steal');
   }
 
   /**
@@ -150,7 +167,7 @@ class Config {
     if (this.watcher[key]) return;
 
     const watcher = chokidar.watch(file);
-    watcher.on('change', path => {
+    watcher.on('change', _path => {
       delete this._configCache[key];
       this.logger.info(`[${PLUGIN_NAME}][修改配置文件][${type}][${name}]`);
       if (this[`change_${name}`]) {

@@ -2,6 +2,7 @@ node_modules/
 coverage/
 .cursor/
 tests/
+.claude/
 
 config.json
 FileScopeMCP-tree.json
@@ -11,4 +12,3 @@ FileScopeMCP-tree.json
 
 data/
 temp/
-GEMINI.md

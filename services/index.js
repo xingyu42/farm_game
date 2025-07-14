@@ -13,6 +13,8 @@ import { PlantingService } from './PlantingService.js';
 import { InventoryService } from './InventoryService.js';
 import { ShopService } from './ShopService.js';
 import { LandService } from './LandService.js';
+import { ProtectionService } from './ProtectionService.js';
+import { StealService } from './StealService.js';
 
 class ServiceContainer {
   constructor() {
@@ -62,6 +64,25 @@ class ServiceContainer {
       redisClient, 
       config, 
       this.services.playerService
+    );
+
+    // 实例化ProtectionService (需要依赖PlayerService)
+    this.services.protectionService = new ProtectionService(
+      redisClient,
+      config,
+      this.services.playerService,
+      null // logger 使用默认值
+    );
+
+    // 实例化StealService (需要依赖多个服务)
+    this.services.stealService = new StealService(
+      redisClient,
+      config,
+      this.services.playerService,
+      this.services.inventoryService,
+      this.services.protectionService,
+      this.services.landService,
+      null // logger 使用默认值
     );
 
     // TODO: 在后续任务中，这里将依次实例化其他服务

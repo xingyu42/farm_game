@@ -1,13 +1,13 @@
 
 
-import Calculator from '../utils/calculator.js';
+import { Calculator } from '../utils/calculator.js';
 import { ItemResolver } from '../utils/ItemResolver.js';
 
 /**
  * 仓库服务 - 管理玩家物品仓库（根据PRD v3.2设计）
  * 包含：物品添加、移除、查询、仓库扩容等功能
  */
-class InventoryService {
+export class InventoryService {
   constructor(redisClient, config, logger = null) {
     this.redis = redisClient;
     this.config = config;
@@ -208,7 +208,7 @@ class InventoryService {
       return inventory.items[itemId]?.quantity || 0;
     } catch (error) {
       this.logger.error(`[InventoryService] 检查物品数量失败 [${userId}]: ${error.message}`);
-      return 0;
+      throw error; // 重新抛出错误而不是返回默认值
     }
   }
 
@@ -224,7 +224,7 @@ class InventoryService {
       return inventory.usage + additionalItems <= inventory.capacity;
     } catch (error) {
       this.logger.error(`[InventoryService] 检查仓库容量失败 [${userId}]: ${error.message}`);
-      return false;
+      throw error; // 重新抛出错误而不是返回默认值
     }
   }
 
@@ -326,7 +326,167 @@ class InventoryService {
   _getItemSellPrice(itemId) {
     return this.itemResolver.getItemSellPrice(itemId);
   }
+
+  /**
+   * 锁定物品，防止被出售或使用
+   * @param {string} userId 用户ID
+   * @param {string} itemId 物品ID
+   * @returns {Object} 锁定结果
+   */
+  async lockItem(userId, itemId) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+      
+      return await this.redis.transaction(async (multi) => {
+        const playerData = await this.redis.get(playerKey);
+        
+        if (!playerData || !playerData.inventory || !playerData.inventory[itemId]) {
+          return {
+            success: false,
+            message: `仓库中没有 ${this._getItemName(itemId)}`
+          };
+        }
+        
+        // 设置锁定标志
+        playerData.inventory[itemId].locked = true;
+        playerData.inventory[itemId].lockedAt = Date.now();
+        playerData.lastUpdated = Date.now();
+        
+        multi.set(playerKey, this.redis.serialize(playerData));
+        
+        this.logger.info(`[InventoryService] 玩家 ${userId} 锁定物品: ${itemId}`);
+        
+        return {
+          success: true,
+          message: `成功锁定 ${this._getItemName(itemId)}`,
+          item: playerData.inventory[itemId]
+        };
+      });
+    } catch (error) {
+      this.logger.error(`[InventoryService] 锁定物品失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 解锁物品，恢复可用状态
+   * @param {string} userId 用户ID
+   * @param {string} itemId 物品ID
+   * @returns {Object} 解锁结果
+   */
+  async unlockItem(userId, itemId) {
+    try {
+      const playerKey = this.redis.generateKey('player', userId);
+      
+      return await this.redis.transaction(async (multi) => {
+        const playerData = await this.redis.get(playerKey);
+        
+        if (!playerData || !playerData.inventory || !playerData.inventory[itemId]) {
+          return {
+            success: false,
+            message: `仓库中没有 ${this._getItemName(itemId)}`
+          };
+        }
+        
+        // 移除锁定标志
+        delete playerData.inventory[itemId].locked;
+        delete playerData.inventory[itemId].lockedAt;
+        playerData.inventory[itemId].lastUpdated = Date.now();
+        playerData.lastUpdated = Date.now();
+        
+        multi.set(playerKey, this.redis.serialize(playerData));
+        
+        this.logger.info(`[InventoryService] 玩家 ${userId} 解锁物品: ${itemId}`);
+        
+        return {
+          success: true,
+          message: `成功解锁 ${this._getItemName(itemId)}`,
+          item: playerData.inventory[itemId]
+        };
+      });
+    } catch (error) {
+      this.logger.error(`[InventoryService] 解锁物品失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查物品是否已锁定
+   * @param {string} userId 用户ID
+   * @param {string} itemId 物品ID
+   * @returns {boolean} 是否已锁定
+   */
+  async isItemLocked(userId, itemId) {
+    try {
+      const inventory = await this.getInventory(userId);
+      const item = inventory.items[itemId];
+
+      if (!item) {
+        return false;
+      }
+
+      return Boolean(item.locked);
+    } catch (error) {
+      this.logger.error(`[InventoryService] 检查物品锁定状态失败 [${userId}]: ${error.message}`);
+      throw error; // 重新抛出错误而不是返回默认值
+    }
+  }
+
+  /**
+   * 批量锁定物品
+   * @param {string} userId 用户ID
+   * @param {Array<string>} itemIds 物品ID列表
+   * @returns {Object} 批量锁定结果
+   */
+  async lockItems(userId, itemIds) {
+    try {
+      const results = [];
+      
+      for (const itemId of itemIds) {
+        const result = await this.lockItem(userId, itemId);
+        results.push({ itemId, ...result });
+      }
+      
+      const successful = results.filter(r => r.success).length;
+      
+      return {
+        success: successful === itemIds.length,
+        message: `批量锁定完成，成功锁定 ${successful}/${itemIds.length} 个物品`,
+        results
+      };
+    } catch (error) {
+      this.logger.error(`[InventoryService] 批量锁定物品失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量解锁物品
+   * @param {string} userId 用户ID
+   * @param {Array<string>} itemIds 物品ID列表
+   * @returns {Object} 批量解锁结果
+   */
+  async unlockItems(userId, itemIds) {
+    try {
+      const results = [];
+      
+      for (const itemId of itemIds) {
+        const result = await this.unlockItem(userId, itemId);
+        results.push({ itemId, ...result });
+      }
+      
+      const successful = results.filter(r => r.success).length;
+      
+      return {
+        success: successful === itemIds.length,
+        message: `批量解锁完成，成功解锁 ${successful}/${itemIds.length} 个物品`,
+        results
+      };
+    } catch (error) {
+      this.logger.error(`[InventoryService] 批量解锁物品失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export; Principle_Applied: ModuleSystem-Standardization;}}
-export { InventoryService };

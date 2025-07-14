@@ -86,6 +86,44 @@ items:
       defenseBonus: 50 # 防御加成50%
       duration: 120 # 持续120分钟
 
+  # 偷菜工具配置（未来扩展）
+  stealTools:
+    basic_lockpick:
+      name: "基础开锁器"
+      price: 100
+      sellPrice: 40
+      category: "tools"
+      description: "提高偷菜成功率的基础工具"
+      effect:
+        successRateBonus: 10 # +10%成功率
+        duration: 60 # 持续60分钟
+      rarity: "common"
+
+    advanced_gloves:
+      name: "隐形手套"
+      price: 250
+      sellPrice: 100
+      category: "tools"
+      description: "减少被发现概率的高级工具"
+      effect:
+        successRateBonus: 20 # +20%成功率
+        stealthBonus: 15 # +15%隐匿加成
+        duration: 90 # 持续90分钟
+      rarity: "rare"
+
+    master_toolkit:
+      name: "大师工具包"
+      price: 500
+      sellPrice: 200
+      category: "tools"
+      description: "专业偷菜者的终极装备"
+      effect:
+        successRateBonus: 35 # +35%成功率
+        rewardBonus: 25 # +25%收益加成
+        cooldownReduction: 20 # -20%冷却时间
+        duration: 120 # 持续120分钟
+      rarity: "legendary"
+
   # 土地进阶材料
   landMaterials:
     copper_essence:
@@ -141,6 +179,8 @@ items:
         items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
       - name: "防御"
         items: ["normal", "premium", "deluxe"]
+      - name: "工具"
+        items: ["basic_lockpick", "advanced_gloves", "master_toolkit"]
       - name: "材料"
         items: ["copper_essence", "silver_essence", "gold_essence"]
 
