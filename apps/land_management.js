@@ -1,12 +1,7 @@
 /**
  * 土地管理功能命令处理器 (Miao-Yunzai 插件)
- * 处理土地扩张、品质升级等相关指令
+ * 处理土地扩张、品质升级、强化等相关指令
  */
-
-// {{CHENGQI:
-// Action: Modified; Timestamp: 2025-06-30T13:47:33+08:00; Reason: Shrimp Task ID: #c69301bb, adding land quality upgrade commands for T7;
-// }}
-
 import serviceContainer from '../services/index.js';
 import { ItemResolver } from '../utils/ItemResolver.js';
 
@@ -18,7 +13,6 @@ export class LandManagementCommands extends plugin {
       event: 'message',
       priority: 100,
       rule: [
-        // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading regex to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
         {
           reg: '^#(?<nc>nc)?土地扩张$',
           fnc: 'expandLand'
@@ -34,29 +28,40 @@ export class LandManagementCommands extends plugin {
         {
           reg: '^#(?<nc>nc)?土地品质\\s*(?<landId>\\d+)?$',
           fnc: 'viewLandQualityInfo'
+        },
+        {
+          reg: '^#(?<nc>nc)?强化土地\\s*(?<landId>\\d+)?$',
+          fnc: 'enhanceLand'
         }
       ]
     });
+    
+    this.itemResolver = null;
   }
 
-  /**
-   * 土地扩张
-   * @param {Object} e Miao-Yunzai事件对象
-   */
+  async _initializeDependencies() {
+      if (!this.itemResolver) {
+          await serviceContainer.init();
+          const config = serviceContainer.getService('config');
+          this.itemResolver = new ItemResolver(config);
+      }
+  }
+
+  _getItemName(itemId) {
+      if (!this.itemResolver) {
+          logger.warn('[LandManagementCommands] ItemResolver未初始化！');
+          return itemId;
+      }
+      return this.itemResolver.getItemName(itemId);
+  }
+
   async expandLand(e) {
     try {
       const userId = e.user_id.toString();
-      
-      // 确保服务已初始化
       await serviceContainer.init();
-      
       const landService = serviceContainer.getService('landService');
       const playerService = serviceContainer.getService('playerService');
-      
-      // 确保玩家存在
       await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      
-      // 执行土地扩张
       const result = await landService.expandLand(userId);
       
       if (result.success) {
@@ -65,14 +70,11 @@ export class LandManagementCommands extends plugin {
         message += `💰 花费: ${result.costGold} 金币\n`;
         message += `📊 当前土地数量: ${result.currentLandCount}\n`;
         message += `💰 剩余金币: ${result.remainingCoins}`;
-        
         await e.reply(message);
       } else {
         await e.reply(`❌ ${result.message}`);
       }
-      
       return true;
-      
     } catch (error) {
       logger.error(`[LandManagementCommands] 土地扩张失败: ${error.message}`);
       await e.reply('❌ 土地扩张失败，请稍后再试');
@@ -80,24 +82,13 @@ export class LandManagementCommands extends plugin {
     }
   }
 
-  /**
-   * 查看土地信息
-   * @param {Object} e Miao-Yunzai事件对象
-   */
   async viewLandInfo(e) {
     try {
       const userId = e.user_id.toString();
-      
-      // 确保服务已初始化
       await serviceContainer.init();
-      
       const landService = serviceContainer.getService('landService');
       const playerService = serviceContainer.getService('playerService');
-      
-      // 确保玩家存在
       const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      
-      // 获取土地扩张信息
       const landInfo = await landService.getLandExpansionInfo(userId);
       
       let message = `🏞️ 土地信息\n`;
@@ -129,7 +120,6 @@ export class LandManagementCommands extends plugin {
       
       await e.reply(message);
       return true;
-      
     } catch (error) {
       logger.error(`[LandManagementCommands] 查看土地信息失败: ${error.message}`);
       await e.reply('❌ 查看土地信息失败，请稍后再试');
@@ -137,15 +127,10 @@ export class LandManagementCommands extends plugin {
     }
   }
 
-  /**
-   * 土地品质进阶
-   * @param {Object} e Miao-Yunzai事件对象
-   */
   async upgradeLandQuality(e) {
     try {
       const userId = e.user_id.toString();
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(?<nc>nc)?土地进阶\s*(?<landId>\d+)?$/);
+      const match = e.msg.match(/^#(?<nc>nc)?土地进阶\\s*(?<landId>\\d+)?$/);
 
       if (!match || !match.groups || !match.groups.landId) {
         await e.reply('请指定要进阶的土地编号，例如：#nc土地进阶 1');
@@ -154,16 +139,10 @@ export class LandManagementCommands extends plugin {
 
       const landId = parseInt(match.groups.landId);
       
-      // 确保服务已初始化
-      await serviceContainer.init();
-      
+      await this._initializeDependencies();
       const landService = serviceContainer.getService('landService');
-      const playerService = serviceContainer.getService('playerService');
+      await landService.playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
       
-      // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      
-      // 执行土地品质进阶
       const result = await landService.upgradeLandQuality(userId, landId);
       
       if (result.success) {
@@ -181,14 +160,11 @@ export class LandManagementCommands extends plugin {
         }
         
         message += `💰 剩余金币: ${result.remainingCoins}`;
-        
         await e.reply(message);
       } else {
         await e.reply(`❌ ${result.message}`);
       }
-      
       return true;
-      
     } catch (error) {
       logger.error(`[LandManagementCommands] 土地品质进阶失败: ${error.message}`);
       await e.reply('❌ 土地品质进阶失败，请稍后再试');
@@ -196,49 +172,32 @@ export class LandManagementCommands extends plugin {
     }
   }
 
-  /**
-   * 查看土地品质信息
-   * @param {Object} e Miao-Yunzai事件对象
-   */
   async viewLandQualityInfo(e) {
     try {
       const userId = e.user_id.toString();
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(?<nc>nc)?土地品质\s*(?<landId>\d+)?$/);
+      const match = e.msg.match(/^#(?<nc>nc)?土地品质\\s*(?<landId>\\d+)?$/);
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
+      await this._initializeDependencies();
       const landService = serviceContainer.getService('landService');
       const playerService = serviceContainer.getService('playerService');
-
-      // 确保玩家存在
       const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
 
       if (!match || !match.groups || !match.groups.landId) {
-        // 显示所有土地的品质概览
         let message = `🏞️ 土地品质概览\n`;
         message += '━━━━━━━━━━━━━━━━━━━━\n';
-
         for (let i = 1; i <= playerData.landCount; i++) {
-          // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 13:22:24 +08:00; Reason: Shrimp Task ID: #7ea4d09e, fixing data structure access to use array instead of object; Principle_Applied: DataStructure-Consistency;}}
           const land = playerData.lands?.[i - 1] || {};
           const quality = land.quality || 'normal';
           const qualityIcon = this._getQualityIcon(quality);
-
           message += `${qualityIcon} 土地${i}: ${this._getQualityName(quality)}\n`;
         }
-
         message += '\n💡 使用 #nc土地品质 数字 查看详细信息';
         message += '\n💡 使用 #nc土地进阶 数字 进行品质进阶';
-
         await e.reply(message);
         return true;
       }
 
       const landId = parseInt(match.groups.landId);
-      
-      // 获取土地品质进阶信息
       const upgradeInfo = await landService.getLandQualityUpgradeInfo(userId, landId);
       
       if (!upgradeInfo.canUpgrade && upgradeInfo.error) {
@@ -286,7 +245,6 @@ export class LandManagementCommands extends plugin {
       
       await e.reply(message);
       return true;
-      
     } catch (error) {
       logger.error(`[LandManagementCommands] 查看土地品质信息失败: ${error.message}`);
       await e.reply('❌ 查看土地品质信息失败，请稍后再试');
@@ -294,24 +252,44 @@ export class LandManagementCommands extends plugin {
     }
   }
 
-  /**
-   * 获取品质图标
-   * @param {string} quality 品质类型
-   */
+  async enhanceLand(e) {
+    try {
+      const userId = e.user_id.toString();
+      const match = e.msg.match(/^#(?<nc>nc)?强化土地\\s*(?<landId>\\d+)?$/);
+
+      if (!match || !match.groups || !match.groups.landId) {
+        await e.reply('请指定要强化的土地编号，例如：#nc强化土地 1');
+        return true;
+      }
+
+      const landId = parseInt(match.groups.landId);
+
+      await serviceContainer.init();
+      const landService = serviceContainer.getService('landService');
+      await landService.playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+
+      const result = await landService.enhanceLand(userId, landId);
+
+      await e.reply(result.message);
+      
+      return true;
+    } catch (error) {
+      logger.error(`[LandManagementCommands] 强化土地失败: ${error.message}`);
+      await e.reply('❌ 强化土地失败，请稍后再试');
+      return true;
+    }
+  }
+
   _getQualityIcon(quality) {
     const qualityIcons = {
-      normal: '🟫',   // 普通土地
-      copper: '🟠',   // 铜质土地
-      silver: '⚪',   // 银质土地
-      gold: '🟡'      // 金质土地
+      normal: '🟫',
+      copper: '🟠',
+      silver: '⚪',
+      gold: '🟡'
     };
     return qualityIcons[quality] || qualityIcons.normal;
   }
 
-  /**
-   * 获取品质名称
-   * @param {string} quality 品质类型
-   */
   _getQualityName(quality) {
     const qualityNames = {
       normal: '普通土地',
@@ -321,14 +299,4 @@ export class LandManagementCommands extends plugin {
     };
     return qualityNames[quality] || qualityNames.normal;
   }
-
-  /**
-   * 获取物品名称（使用统一的ItemResolver）
-   * @param {string} itemId 物品ID
-   */
-  _getItemName(itemId) {
-    const config = serviceContainer.getService('config');
-    const itemResolver = new ItemResolver(config);
-    return itemResolver.getItemName(itemId);
-  }
-} 
+}

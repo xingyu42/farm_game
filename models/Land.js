@@ -31,6 +31,7 @@ class Land {
     // 扩展属性
     this.lastUpgradeTime = data.lastUpgradeTime || null;
     this.upgradeLevel = data.upgradeLevel || 0;
+    this.enhancementLevel = data.enhancementLevel || 0;
   }
 
   /**
@@ -396,7 +397,8 @@ class Land {
       hasPests: this.hasPests,
       stealable: this.stealable,
       lastUpgradeTime: this.lastUpgradeTime,
-      upgradeLevel: this.upgradeLevel
+      upgradeLevel: this.upgradeLevel,
+      enhancementLevel: this.enhancementLevel
     };
   }
 

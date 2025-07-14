@@ -9,6 +9,8 @@ import redisClient from '../common/redisClient.js';
 
 // 导入业务服务
 import PlayerManagerService from './player/PlayerManagerService.js';
+import AdminService from './AdminService.js';
+import StatisticsService from './StatisticsService.js';
 import { PlantingService } from './PlantingService.js';
 import { InventoryService } from './InventoryService.js';
 import { ShopService } from './ShopService.js';
@@ -43,6 +45,20 @@ class ServiceContainer {
 
     // 实例化PlayerManagerService（新的重构后的服务）
     this.services.playerService = new PlayerManagerService(redisClient, config);
+
+    // 实例化AdminService（依赖PlayerManagerService）
+    this.services.adminService = new AdminService(
+      redisClient,
+      config,
+      this.services.playerService, // 依赖PlayerManagerService
+      null // logger使用默认值
+    );
+
+    // 实例化StatisticsService（独立服务，无特殊依赖）
+    this.services.statisticsService = new StatisticsService(
+      redisClient,
+      null // logger使用默认值
+    );
 
     // 实例化PlantingService（重构后需要 playerDataService 依赖）
     this.services.plantingService = new PlantingService(

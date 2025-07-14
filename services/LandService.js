@@ -450,6 +450,72 @@ class LandService {
       return itemId;
     }
   }
+
+  /**
+   * 执行土地强化
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID
+   * @returns {Object} 强化结果
+   */
+  async enhanceLand(userId, landId) {
+    const lock = await this.redis.lock(`player:${userId}:lock`);
+    if (!lock) {
+      return { success: false, message: '系统繁忙，请稍后再试。' };
+    }
+
+    try {
+      const validation = await this.playerService.validateLandId(userId, landId);
+      if (!validation.valid) {
+        return { success: false, message: validation.message };
+      }
+
+      const player = await this.playerService.getPlayer(userId);
+      const land = player.lands[landId - 1];
+      const enhancementConfig = this.config.land?.enhancement;
+
+      if (!enhancementConfig) {
+        return { success: false, message: '未找到土地强化配置。' };
+      }
+
+      const currentLevel = land.enhancementLevel || 0;
+      if (currentLevel >= enhancementConfig.maxLevel) {
+        return { success: false, message: '该土地已达到最大强化等级。' };
+      }
+
+      const nextLevel = currentLevel + 1;
+      const cost = enhancementConfig.costs?.[land.quality]?.[nextLevel];
+
+      if (cost === undefined) {
+        return { success: false, message: `未找到${land.quality}品质土地强化到${nextLevel}级的成本配置。` };
+      }
+
+      if (player.coins < cost) {
+        return { success: false, message: `金币不足，强化需要 ${cost} 金币，当前拥有 ${player.coins} 金币。` };
+      }
+
+      // 扣除金币并更新土地强化等级
+      player.coins -= cost;
+      land.enhancementLevel = nextLevel;
+
+      await this.playerService.updatePlayer(userId, player);
+
+      const bonus = enhancementConfig.bonusPerLevel * nextLevel;
+
+      return {
+        success: true,
+        message: `🎉 土地 ${landId} 强化成功！等级: ${nextLevel}，总加成: +${bonus}%`,
+        landId,
+        newLevel: nextLevel,
+        cost,
+        remainingCoins: player.coins
+      };
+    } catch (error) {
+      this.logger.error(`[LandService] 土地强化失败 [${userId}, ${landId}]: ${error.message}`);
+      throw error;
+    } finally {
+      await this.redis.unlock(lock);
+    }
+  }
 }
 
 // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export; Principle_Applied: ModuleSystem-Standardization;}}

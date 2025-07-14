@@ -1,13 +1,21 @@
 // {{CHENGQI:
-// Action: Modified; Timestamp: 2025-06-30; Reason: Shrimp Task ID: #5cc38447, unifying service access pattern using serviceContainer;
+// Action: Modified; Timestamp: 2025-07-14; Reason: Shrimp Task ID: #8a23c789, refactoring to use dedicated SignInService;
 // }}
 // {{START MODIFICATIONS}}
 
-import serviceContainer from '../services/index.js'
+import { PlayerService } from '../services/player/PlayerService.js';
+import SignInService from '../services/player/SignInService.js';
+import { Config } from '../models/Config.js';
+import { redisClient } from '../common/redisClient.js';
+
+// 初始化服务
+const cfg = await Config.load(redisClient);
+const playerService = new PlayerService(redisClient, cfg);
+const signInService = new SignInService(redisClient, cfg, playerService);
 
 /**
  * 玩家系统核心命令处理器
- * 处理玩家注册、信息查询等基础功能
+ * 处理玩家注册、信息查询、签到等基础功能
  */
 export class player extends plugin {
   constructor() {
@@ -30,14 +38,7 @@ export class player extends plugin {
           fnc: 'dailySignIn'
         }
       ]
-    })
-  }
-
-  /**
-   * 确保服务容器已初始化
-   */
-  async _ensureServicesInitialized() {
-    await serviceContainer.init()
+    });
   }
 
   /**
@@ -46,85 +47,68 @@ export class player extends plugin {
    */
   async showPlayerInfo(e) {
     try {
-      const userId = e.user_id
-      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
+      const userId = e.user_id.toString();
+      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
       
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      
-      // 确保玩家已注册（自动注册机制）
-      await playerService.ensurePlayer(userId, userName)
-      const playerData = await playerService.getPlayerData(userId)
+      const playerData = await playerService.ensurePlayer(userId, userName);
 
       if (!playerData) {
-        e.reply('获取玩家信息失败，请稍后重试')
-        return true
+        e.reply('获取玩家信息失败，请稍后重试');
+        return true;
       }
 
-      // 获取升级所需经验
-      const levelInfo = await playerService.getLevelInfo(playerData.level)
-      const experienceToNext = levelInfo ? levelInfo.experienceRequired : 'Max'
+      const levelInfo = await playerService.getLevelInfo(playerData.level);
+      const experienceToNext = levelInfo ? levelInfo.experienceRequired : 'Max';
 
-      // 构建玩家信息消息
       const playerInfo = [
         `🌾 ${playerData.name || userName} 的农场`,
         `━━━━━━━━━━━━━━━━━━`,
         `👤 等级: Lv.${playerData.level}`,
         `✨ 经验: ${playerData.experience}/${experienceToNext}`,
         `💰 金币: ${playerData.coins.toLocaleString()}`,
-        `🏞️ 土地: ${playerData.lands.length}/24 块`,
-        `📦 仓库: ${playerData.getInventoryUsage()}/${playerData.inventoryCapacity}`,
+        `🏞️ 土地: ${playerData.landCount}/${playerData.maxLandCount}`,
+        `📦 仓库: ${playerData.getInventoryInfo().usage}/${playerData.getInventoryInfo().capacity}`,
         `━━━━━━━━━━━━━━━━━━`,
         `🛡️ 防护状态: ${playerData.getDogFoodStatus()}`,
         `⏰ 偷菜冷却: ${playerData.getStealCooldownStatus()}`,
         `━━━━━━━━━━━━━━━━━━`,
-        `📅 总签到: ${playerData.stats.total_signin_days} 天`,
-        `📈 累计收入: ${playerData.stats.total_income.toLocaleString()} 金币`,
-        `📉 累计支出: ${playerData.stats.total_expenses.toLocaleString()} 金币`
-      ]
+        `📅 总签到: ${playerData.signIn.totalSignDays || 0} 天`,
+        `📈 连续签到: ${playerData.signIn.consecutiveDays || 0} 天`
+      ];
 
-      // 如果是新玩家，添加欢迎信息
-      if (playerData.experience === 0 && playerData.level === 1) {
-        playerInfo.push(``, `🎉 欢迎来到农场世界！`)
-        playerInfo.push(`💡 输入 #nc帮助 查看游戏指令`)
+      if (playerData.isNewPlayer()) {
+        playerInfo.push(``, `🎉 欢迎来到农场世界！`);
+        playerInfo.push(`💡 输入 #nc帮助 查看游戏指令`);
       }
 
-      e.reply(playerInfo.join('\n'))
-      return true
+      e.reply(playerInfo.join('\n'));
+      return true;
     } catch (error) {
-      logger.error('[农场游戏] 显示玩家信息失败:', error)
-      e.reply('查看玩家信息失败，请稍后重试')
-      return true
+      logger.error('[农场游戏] 显示玩家信息失败:', error);
+      e.reply('查看玩家信息失败，请稍后重试');
+      return true;
     }
   }
 
   /**
    * 手动注册玩家
-   * 虽然有自动注册机制，但提供显式注册选项
    */
   async registerPlayer(e) {
     try {
-      const userId = e.user_id
-      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
+      const userId = e.user_id.toString();
+      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
       
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      
-      // 检查玩家是否已存在
-      const existingPlayer = await playerService.getPlayerData(userId)
+      const existingPlayer = await playerService.getPlayer(userId);
       if (existingPlayer) {
-        e.reply('您已经是注册玩家了！发送 #nc我的信息 查看详情')
-        return true
+        e.reply('您已经是注册玩家了！发送 #nc我的信息 查看详情');
+        return true;
       }
 
-      // 创建新玩家
-      const playerData = await playerService.createPlayer(userId, userName)
+      const playerData = await playerService.createPlayer(userId, userName);
       
       if (!playerData) {
-        e.reply('注册失败，请稍后重试')
-        return true
+        e.reply('注册失败，请稍后重试');
+        return true;
       }
 
       const welcomeMsg = [
@@ -132,20 +116,20 @@ export class player extends plugin {
         `━━━━━━━━━━━━━━━━━━`,
         `🎁 初始资源已到账：`,
         `💰 金币: ${playerData.coins} 枚`,
-        `🏞️ 土地: ${playerData.lands.length} 块`,
+        `🏞️ 土地: ${playerData.landCount} 块`,
         `📦 仓库容量: ${playerData.inventoryCapacity}`,
         ``,
         `🌾 您已获得初始礼包，请查看仓库！`,
         `💡 发送 #nc我的信息 查看详细信息`,
         `💡 发送 #nc帮助 查看游戏指令`
-      ]
+      ];
 
-      e.reply(welcomeMsg.join('\n'))
-      return true
+      e.reply(welcomeMsg.join('\n'));
+      return true;
     } catch (error) {
-      logger.error('[农场游戏] 注册玩家失败:', error)
-      e.reply('注册失败，请稍后重试')
-      return true
+      logger.error('[农场游戏] 注册玩家失败:', error);
+      e.reply('注册失败，请稍后重试');
+      return true;
     }
   }
 
@@ -154,49 +138,20 @@ export class player extends plugin {
    */
   async dailySignIn(e) {
     try {
-      const userId = e.user_id
-      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`
+      const userId = e.user_id.toString();
+      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
       
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
+      const signInResult = await signInService.performSignIn(userId);
       
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId, userName)
-      
-      // 执行签到
-      const signInResult = await playerService.dailySignIn(userId)
-      
-      if (!signInResult.success) {
-        e.reply(signInResult.message || '签到失败，请稍后重试')
-        return true
-      }
+      await e.reply(signInResult.message);
+      return true;
 
-      const reward = signInResult.reward
-      const signInMsg = [
-        `✅ 签到成功！`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `🎁 今日奖励：`,
-        `💰 金币: +${reward.gold}`,
-        `✨ 经验: +${reward.experience}`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `📅 连续签到: ${signInResult.consecutiveDays} 天`,
-        `📊 总签到天数: ${signInResult.totalSignInDays} 天`
-      ]
-
-      // 如果有连续签到奖励
-      if (signInResult.consecutiveDays > 1 && signInResult.consecutiveDays % 7 === 0) {
-        signInMsg.push(`🏆 连续签到${signInResult.consecutiveDays}天，额外奖励已发放！`)
-      }
-
-      e.reply(signInMsg.join('\n'))
-      return true
     } catch (error) {
-      logger.error('[农场游戏] 签到失败:', error)
-      e.reply('签到失败，请稍后重试')
-      return true
+      logger.error('[农场游戏] 签到失败:', error);
+      e.reply('签到失败，请稍后重试');
+      return true;
     }
   }
 }
 
-// {{END MODIFICATIONS}} 
+// {{END MODIFICATIONS}}
