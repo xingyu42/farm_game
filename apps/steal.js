@@ -14,19 +14,19 @@ export class steal extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^@(?<username>.+?)\\s+#(?<nc>nc)?偷菜$',
+          reg: '^@(.+?)\\s+#(nc)?偷菜$',
           fnc: 'stealCrop'
         },
         {
-          reg: '^#(?<nc>nc)?使用狗粮(?:\\s+(?<dogFoodType>.+))?$',
+          reg: '^#(nc)?使用狗粮(?:\\s+(.+))?$',
           fnc: 'useDogFood'
         },
         {
-          reg: '^#(?<nc>nc)?防护状态$',
+          reg: '^#(nc)?防护状态$',
           fnc: 'showProtectionStatus'
         },
         {
-          reg: '^#(?<nc>nc)?偷菜状态$',
+          reg: '^#(nc)?偷菜状态$',
           fnc: 'showStealStatus'
         }
       ]
@@ -79,7 +79,7 @@ export class steal extends plugin {
       const result = await stealService.executeSteal(thiefUserId, targetUserId)
       
       // 6. 构建回复消息
-      let replyMessage = this._buildStealResultMessage(result, targetUserId)
+      let replyMessage = this._buildStealResultMessage(result)
       
       e.reply(replyMessage)
       return true
@@ -109,13 +109,13 @@ export class steal extends plugin {
    */
   async useDogFood(e) {
     try {
-      const match = e.msg.match(/^#(?<nc>nc)?使用狗粮(?:\s+(?<dogFoodType>.+))?$/)
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?使用狗粮(?:\s+(.+))?$/)
+      if (!match) {
         e.reply('❌ 格式错误！使用: #使用狗粮 [狗粮类型]')
         return true
       }
 
-      const { dogFoodType } = match.groups
+      const dogFoodType = match[2]
       const userId = e.user_id
 
       await this._ensureServicesInitialized()
@@ -196,8 +196,7 @@ export class steal extends plugin {
         return true
       }
       
-      // 获取详细防护状态
-      const protectionStatus = await protectionService.getProtectionStatus(userId)
+      // 获取当前防护加成
       const currentBonus = await protectionService.getProtectionBonus(userId)
       
       const message = [
@@ -289,11 +288,10 @@ export class steal extends plugin {
   /**
    * 构建偷菜结果消息
    * @param {Object} result 偷菜结果
-   * @param {string} targetUserId 目标用户ID
    * @returns {string} 消息文本
    * @private
    */
-  _buildStealResultMessage(result, targetUserId) {
+  _buildStealResultMessage(result) {
     let message = ''
     
     if (result.success) {

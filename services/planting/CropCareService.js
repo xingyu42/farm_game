@@ -233,7 +233,6 @@ class CropCareService {
         }
 
         const results = [];
-        let successCount = 0;
 
         // 遍历所有土地
         for (let landIndex = 0; landIndex < playerData.lands.length; landIndex++) {
@@ -254,7 +253,6 @@ class CropCareService {
             
             if (careResult.success) {
               results.push({ landId, success: true, ...careResult });
-              successCount++;
             } else {
               results.push({ landId, success: false, message: careResult.message });
             }
@@ -302,7 +300,7 @@ class CropCareService {
         land.health = Math.min(100, land.health + 15);
         return { success: true, cropName, health: land.health };
 
-      case 'fertilize':
+      case 'fertilize': {
         // 选择肥料
         let selectedFertilizer = fertilizerType || this._selectBestFertilizer(playerData.inventory);
         if (!selectedFertilizer) {
@@ -330,13 +328,14 @@ class CropCareService {
           delete playerData.inventory[selectedFertilizer];
         }
 
-        return { 
-          success: true, 
-          cropName, 
-          health: land.health, 
+        return {
+          success: true,
+          cropName,
+          health: land.health,
           timeReduced: timeReduction,
           fertilizerUsed: fertilizerConfig.name
         };
+      }
 
       default:
         return { success: false, message: '未知的护理类型' };

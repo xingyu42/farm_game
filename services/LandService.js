@@ -221,6 +221,15 @@ class LandService {
         };
       }
 
+      // 获取玩家数据
+      const playerData = await this.playerService.getPlayerData(userId);
+      if (!playerData) {
+        return {
+          canUpgrade: false,
+          error: '玩家数据不存在'
+        };
+      }
+
       // 使用智能土地访问方法获取土地数据
       const land = await this.playerService.getLandById(userId, landId);
       if (!land) {
@@ -229,7 +238,7 @@ class LandService {
           error: `土地 ${landId} 数据不存在`
         };
       }
-      
+
       const currentQuality = land.quality || 'normal';
       
       // 获取品质配置

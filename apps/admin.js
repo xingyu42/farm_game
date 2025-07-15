@@ -11,7 +11,7 @@ export class adminApp extends plugin {
       priority: 400,
       rule: [
         {
-          reg: '^#nc管理\s*(重置玩家|添加金币|添加经验|设置土地品质|统计|经济分析|重载配置|备份)(.*)$',
+          reg: '^#nc管理\\s*(重置玩家|添加金币|添加经验|设置土地品质|统计|经济分析|重载配置|备份)(.*)$',
           fnc: 'handleAdmin'
         }
       ]
@@ -29,7 +29,7 @@ export class adminApp extends plugin {
     const adminService = serviceContainer.getService('adminService');
     const statisticsService = serviceContainer.getService('statisticsService');
 
-    const command = e.msg.replace(/#nc管理\s*/, '').trim();
+    const command = e.msg.replace(/#nc管理\\s*/, '').trim();
     const [action, ...args] = command.split(/\s+/);
     
     switch (action) {

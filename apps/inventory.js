@@ -104,8 +104,15 @@ export class InventoryCommands extends plugin {
   async lockItem(e) {
     try {
       const userId = e.user_id.toString();
-      const itemName = e.msg.replace(/^#(nc)?锁定\s+/, '').trim();
-
+      const match = e.msg.match(/^#(nc)?锁定\s+(.+)$/);
+      
+      if (!match) {
+        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定 [物品名]');
+        return true;
+      }
+      
+      const itemName = match[2].trim();
+      
       if (!itemName) {
         await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定 [物品名]');
         return true;
@@ -154,8 +161,15 @@ export class InventoryCommands extends plugin {
   async unlockItem(e) {
     try {
       const userId = e.user_id.toString();
-      const itemName = e.msg.replace(/^#(nc)?解锁\s+/, '').trim();
-
+      const match = e.msg.match(/^#(nc)?解锁\s+(.+)$/);
+      
+      if (!match) {
+        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁 [物品名]');
+        return true;
+      }
+      
+      const itemName = match[2].trim();
+      
       if (!itemName) {
         await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁 [物品名]');
         return true;

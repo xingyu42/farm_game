@@ -152,7 +152,7 @@ export class ShopService {
 
         // 扣除金币 - 使用EconomyService的内部方法
         const economyService = this.playerService.getEconomyService();
-        const actualChange = economyService._updateCoinsInTransaction(playerData, -totalCost);
+        economyService._updateCoinsInTransaction(playerData, -totalCost);
 
         // 添加物品到仓库 - 直接操作库存数据
         if (!playerData.inventory) {
@@ -285,7 +285,7 @@ export class ShopService {
 
         // 添加金币 - 使用EconomyService的内部方法
         const economyService = this.playerService.getEconomyService();
-        const actualChange = economyService._updateCoinsInTransaction(playerData, totalEarnings);
+        economyService._updateCoinsInTransaction(playerData, totalEarnings);
 
         playerData.lastUpdated = Date.now();
 
@@ -388,7 +388,7 @@ export class ShopService {
 
         // 添加金币 - 使用EconomyService的内部方法
         const economyService = this.playerService.getEconomyService();
-        const actualChange = economyService._updateCoinsInTransaction(playerData, totalEarnings);
+        economyService._updateCoinsInTransaction(playerData, totalEarnings);
 
         playerData.lastUpdated = Date.now();
 
@@ -426,7 +426,7 @@ export class ShopService {
         if (itemsConfig[category]) {
           const categoryPrices = [];
           
-          for (const [itemId, itemInfo] of Object.entries(itemsConfig[category])) {
+          for (const [, itemInfo] of Object.entries(itemsConfig[category])) {
             if (itemInfo.sellPrice !== undefined) {
               categoryPrices.push({
                 name: itemInfo.name,

@@ -88,7 +88,7 @@ class RedisClient {
 
       // 检查每个命令的执行结果
       for (let i = 0; i < results.length; i++) {
-        const [err, result] = results[i];
+        const [err] = results[i];
         if (err) {
           throw new Error(`Transaction command ${i} failed: ${err.message}`, { cause: err });
         }

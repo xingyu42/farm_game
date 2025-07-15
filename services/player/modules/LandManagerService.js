@@ -51,7 +51,7 @@ class LandManagerService {
         }
 
         // 使用EconomyService的内部方法扣除金币，确保逻辑一致性
-        const actualChange = this.economyService._updateCoinsInTransaction(playerData, -landConfig.goldCost);
+        this.economyService._updateCoinsInTransaction(playerData, -landConfig.goldCost);
 
         // 增加土地数量
         playerData.landCount += 1;
@@ -197,7 +197,7 @@ class LandManagerService {
    */
   async updateLand(userId, landId, updates) {
     try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.playerDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const playerData = await this.playerDataService.getPlayerFromHash(userId);
 
         if (!playerData) {

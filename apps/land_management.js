@@ -14,23 +14,23 @@ export class LandManagementCommands extends plugin {
       priority: 100,
       rule: [
         {
-          reg: '^#(?<nc>nc)?土地扩张$',
+          reg: '^#(nc)?土地扩张$',
           fnc: 'expandLand'
         },
         {
-          reg: '^#(?<nc>nc)?土地信息$',
+          reg: '^#(nc)?土地信息$',
           fnc: 'viewLandInfo'
         },
         {
-          reg: '^#(?<nc>nc)?土地进阶\\s*(?<landId>\\d+)?$',
+          reg: '^#(nc)?土地进阶\\s*(\\d+)?$',
           fnc: 'upgradeLandQuality'
         },
         {
-          reg: '^#(?<nc>nc)?土地品质\\s*(?<landId>\\d+)?$',
+          reg: '^#(nc)?土地品质\\s*(\\d+)?$',
           fnc: 'viewLandQualityInfo'
         },
         {
-          reg: '^#(?<nc>nc)?强化土地\\s*(?<landId>\\d+)?$',
+          reg: '^#(nc)?强化土地\\s*(\\d+)?$',
           fnc: 'enhanceLand'
         }
       ]
@@ -130,14 +130,14 @@ export class LandManagementCommands extends plugin {
   async upgradeLandQuality(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(?<nc>nc)?土地进阶\\s*(?<landId>\\d+)?$/);
+      const match = e.msg.match(/^#(nc)?土地进阶\s*(\d+)?$/);
 
-      if (!match || !match.groups || !match.groups.landId) {
+      if (!match || !match[2]) {
         await e.reply('请指定要进阶的土地编号，例如：#nc土地进阶 1');
         return true;
       }
 
-      const landId = parseInt(match.groups.landId);
+      const landId = parseInt(match[2]);
       
       await this._initializeDependencies();
       const landService = serviceContainer.getService('landService');
@@ -175,14 +175,14 @@ export class LandManagementCommands extends plugin {
   async viewLandQualityInfo(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(?<nc>nc)?土地品质\\s*(?<landId>\\d+)?$/);
+      const match = e.msg.match(/^#(nc)?土地品质\s*(\d+)?$/);
 
       await this._initializeDependencies();
       const landService = serviceContainer.getService('landService');
       const playerService = serviceContainer.getService('playerService');
       const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
 
-      if (!match || !match.groups || !match.groups.landId) {
+      if (!match || !match[2]) {
         let message = `🏞️ 土地品质概览\n`;
         message += '━━━━━━━━━━━━━━━━━━━━\n';
         for (let i = 1; i <= playerData.landCount; i++) {
@@ -197,7 +197,7 @@ export class LandManagementCommands extends plugin {
         return true;
       }
 
-      const landId = parseInt(match.groups.landId);
+      const landId = parseInt(match[2]);
       const upgradeInfo = await landService.getLandQualityUpgradeInfo(userId, landId);
       
       if (!upgradeInfo.canUpgrade && upgradeInfo.error) {
@@ -255,14 +255,14 @@ export class LandManagementCommands extends plugin {
   async enhanceLand(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(?<nc>nc)?强化土地\\s*(?<landId>\\d+)?$/);
+      const match = e.msg.match(/^#(nc)?强化土地\s*(\d+)?$/);
 
-      if (!match || !match.groups || !match.groups.landId) {
+      if (!match || !match[2]) {
         await e.reply('请指定要强化的土地编号，例如：#nc强化土地 1');
         return true;
       }
 
-      const landId = parseInt(match.groups.landId);
+      const landId = parseInt(match[2]);
 
       await serviceContainer.init();
       const landService = serviceContainer.getService('landService');

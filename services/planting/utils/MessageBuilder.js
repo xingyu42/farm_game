@@ -121,11 +121,7 @@ class MessageBuilder {
    * @returns {Object} 护理响应
    */
   buildCareMessage(careType, cropName, landId, effectData = {}) {
-    const careIcons = {
-      water: this.icons.water,
-      fertilizer: this.icons.fertilizer,
-      pesticide: this.icons.pesticide
-    };
+
 
     const careNames = {
       water: '浇水',
@@ -133,7 +129,6 @@ class MessageBuilder {
       pesticide: '除虫'
     };
 
-    const icon = careIcons[careType] || this.icons.success;
     const careName = careNames[careType] || '护理';
     
     let message = `${this.icons.success} 成功为第${landId}块土地的${cropName}${careName}！`;

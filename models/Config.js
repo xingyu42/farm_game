@@ -186,7 +186,7 @@ class Config {
    * @param {'config'|'default_config'} type 配置文件或默认
    * @param {string} comment 注释
    */
-  modify(name, key, value, type = 'config', comment = null) {
+  modify(name, key, value, type = 'config', _comment = null) {
     let filePath = path.join(PROJECT_PATH, 'config', type, `${name}.yaml`);
 
     // 确保目录存在

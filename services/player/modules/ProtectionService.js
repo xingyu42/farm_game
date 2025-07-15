@@ -18,7 +18,7 @@ class ProtectionService {
    */
   async useDogFood(userId, dogFoodType) {
     try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.playerDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const playerData = await this.playerDataService.getPlayerFromHash(userId);
         
         if (!playerData) {
@@ -118,7 +118,7 @@ class ProtectionService {
    */
   async setStealCooldown(userId, cooldownMinutes = 5) {
     try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.playerDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const playerData = await this.playerDataService.getPlayerFromHash(userId);
         
         if (!playerData) {
@@ -153,7 +153,7 @@ class ProtectionService {
    */
   async setFarmProtection(userId, protectionMinutes = 30) {
     try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.playerDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const playerData = await this.playerDataService.getPlayerFromHash(userId);
         
         if (!playerData) {

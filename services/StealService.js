@@ -148,7 +148,6 @@ export class StealService {
    */
   async _handleStealSuccess(attackerId, targetId, stealableLands, successRate) {
     const rewards = [];
-    const now = Date.now();
     
     // 随机选择要偷取的土地（最多maxStealPerAttempt块）
     const maxSteal = this.stealConfig.basic?.maxStealPerAttempt || 3;

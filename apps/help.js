@@ -3,7 +3,7 @@
  * 提供全面的游戏命令帮助和使用指南
  */
 
-import serviceContainer from '../services/index.js';
+
 
 // 使用全局logger，如果不存在则使用console
 const logger = global.logger || console;
@@ -24,7 +24,7 @@ export class HelpCommands extends plugin {
           fnc: 'showMainHelp'
         },
         {
-          reg: '^#nc帮助\\s+(?<category>.+)$',
+          reg: '^#nc帮助\\s+(.+)$',
           fnc: 'showCategoryHelp'
         }
       ]
@@ -58,13 +58,13 @@ export class HelpCommands extends plugin {
    */
   async showCategoryHelp(e) {
     try {
-      const match = e.msg.match(/^#nc帮助\s+(?<category>.+)$/);
-      if (!match?.groups?.category) {
+      const match = e.msg.match(/^#nc帮助\s+(.+)$/);
+      if (!match) {
         await e.reply('❌ 请指定要查看的帮助分类，例如：#nc帮助 农场管理');
         return true;
       }
 
-      const category = match.groups.category.trim();
+      const category = match[1].trim();
       const isAdmin = e.isMaster;
       
       const helpMessage = this._buildCategoryHelpMessage(category, isAdmin);

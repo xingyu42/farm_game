@@ -254,7 +254,7 @@ class CropPlantingService {
         // 批量处理种植
         for (const landId of plantsToProcess) {
           try {
-            const result = await this._plantSingleCropInTransaction(playerData, landId, cropType);
+            const result = await this._plantSingleCropInTransaction(userId, playerData, landId, cropType);
             results.push({ landId, success: true, ...result });
           } catch (error) {
             results.push({ landId, success: false, message: error.message });
@@ -289,13 +289,14 @@ class CropPlantingService {
 
   /**
    * 在事务内种植单个作物（用于批量操作）
+   * @param {string} userId 用户ID
    * @param {Object} playerData 玩家数据
    * @param {number} landId 土地编号
    * @param {string} cropType 作物类型
    * @returns {Object} 种植结果
    * @private
    */
-  async _plantSingleCropInTransaction(playerData, landId, cropType) {
+  async _plantSingleCropInTransaction(userId, playerData, landId, cropType) {
     const cropConfig = this.config.crops[cropType];
     const landIndex = landId - 1;
     const land = playerData.lands[landIndex];

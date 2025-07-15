@@ -19,23 +19,23 @@ export class ShopCommands extends plugin {
       rule: [
         // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading regex to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
         {
-          reg: '^#(?<nc>nc)?商店$',
+          reg: '^#(nc)?商店$',
           fnc: 'viewShop'
         },
         {
-          reg: '^#(?<nc>nc)?市场$',
+          reg: '^#(nc)?市场$',
           fnc: 'viewMarket'
         },
         {
-          reg: '^#(?<nc>nc)?购买\\s+(?<itemName>.+?)\\s*(?<quantity>\\d+)?$',
+          reg: '^#(nc)?购买\\s+(.+?)\\s*(\\d+)?$',
           fnc: 'buyItem'
         },
         {
-          reg: '^#(?<nc>nc)?出售\\s+(?<itemName>.+?)\\s*(?<quantity>\\d+)?$',
+          reg: '^#(nc)?出售\\s+(.+?)\\s*(\\d+)?$',
           fnc: 'sellItem'
         },
         {
-          reg: '^#(?<nc>nc)?出售全部$',
+          reg: '^#(nc)?出售全部$',
           fnc: 'sellAllCrops'
         }
       ]
@@ -151,17 +151,16 @@ export class ShopCommands extends plugin {
   async buyItem(e) {
     try {
       const userId = e.user_id.toString();
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(?<nc>nc)?购买\s+(?<itemName>.+?)\s*(?<quantity>\d+)?$/);
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to numbered capture groups for consistency with rule patterns; Principle_Applied: RegexPattern-Modernization;}}
+      const match = e.msg.match(/^#(nc)?购买\s+(.+?)\s*(\d+)?$/);
 
-      if (!match || !match.groups) {
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #nc购买 [物品名] [数量]');
         return true;
       }
 
-      const { itemName: rawItemName, quantity: rawQuantity } = match.groups;
-      const itemName = rawItemName.trim();
-      const quantity = parseInt(rawQuantity) || 1;
+      const itemName = match[2].trim();
+      const quantity = parseInt(match[3]) || 1;
       
       if (quantity <= 0) {
         await e.reply('❌ 购买数量必须大于0');
@@ -202,17 +201,16 @@ export class ShopCommands extends plugin {
   async sellItem(e) {
     try {
       const userId = e.user_id.toString();
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(?<nc>nc)?出售\s+(?<itemName>.+?)\s*(?<quantity>\d+)?$/);
+      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to numbered capture groups for consistency with rule patterns; Principle_Applied: RegexPattern-Modernization;}}
+      const match = e.msg.match(/^#(nc)?出售\s+(.+?)\s*(\d+)?$/);
 
-      if (!match || !match.groups) {
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #nc出售 [物品名] [数量]');
         return true;
       }
 
-      const { itemName: rawItemName, quantity: rawQuantity } = match.groups;
-      const itemName = rawItemName.trim();
-      const quantity = parseInt(rawQuantity) || 1;
+      const itemName = match[2].trim();
+      const quantity = parseInt(match[3]) || 1;
       
       if (quantity <= 0) {
         await e.reply('❌ 出售数量必须大于0');

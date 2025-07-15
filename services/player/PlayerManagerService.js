@@ -292,7 +292,7 @@ class PlayerManagerService {
    * @param {string} userId 用户ID
    * @param {Object} playerData 玩家数据
    */
-  async _giveInitialGift(userId, playerData) {
+  async _giveInitialGift(userId, _playerData) {
     try {
       const initialGift = this.config.items?.initial_gift;
       

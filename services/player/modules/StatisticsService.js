@@ -100,7 +100,7 @@ class StatisticsService {
    * @param {number} amount 被偷数量
    * @param {number} value 被偷价值
    */
-  async addStolenFromStats(userId, amount, value = 0) {
+  async addStolenFromStats(userId, amount, _value = 0) {
     try {
       await this.updateStatistics(userId, {
         stolenFrom: amount
@@ -284,7 +284,7 @@ class StatisticsService {
         // 重置指定统计
         resetStats.statistics = { ...playerData.statistics };
         for (const stat of statsToReset) {
-          if (resetStats.statistics.hasOwnProperty(stat)) {
+          if (Object.prototype.hasOwnProperty.call(resetStats.statistics, stat)) {
             resetStats.statistics[stat] = 0;
           }
         }

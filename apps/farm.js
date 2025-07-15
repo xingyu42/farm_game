@@ -14,43 +14,43 @@ export class farm extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^#(?<nc>nc)?我的农场$',
+          reg: '^#(nc)?我的农场$',
           fnc: 'showMyFarm'
         },
         {
-          reg: '^@(?<username>.+?) #(?<nc>nc)?农场$',
+          reg: '^@(.+?) #(nc)?农场$',
           fnc: 'showOtherFarm'
         },
         {
-          reg: '^#(?<nc>nc)?(?<action>农场|信息|我的信息)$',
+          reg: '^#(nc)?(农场|信息|我的信息)$',
           fnc: 'showFarmInfo'
         },
         {
-          reg: '^#(?<nc>nc)?种植\\s+(?<landId>\\d+)\\s+(?<cropName>.+)$',
+          reg: '^#(nc)?种植\\s+(\\d+)\\s+(.+)$',
           fnc: 'plantCrop'
         },
         {
-          reg: '^#(?<nc>nc)?种植\\s+(?<cropName>.+)\\s+(?<landId>\\d+)$',
+          reg: '^#(nc)?种植\\s+(.+)\\s+(\\d+)$',
           fnc: 'plantCropReverse'
         },
         {
-          reg: '^#(?<nc>nc)?浇水\\s+(?<landId>\\d+)$',
+          reg: '^#(nc)?浇水\\s+(\\d+)$',
           fnc: 'waterCrop'
         },
         {
-          reg: '^#(?<nc>nc)?施肥\\s+(?<landId>\\d+)$',
+          reg: '^#(nc)?施肥\\s+(\\d+)$',
           fnc: 'fertilizeCrop'
         },
         {
-          reg: '^#(?<nc>nc)?除虫\\s+(?<landId>\\d+)$',
+          reg: '^#(nc)?除虫\\s+(\\d+)$',
           fnc: 'pesticideCrop'
         },
         {
-          reg: '^#(?<nc>nc)?收获\\s+(?<landId>\\d+)$',
+          reg: '^#(nc)?收获\\s+(\\d+)$',
           fnc: 'harvestCrop'
         },
         {
-          reg: '^#(?<nc>nc)?收获$',
+          reg: '^#(nc)?收获$',
           fnc: 'harvestAllCrops'
         }
       ],
@@ -162,12 +162,11 @@ export class farm extends plugin {
 
     // 获取作物配置
     const cropsConfig = this.config.crops
-    const landConfig = this.config.land
-    
+
     // 显示每块土地的状态
     for (let i = 0; i < playerData.lands.length; i++) {
       const land = playerData.lands[i]
-      const landDisplay = this._formatLandStatus(land, cropsConfig, landConfig)
+      const landDisplay = this._formatLandStatus(land, cropsConfig)
       farmInfo.push(landDisplay)
     }
 
@@ -186,14 +185,11 @@ export class farm extends plugin {
    * 格式：[品质][地号]：[作物名] [健康度] [成熟时间] [负面状态] [可偷窃]
    * @param {Object} land 土地数据
    * @param {Object} cropsConfig 作物配置
-   * @param {Object} landConfig 土地配置
    * @returns {string} 土地状态文本
    */
-  _formatLandStatus(land, cropsConfig, landConfig) {
+  _formatLandStatus(land, cropsConfig) {
     const landId = land.id
     const quality = land.quality || 'normal'
-    const qualityConfig = landConfig.quality?.[quality] || landConfig.quality?.normal
-    const qualityName = qualityConfig?.name || '普通土地'
     
     // 品质标识
     const qualityIcon = this._getQualityIcon(quality)
@@ -319,13 +315,14 @@ export class farm extends plugin {
   async plantCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(?<nc>nc)?种植\s+(?<landId>\d+)\s+(?<cropName>.+)$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/);
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #种植 [土地编号] [作物名称]');
         return true;
       }
 
-      const { landId, cropName } = match.groups;
+      const landId = match[2];
+      const cropName = match[3];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
@@ -373,13 +370,14 @@ export class farm extends plugin {
   async plantCropReverse(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(?<nc>nc)?种植\s+(?<cropName>.+)\s+(?<landId>\d+)$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/);
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #种植 [作物名称] [土地编号]');
         return true;
       }
 
-      const { cropName, landId } = match.groups;
+      const cropName = match[2];
+      const landId = match[3];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
@@ -427,13 +425,13 @@ export class farm extends plugin {
   async waterCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(?<nc>nc)?浇水\s+(?<landId>\d+)$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?浇水\s+(\d+)$/);
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #浇水 [土地编号]');
         return true;
       }
 
-      const { landId } = match.groups;
+      const landId = match[2];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
@@ -475,13 +473,14 @@ export class farm extends plugin {
       // 支持两种格式：
       // #施肥 1          -> 自动选择最好的肥料
       // #施肥 1 普通肥料  -> 使用指定肥料
-      const match = e.msg.match(/^#(?<nc>nc)?施肥\s+(?<landId>\d+)(?:\s+(?<fertilizer>.+))?$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?施肥\s+(\d+)(?:\s+(.+))?$/);
+      if (!match) {
         await e.reply('❌ 格式错误！\n使用方法：\n#施肥 [土地编号] - 自动选择最好的肥料\n#施肥 [土地编号] [肥料名称] - 使用指定肥料');
         return true;
       }
 
-      const { landId, fertilizer } = match.groups;
+      const landId = match[2];
+      const fertilizer = match[3];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
@@ -532,13 +531,13 @@ export class farm extends plugin {
   async pesticideCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(?<nc>nc)?除虫\s+(?<landId>\d+)$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?除虫\s+(\d+)$/);
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #除虫 [土地编号]');
         return true;
       }
 
-      const { landId } = match.groups;
+      const landId = match[2];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
@@ -578,13 +577,13 @@ export class farm extends plugin {
   async harvestCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(?<nc>nc)?收获\s+(?<landId>\d+)$/);
-      if (!match?.groups) {
+      const match = e.msg.match(/^#(nc)?收获\s+(\d+)$/);
+      if (!match) {
         await e.reply('❌ 格式错误！使用: #收获 [土地编号]');
         return true;
       }
 
-      const { landId } = match.groups;
+      const landId = match[2];
 
       // 输入验证增强
       const landIdNum = parseInt(landId);
