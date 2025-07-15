@@ -3,15 +3,8 @@
 // }}
 // {{START MODIFICATIONS}}
 
-import { PlayerService } from '../services/player/PlayerService.js';
-import SignInService from '../services/player/SignInService.js';
-import { Config } from '../models/Config.js';
-import { redisClient } from '../common/redisClient.js';
+import serviceContainer from '../services/index.js';
 
-// 初始化服务
-const cfg = await Config.load(redisClient);
-const playerService = new PlayerService(redisClient, cfg);
-const signInService = new SignInService(redisClient, cfg, playerService);
 
 /**
  * 玩家系统核心命令处理器
@@ -49,7 +42,11 @@ export class player extends plugin {
     try {
       const userId = e.user_id.toString();
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
-      
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+      const playerService = serviceContainer.getService('playerService');
+
       const playerData = await playerService.ensurePlayer(userId, userName);
 
       if (!playerData) {
@@ -97,7 +94,11 @@ export class player extends plugin {
     try {
       const userId = e.user_id.toString();
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
-      
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+      const playerService = serviceContainer.getService('playerService');
+
       const existingPlayer = await playerService.getPlayer(userId);
       if (existingPlayer) {
         e.reply('您已经是注册玩家了！发送 #nc我的信息 查看详情');
@@ -139,10 +140,16 @@ export class player extends plugin {
   async dailySignIn(e) {
     try {
       const userId = e.user_id.toString();
+
+      // 确保服务已初始化
+      await serviceContainer.init();
+      const playerService = serviceContainer.getService('playerService');
+
       await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      
-      const signInResult = await signInService.performSignIn(userId);
-      
+
+      // 使用签到服务
+      const signInResult = await playerService.signInService.signIn(userId);
+
       await e.reply(signInResult.message);
       return true;
 
