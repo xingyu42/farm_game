@@ -11,44 +11,44 @@ import { Calculator } from '../utils/calculator.js';
 class Player {
   constructor(data = {}, config = null) {
     this.config = config;
-    
+
     // 基础信息
     this.name = data.name;
     this.level = data.level;
     this.experience = data.experience;
     this.coins = data.coins;
-    
+
     // 土地系统
     this.landCount = data.landCount
     this.lands = data.lands || this._createDefaultLands(this.landCount);
     this.maxLandCount = data.maxLandCount
-    
+
     // 仓库系统
     this.inventory = data.inventory;
     this.inventoryCapacity = data.inventoryCapacity;
     this.inventory_capacity = data.inventory_capacity; // 新字段名兼容
     this.maxInventoryCapacity = data.maxInventoryCapacity;
-    
+
     // 统计数据
     this.stats = data.stats;
-    
+
     // 签到系统
     this.signIn = data.signIn
-    
+
     // 防御系统
     this.protection = data.protection
-    
+
     // 偷菜系统
     this.stealing = data.stealing
-    
+
     // 统计数据
     this.statistics = data.statistics
-    
+
     // 时间戳
     this.createdAt = data.createdAt || Date.now();
     this.lastUpdated = data.lastUpdated || Date.now();
     this.lastActiveTime = data.lastActiveTime || Date.now();
-    
+
     // 向后兼容的金币访问器
     Object.defineProperty(this, 'gold', {
       get() { return this.coins; },
@@ -177,8 +177,8 @@ class Player {
       if (hashData[field] !== undefined) {
         // 数值字段转换
         if (['level', 'experience', 'coins', 'landCount', 'maxLandCount',
-             'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-             'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
+          'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
+          'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
           const numValue = parseInt(hashData[field]);
           playerData[field] = isNaN(numValue) ? 0 : numValue;
         } else {
@@ -189,7 +189,7 @@ class Player {
         if (['level'].includes(field)) {
           playerData[field] = 1;
         } else if (['experience', 'coins', 'landCount', 'maxLandCount',
-                   'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity'].includes(field)) {
+          'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity'].includes(field)) {
           playerData[field] = 0;
         } else if (['createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
           playerData[field] = Date.now();

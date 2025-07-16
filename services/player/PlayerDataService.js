@@ -21,7 +21,7 @@ class PlayerDataService {
   async getPlayerFromHash(userId) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
+
       // 检查Hash是否存在
       const exists = await this.redis.exists(playerKey);
       if (!exists) {
@@ -51,7 +51,7 @@ class PlayerDataService {
   async savePlayerToHash(userId, playerData) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
+
       // 使用序列化器序列化数据
       const hashData = this.serializer.serializeForHash(playerData);
 
@@ -89,13 +89,13 @@ class PlayerDataService {
     try {
       const playerKey = this.redis.generateKey('player', userId);
       const hashUpdates = {};
-      
+
       for (const [field, value] of Object.entries(fieldUpdates)) {
         if (this.serializer.simpleFields.includes(field)) {
           hashUpdates[field] = value.toString();
         }
       }
-      
+
       if (Object.keys(hashUpdates).length > 0) {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
@@ -131,13 +131,13 @@ class PlayerDataService {
     try {
       const playerKey = this.redis.generateKey('player', userId);
       const hashUpdates = {};
-      
+
       for (const [field, value] of Object.entries(fieldUpdates)) {
         if (this.serializer.complexFields.includes(field)) {
           hashUpdates[field] = JSON.stringify(value);
         }
       }
-      
+
       if (Object.keys(hashUpdates).length > 0) {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
@@ -157,21 +157,21 @@ class PlayerDataService {
     try {
       const playerKey = this.redis.generateKey('player', userId);
       const hashUpdates = {};
-      
+
       // 处理简单字段
       for (const [field, value] of Object.entries(simpleUpdates)) {
         if (this.serializer.simpleFields.includes(field)) {
           hashUpdates[field] = value.toString();
         }
       }
-      
+
       // 处理复杂字段
       for (const [field, value] of Object.entries(complexUpdates)) {
         if (this.serializer.complexFields.includes(field)) {
           hashUpdates[field] = JSON.stringify(value);
         }
       }
-      
+
       if (Object.keys(hashUpdates).length > 0) {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
@@ -238,7 +238,7 @@ class PlayerDataService {
   async executeWithTransaction(userId, operation) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
+
       return await this.redis.transaction(async (multi) => {
         return await operation(multi, playerKey);
       });

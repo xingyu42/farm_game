@@ -6,7 +6,8 @@ import path from 'path';
 
 // 项目常量
 const PLUGIN_NAME = 'farm_game';
-const PROJECT_PATH = process.cwd();
+const _path = process.cwd();
+const PLUGIN_PATH = path.join(_path, 'plugins', PLUGIN_NAME);
 
 class Config {
   constructor(redis = null, logger = null) {
@@ -23,8 +24,8 @@ class Config {
   /** 初始化配置 */
   initCfg() {
     try {
-      let configPath = path.join(PROJECT_PATH, 'config', 'config');
-      let defaultPath = path.join(PROJECT_PATH, 'config', 'default_config');
+      let configPath = path.join(PLUGIN_PATH, 'config', 'config');
+      let defaultPath = path.join(PLUGIN_PATH, 'config', 'default_config');
 
       // 确保配置目录存在
       if (!fs.existsSync(configPath)) {
@@ -132,7 +133,7 @@ class Config {
    * @param {string} name 名称
    */
   getYaml(type, name) {
-    let file = path.join(PROJECT_PATH, 'config', type, `${name}.yaml`);
+    let file = path.join(PLUGIN_PATH, 'config', type, `${name}.yaml`);
     let key = `${type}.${name}`;
 
     if (this._configCache[key]) return this._configCache[key];
@@ -187,7 +188,7 @@ class Config {
    * @param {string} comment 注释
    */
   modify(name, key, value, type = 'config', _comment = null) {
-    let filePath = path.join(PROJECT_PATH, 'config', type, `${name}.yaml`);
+    let filePath = path.join(PLUGIN_PATH, 'config', type, `${name}.yaml`);
 
     // 确保目录存在
     const dir = path.dirname(filePath);
@@ -199,15 +200,15 @@ class Config {
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, '', 'utf8');
     }
-    
+
     try {
       // 简化版本：直接使用YAML操作
       const content = fs.readFileSync(filePath, 'utf8');
       const doc = YAML.parseDocument(content);
-      
+
       // 设置值
       doc.setIn(key.split('.'), value);
-      
+
       fs.writeFileSync(filePath, doc.toString(), 'utf8');
     } catch (e) {
       this.logger.error(`[${PLUGIN_NAME}][修改配置文件失败][${name}]：${e}`);
@@ -225,22 +226,22 @@ class Config {
    * @param {'config'|'default_config'} type 配置文件或默认
    */
   deleteKey(name, key, type = 'config') {
-    let filePath = path.join(PROJECT_PATH, 'config', type, `${name}.yaml`);
+    let filePath = path.join(PLUGIN_PATH, 'config', type, `${name}.yaml`);
     if (!fs.existsSync(filePath)) return false;
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       const doc = YAML.parseDocument(content);
-      
+
       // 删除键
       doc.deleteIn(key.split('.'));
-      
+
       fs.writeFileSync(filePath, doc.toString(), 'utf8');
     } catch (e) {
       this.logger.error(`[${PLUGIN_NAME}][删除配置文件键失败][${name}]：${e}`);
       return false;
     }
-    
+
     delete this._configCache[`${type}.${name}`];
     return true;
   }

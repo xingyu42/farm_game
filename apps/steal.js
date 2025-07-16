@@ -14,7 +14,7 @@ export class steal extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: '^@(.+?)\\s+#(nc)?偷菜$',
+          reg: '^#(nc)?偷菜$',
           fnc: 'stealCrop'
         },
         {
@@ -50,13 +50,7 @@ export class steal extends plugin {
   async stealCrop(e) {
     try {
       // 1. 提取被@用户的QQ号
-      const atUser = e.at
-      if (!atUser || atUser.length === 0) {
-        e.reply('请正确@要偷菜的用户')
-        return true
-      }
-      
-      const targetUserId = atUser[0]
+      const targetUserId = e.at
       const thiefUserId = e.user_id
       
       // 2. 确保服务已初始化
@@ -68,8 +62,8 @@ export class steal extends plugin {
       // 3. 确保偷菜者已注册
       await playerService.ensurePlayer(thiefUserId)
       
-      // 4. 检查目标玩家是否存在
-      const targetPlayerData = await playerService.getPlayerData(targetUserId)
+      // 4. 检查目标玩家是否存在（不自动创建）
+      const targetPlayerData = await playerService.getDataService().getPlayerFromHash(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true

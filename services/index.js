@@ -5,7 +5,7 @@
 
 // 导入配置和通用工具
 import Config from '../models/Config.js';
-import redisClient from '../common/redisClient.js';
+import redisClient from '../utils/redisClient.js';
 
 // 导入业务服务
 import PlayerManagerService from './player/PlayerManagerService.js';

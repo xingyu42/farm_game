@@ -40,8 +40,8 @@ class AdminService {
     }
 
     try {
-      // 检查玩家是否存在
-      const player = await this.playerService.getPlayer(targetId);
+      // 检查玩家是否存在（不自动创建）
+      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
       if (!player) {
         return { success: false, message: '未找到该玩家。' };
       }
@@ -72,8 +72,8 @@ class AdminService {
     }
 
     try {
-      // 检查玩家是否存在
-      const player = await this.playerService.getPlayer(targetId);
+      // 检查玩家是否存在（不自动创建）
+      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
       if (!player) {
         return { success: false, message: '未找到该玩家。' };
       }
@@ -110,17 +110,21 @@ class AdminService {
       return { success: false, message: `无效的品质。有效品质为: ${validQualities.join(', ')}` };
     }
     try {
-        const validation = await this.playerService.validateLandId(targetId, landId);
-        if (!validation.valid) {
-            return { success: false, message: validation.message };
-        }
+      const validation = await this.playerService.validateLandId(targetId, landId);
+      if (!validation.valid) {
+        return { success: false, message: validation.message };
+      }
 
-        const player = await this.playerService.getPlayer(targetId);
-        player.lands[landId - 1].quality = quality;
-        await this.playerService.updatePlayer(targetId, player);
+      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
+      if (!player) {
+        return { success: false, message: '未找到该玩家。' };
+      }
 
-        this.logger.info(`[AdminService] 将玩家 [${targetId}] 的土地 ${landId} 品质设置为 ${quality}`);
-        return { success: true, message: `已将玩家 ${targetId} 的土地 ${landId} 品质设置为 ${quality}。` };
+      player.lands[landId - 1].quality = quality;
+      await this.playerService.getDataService().savePlayerToHash(targetId, player);
+
+      this.logger.info(`[AdminService] 将玩家 [${targetId}] 的土地 ${landId} 品质设置为 ${quality}`);
+      return { success: true, message: `已将玩家 ${targetId} 的土地 ${landId} 品质设置为 ${quality}。` };
     } catch (error) {
       this.logger.error(`[AdminService] 设置土地品质失败 [${targetId}, ${landId}]: ${error.message}`);
       return { success: false, message: `设置土地品质失败: ${error.message}` };

@@ -61,7 +61,7 @@ export class adminApp extends plugin {
   }
 
   async resetPlayer(e, args, adminService) {
-    const targetId = e.at || (args[0] ? args[0].replace('@', '') : null);
+    const targetId = e.at;
     if (!targetId) {
       await e.reply('请指定要重置的玩家，例如：#nc管理 重置玩家 @张三');
       return;

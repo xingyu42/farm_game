@@ -18,20 +18,12 @@ export class farm extends plugin {
           fnc: 'showMyFarm'
         },
         {
-          reg: '^@(.+?) #(nc)?农场$',
+          reg: '^#(nc)?农场$',
           fnc: 'showOtherFarm'
         },
         {
-          reg: '^#(nc)?(农场|信息|我的信息)$',
-          fnc: 'showFarmInfo'
-        },
-        {
-          reg: '^#(nc)?种植\\s+(\\d+)\\s+(.+)$',
-          fnc: 'plantCrop'
-        },
-        {
           reg: '^#(nc)?种植\\s+(.+)\\s+(\\d+)$',
-          fnc: 'plantCropReverse'
+          fnc: 'plantCrop'
         },
         {
           reg: '^#(nc)?浇水\\s+(\\d+)$',
@@ -63,7 +55,7 @@ export class farm extends plugin {
         }
       ]
     })
-    
+
     // 初始化配置
     this.config = Config
   }
@@ -81,12 +73,12 @@ export class farm extends plugin {
   async showMyFarm(e) {
     try {
       const userId = e.user_id
-      
+
       // 确保服务已初始化
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
-      
+
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
       const playerData = await playerService.getPlayerData(userId)
@@ -112,21 +104,21 @@ export class farm extends plugin {
   async showOtherFarm(e) {
     try {
       // 提取被@用户的QQ号
-      const atUser = e.at
-      if (!atUser || atUser.length === 0) {
-        e.reply('请正确@要查看的用户')
+      const targetUserId = e.at
+
+      // 增加对 targetUserId 的校验
+      if (!targetUserId) {
+        e.reply('无法获取到目标用户信息，请确认指令是否正确。')
         return true
       }
-      
-      const targetUserId = atUser[0]
-      
+
       // 确保服务已初始化
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
-      
-      // 检查目标玩家是否存在
-      const targetPlayerData = await playerService.getPlayerData(targetUserId)
+
+      // 检查目标玩家是否存在（不自动创建）
+      const targetPlayerData = await playerService.getDataService().getPlayerFromHash(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true
@@ -149,8 +141,8 @@ export class farm extends plugin {
    * @returns {string} 农场状态显示文本
    */
   async _buildFarmDisplay(playerData, isOwner = true) {
-    const ownerTitle = isOwner ? '我的农场' : `${playerData.name || '玩家'} 的农场`
-    
+    const ownerTitle = isOwner ? '我的农场' : `${playerData.name} 的农场`
+
     // 农场基础信息
     const farmInfo = [
       `🌾 ${ownerTitle}`,
@@ -170,12 +162,6 @@ export class farm extends plugin {
       farmInfo.push(landDisplay)
     }
 
-    // 添加保护状态（仅对自己可见）
-    if (isOwner) {
-      farmInfo.push(`━━━━━━━━━━━━━━━━━━`)
-      farmInfo.push(`🛡️ 狗粮保护: ${playerData.getDogFoodStatus()}`)
-      farmInfo.push(`⏰ 偷菜冷却: ${playerData.getStealCooldownStatus()}`)
-    }
 
     return farmInfo.join('\n')
   }
@@ -190,10 +176,10 @@ export class farm extends plugin {
   _formatLandStatus(land, cropsConfig) {
     const landId = land.id
     const quality = land.quality || 'normal'
-    
+
     // 品质标识
     const qualityIcon = this._getQualityIcon(quality)
-    
+
     if (!land.crop || land.status === 'empty') {
       return `${qualityIcon}[${landId}]：空闲`
     }
@@ -201,15 +187,15 @@ export class farm extends plugin {
     // 获取作物信息
     const cropConfig = cropsConfig[land.crop]
     const cropName = cropConfig?.name || land.crop
-    
+
     // 健康度
     const health = land.health || 100
     const healthDisplay = health === 100 ? '健康' : `${health}%`
-    
+
     // 成熟时间
     let timeDisplay = ''
     const now = Date.now()
-    
+
     if (land.status === 'mature') {
       timeDisplay = '已成熟'
     } else if (land.harvestTime) {
@@ -222,16 +208,16 @@ export class farm extends plugin {
     } else {
       timeDisplay = '生长中'
     }
-    
+
     // 负面状态
     const negativeStates = []
     if (land.needsWater) negativeStates.push('缺水')
     if (land.hasPests) negativeStates.push('害虫')
     const negativeDisplay = negativeStates.length > 0 ? `[${negativeStates.join(',')}]` : ''
-    
+
     // 可偷窃状态
     const stealableDisplay = (land.status === 'mature' && land.stealable) ? '[可偷]' : ''
-    
+
     return `${qualityIcon}[${landId}]：${cropName} ${healthDisplay} ${timeDisplay} ${negativeDisplay} ${stealableDisplay}`.trim()
   }
 
@@ -257,7 +243,7 @@ export class farm extends plugin {
    */
   _formatTimeRemaining(milliseconds) {
     const totalSeconds = Math.ceil(milliseconds / 1000)
-    
+
     if (totalSeconds < 60) {
       return `${totalSeconds}秒`
     } else if (totalSeconds < 3600) {
@@ -271,103 +257,9 @@ export class farm extends plugin {
   }
 
   /**
-   * 显示农场信息
-   */
-  async showFarmInfo(e) {
-    try {
-      const userId = e.user_id
-      const playerService = serviceContainer.getService('playerService')
-      
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      const playerData = await playerService.getPlayerData(userId)
-
-      if (!playerData) {
-        e.reply('获取玩家信息失败，请稍后重试')
-        return true
-      }
-
-      // 构建农场信息消息
-      const farmInfo = [
-        `🌾 ${playerData.name || '农场主'} 的农场`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `👤 等级: ${playerData.level} (${playerData.experience}/${playerData.experienceToNext})`,
-        `💰 金币: ${playerData.gold}`,
-        `🏞️ 土地: ${playerData.lands.length}/24`,
-        `📦 仓库: ${playerData.getInventoryUsage()}/${playerData.inventory_capacity}`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `🛡️ 狗粮保护: ${playerData.getDogFoodStatus()}`,
-        `⏰ 偷菜冷却: ${playerData.getStealCooldownStatus()}`
-      ]
-
-      e.reply(farmInfo.join('\n'))
-      return true
-    } catch (error) {
-      logger.error('[农场游戏] 显示农场信息失败:', error)
-      e.reply('查看农场信息失败，请稍后重试')
-      return true
-    }
-  }
-
-  /**
    * 种植作物
    */
   async plantCrop(e) {
-    try {
-      // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(nc)?种植\s+(\d+)\s+(.+)$/);
-      if (!match) {
-        await e.reply('❌ 格式错误！使用: #种植 [土地编号] [作物名称]');
-        return true;
-      }
-
-      const landId = match[2];
-      const cropName = match[3];
-
-      // 输入验证增强
-      const landIdNum = parseInt(landId);
-      if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
-        return true;
-      }
-
-      if (!cropName.trim()) {
-        await e.reply('❌ 作物名称不能为空');
-        return true;
-      }
-      const userId = e.user_id
-      
-      await this._ensureServicesInitialized()
-      
-      const playerService = serviceContainer.getService('playerService')
-      
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      
-      // 解析作物类型（支持中文名称）
-      const cropType = await this._parseCropType(cropName)
-      if (!cropType) {
-        e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
-        return true
-      }
-      
-      // 调用种植服务
-      const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.plantCrop(userId, landIdNum, cropType)
-      
-      e.reply(result.message)
-      return true
-    } catch (error) {
-      logger.error('[农场游戏] 种植作物失败:', error)
-      e.reply('种植失败，请稍后重试')
-      return true
-    }
-  }
-
-  /**
-   * 种植作物（反向参数顺序）
-   */
-  async plantCropReverse(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/);
@@ -391,25 +283,25 @@ export class farm extends plugin {
         return true;
       }
       const userId = e.user_id
-      
+
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
-      
+
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
-      
+
       // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
       if (!cropType) {
         e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
         return true
       }
-      
+
       // 调用种植服务
       const plantingService = serviceContainer.getService('plantingService')
       const result = await plantingService.plantCrop(userId, landIdNum, cropType)
-      
+
       e.reply(result.message)
       return true
     } catch (error) {
@@ -418,6 +310,8 @@ export class farm extends plugin {
       return true
     }
   }
+
+
 
   /**
    * 浇水
@@ -440,7 +334,7 @@ export class farm extends plugin {
         return true;
       }
       const userId = e.user_id
-      
+
       await this._ensureServicesInitialized()
       const playerService = serviceContainer.getService('playerService')
       const plantingService = serviceContainer.getService('plantingService')
@@ -546,7 +440,7 @@ export class farm extends plugin {
         return true;
       }
       const userId = e.user_id
-      
+
       await this._ensureServicesInitialized()
       const playerService = serviceContainer.getService('playerService')
       const plantingService = serviceContainer.getService('plantingService')
@@ -592,18 +486,18 @@ export class farm extends plugin {
         return true;
       }
       const userId = e.user_id
-      
+
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
-      
+
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
-      
+
       // 调用收获服务
       const plantingService = serviceContainer.getService('plantingService')
       const result = await plantingService.harvestCrop(userId, landIdNum)
-      
+
       e.reply(result.message)
       return true
     } catch (error) {
@@ -619,18 +513,18 @@ export class farm extends plugin {
   async harvestAllCrops(e) {
     try {
       const userId = e.user_id
-      
+
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
-      
+
       // 确保玩家已注册
       await playerService.ensurePlayer(userId)
-      
+
       // 调用收获服务（不指定landId表示收获全部）
       const plantingService = serviceContainer.getService('plantingService')
       const result = await plantingService.harvestCrop(userId)
-      
+
       e.reply(result.message)
       return true
     } catch (error) {

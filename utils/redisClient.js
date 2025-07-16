@@ -250,7 +250,7 @@ class RedisClient {
           return 0
         end
       `;
-      
+
       const result = await this.client.eval(luaScript, 1, lockKey, lockValue);
       return result === 1;
     } catch (error) {
@@ -269,7 +269,7 @@ class RedisClient {
    */
   async withLock(userId, operation, operationType = 'general', lockTTL = this.defaultLockTTL) {
     const lockResult = await this.acquireLock(userId, operationType, lockTTL);
-    
+
     if (!lockResult.success) {
       throw new Error(`无法获取锁: ${lockResult.error}`);
     }
@@ -298,13 +298,13 @@ class RedisClient {
       }
 
       const multi = this.client.multi();
-      
+
       // 执行事务函数
       const preparedData = await transactionFn(multi);
-      
+
       // 执行事务
       const results = await multi.exec();
-      
+
       if (results === null) {
         // 事务被取消（WATCH的键被修改）
         throw new Error('事务被取消：监控的键已被修改');
@@ -345,17 +345,17 @@ class RedisClient {
   async mset(keyValuePairs, ttl = null) {
     try {
       const multi = this.client.multi();
-      
+
       for (const [key, value] of Object.entries(keyValuePairs)) {
         const serializedValue = this.serialize(value);
-        
+
         if (ttl) {
           multi.setex(key, ttl, serializedValue);
         } else {
           multi.set(key, serializedValue);
         }
       }
-      
+
       await multi.exec();
       return true;
     } catch (error) {
