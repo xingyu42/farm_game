@@ -23,17 +23,36 @@ export class InventoryService {
   async getInventory(userId) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      const playerData = await this.redis.get(playerKey);
-      
-      if (!playerData) {
+
+      // 检查Hash是否存在
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
         throw new Error('玩家不存在');
       }
-      
+
+      // 获取所有Hash字段
+      const hashData = await this.redis.client.hGetAll(playerKey);
+
+      if (!hashData || Object.keys(hashData).length === 0) {
+        throw new Error('玩家数据为空');
+      }
+
+      // 解析inventory字段
+      let inventory = {};
+      if (hashData.inventory) {
+        try {
+          inventory = JSON.parse(hashData.inventory);
+        } catch (error) {
+          console.warn(`[InventoryService] 解析inventory字段失败: ${error.message}`);
+          inventory = {};
+        }
+      }
+
       return {
-        items: playerData.inventory || {},
-        capacity: playerData.inventory_capacity || playerData.inventoryCapacity || 20,
-        maxCapacity: playerData.maxInventoryCapacity || 200,
-        usage: this._calculateInventoryUsage(playerData.inventory || {})
+        items: inventory || {},
+        capacity: parseInt(hashData.inventory_capacity || hashData.inventoryCapacity || '20'),
+        maxCapacity: parseInt(hashData.maxInventoryCapacity || '200'),
+        usage: this._calculateInventoryUsage(inventory || {})
       };
     } catch (error) {
       this.logger.error(`[InventoryService] 获取仓库数据失败 [${userId}]: ${error.message}`);
@@ -51,57 +70,71 @@ export class InventoryService {
   async addItem(userId, itemId, quantity) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
-      return await this.redis.transaction(async (multi) => {
-        const playerData = await this.redis.get(playerKey);
-        
-        if (!playerData) {
-          throw new Error('玩家不存在');
+
+      // 先获取玩家数据（在事务外）
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
+        throw new Error('玩家不存在');
+      }
+
+      const hashData = await this.redis.client.hGetAll(playerKey);
+      if (!hashData || Object.keys(hashData).length === 0) {
+        throw new Error('玩家数据为空');
+      }
+
+      // 解析inventory字段
+      let inventory = {};
+      if (hashData.inventory) {
+        try {
+          inventory = JSON.parse(hashData.inventory);
+        } catch (error) {
+          console.warn(`[InventoryService] 解析inventory字段失败: ${error.message}`);
+          inventory = {};
         }
-        
-        // 检查仓库容量
-        const currentUsage = this._calculateInventoryUsage(playerData.inventory || {});
-        const capacity = playerData.inventory_capacity || playerData.inventoryCapacity || 20;
-        
-        if (currentUsage + quantity > capacity) {
-          return {
-            success: false,
-            message: `仓库容量不足！当前 ${currentUsage}/${capacity}，需要添加 ${quantity} 个物品`,
-            currentUsage,
-            capacity
-          };
-        }
-        
-        // 初始化仓库
-        if (!playerData.inventory) {
-          playerData.inventory = {};
-        }
-        
-        // 添加物品
-        if (playerData.inventory[itemId]) {
-          playerData.inventory[itemId].quantity += quantity;
-        } else {
-          const itemConfig = this._getItemConfig(itemId);
-          playerData.inventory[itemId] = {
-            quantity,
-            name: itemConfig?.name || itemId,
-            category: itemConfig?.category || 'unknown',
-            lastUpdated: Date.now()
-          };
-        }
-        
-        playerData.lastUpdated = Date.now();
-        multi.set(playerKey, this.redis.serialize(playerData));
-        
-        this.logger.info(`[InventoryService] 玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
-        
+      }
+
+      // 检查仓库容量
+      const currentUsage = this._calculateInventoryUsage(inventory || {});
+      const capacity = parseInt(hashData.inventory_capacity || hashData.inventoryCapacity || '20');
+
+      if (currentUsage + quantity > capacity) {
         return {
-          success: true,
-          message: `成功添加 ${quantity} 个 ${this._getItemName(itemId)}`,
-          item: playerData.inventory[itemId],
-          newUsage: this._calculateInventoryUsage(playerData.inventory)
+          success: false,
+          message: `仓库容量不足！当前 ${currentUsage}/${capacity}，需要添加 ${quantity} 个物品`,
+          currentUsage,
+          capacity
         };
-      });
+      }
+
+      // 添加物品
+      if (inventory[itemId]) {
+        inventory[itemId].quantity += quantity;
+      } else {
+        const itemConfig = this._getItemConfig(itemId);
+        inventory[itemId] = {
+          quantity,
+          name: itemConfig?.name || itemId,
+          category: itemConfig?.category || 'unknown',
+          lastUpdated: Date.now()
+        };
+      }
+
+      // 更新Redis Hash
+      const updates = {
+        inventory: JSON.stringify(inventory),
+        lastUpdated: Date.now().toString()
+      };
+
+      await this.redis.client.hSet(playerKey, updates);
+
+      this.logger.info(`[InventoryService] 玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
+
+      return {
+        success: true,
+        message: `成功添加 ${quantity} 个 ${this._getItemName(itemId)}`,
+        item: inventory[itemId],
+        newUsage: this._calculateInventoryUsage(inventory)
+      };
     } catch (error) {
       this.logger.error(`[InventoryService] 添加物品失败 [${userId}]: ${error.message}`);
       throw error;
@@ -118,7 +151,7 @@ export class InventoryService {
     try {
       const results = [];
       let totalAdded = 0;
-      
+
       for (const item of items) {
         const result = await this.addItem(userId, item.item_id, item.quantity);
         results.push(result);
@@ -126,7 +159,7 @@ export class InventoryService {
           totalAdded += item.quantity;
         }
       }
-      
+
       return {
         success: results.every(r => r.success),
         message: `批量添加完成，成功添加 ${totalAdded} 个物品`,
@@ -148,48 +181,77 @@ export class InventoryService {
   async removeItem(userId, itemId, quantity) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
-      return await this.redis.transaction(async (multi) => {
-        const playerData = await this.redis.get(playerKey);
-        
-        if (!playerData || !playerData.inventory || !playerData.inventory[itemId]) {
-          return {
-            success: false,
-            message: `仓库中没有 ${this._getItemName(itemId)}`
-          };
-        }
-        
-        const currentQuantity = playerData.inventory[itemId].quantity;
-        
-        if (currentQuantity < quantity) {
-          return {
-            success: false,
-            message: `数量不足！仓库中有 ${currentQuantity} 个，需要 ${quantity} 个`,
-            available: currentQuantity
-          };
-        }
-        
-        // 移除物品
-        playerData.inventory[itemId].quantity -= quantity;
-        
-        // 如果数量为0，删除物品记录
-        if (playerData.inventory[itemId].quantity <= 0) {
-          delete playerData.inventory[itemId];
-        } else {
-          playerData.inventory[itemId].lastUpdated = Date.now();
-        }
-        
-        playerData.lastUpdated = Date.now();
-        multi.set(playerKey, this.redis.serialize(playerData));
-        
-        this.logger.info(`[InventoryService] 玩家 ${userId} 移除物品: ${itemId} x${quantity}`);
-        
+
+      // 先获取玩家数据（在事务外）
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
         return {
-          success: true,
-          message: `成功移除 ${quantity} 个 ${this._getItemName(itemId)}`,
-          remaining: playerData.inventory[itemId]?.quantity || 0
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
         };
-      });
+      }
+
+      const hashData = await this.redis.client.hGetAll(playerKey);
+      if (!hashData || Object.keys(hashData).length === 0) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      // 解析inventory字段
+      let inventory = {};
+      if (hashData.inventory) {
+        try {
+          inventory = JSON.parse(hashData.inventory);
+        } catch (error) {
+          console.warn(`[InventoryService] 解析inventory字段失败: ${error.message}`);
+          inventory = {};
+        }
+      }
+
+      if (!inventory[itemId]) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      const currentQuantity = inventory[itemId].quantity;
+
+      if (currentQuantity < quantity) {
+        return {
+          success: false,
+          message: `数量不足！仓库中有 ${currentQuantity} 个，需要 ${quantity} 个`,
+          available: currentQuantity
+        };
+      }
+
+      // 移除物品
+      inventory[itemId].quantity -= quantity;
+
+      // 如果数量为0，删除物品记录
+      if (inventory[itemId].quantity <= 0) {
+        delete inventory[itemId];
+      } else {
+        inventory[itemId].lastUpdated = Date.now();
+      }
+
+      // 更新Redis Hash
+      const updates = {
+        inventory: JSON.stringify(inventory),
+        lastUpdated: Date.now().toString()
+      };
+
+      await this.redis.client.hSet(playerKey, updates);
+
+      this.logger.info(`[InventoryService] 玩家 ${userId} 移除物品: ${itemId} x${quantity}`);
+
+      return {
+        success: true,
+        message: `成功移除 ${quantity} 个 ${this._getItemName(itemId)}`,
+        remaining: inventory[itemId]?.quantity || 0
+      };
     } catch (error) {
       this.logger.error(`[InventoryService] 移除物品失败 [${userId}]: ${error.message}`);
       throw error;
@@ -337,32 +399,61 @@ export class InventoryService {
   async lockItem(userId, itemId) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
-      return await this.redis.transaction(async (multi) => {
-        const playerData = await this.redis.get(playerKey);
-        
-        if (!playerData || !playerData.inventory || !playerData.inventory[itemId]) {
-          return {
-            success: false,
-            message: `仓库中没有 ${this._getItemName(itemId)}`
-          };
-        }
-        
-        // 设置锁定标志
-        playerData.inventory[itemId].locked = true;
-        playerData.inventory[itemId].lockedAt = Date.now();
-        playerData.lastUpdated = Date.now();
-        
-        multi.set(playerKey, this.redis.serialize(playerData));
-        
-        this.logger.info(`[InventoryService] 玩家 ${userId} 锁定物品: ${itemId}`);
-        
+
+      // 先获取玩家数据（在事务外）
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
         return {
-          success: true,
-          message: `成功锁定 ${this._getItemName(itemId)}`,
-          item: playerData.inventory[itemId]
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
         };
-      });
+      }
+
+      const hashData = await this.redis.client.hGetAll(playerKey);
+      if (!hashData || Object.keys(hashData).length === 0) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      // 解析inventory字段
+      let inventory = {};
+      if (hashData.inventory) {
+        try {
+          inventory = JSON.parse(hashData.inventory);
+        } catch (error) {
+          console.warn(`[InventoryService] 解析inventory字段失败: ${error.message}`);
+          inventory = {};
+        }
+      }
+
+      if (!inventory[itemId]) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      // 设置锁定标志
+      inventory[itemId].locked = true;
+      inventory[itemId].lockedAt = Date.now();
+
+      // 更新Redis Hash
+      const updates = {
+        inventory: JSON.stringify(inventory),
+        lastUpdated: Date.now().toString()
+      };
+
+      await this.redis.client.hSet(playerKey, updates);
+
+      this.logger.info(`[InventoryService] 玩家 ${userId} 锁定物品: ${itemId}`);
+
+      return {
+        success: true,
+        message: `成功锁定 ${this._getItemName(itemId)}`,
+        item: inventory[itemId]
+      };
     } catch (error) {
       this.logger.error(`[InventoryService] 锁定物品失败 [${userId}]: ${error.message}`);
       throw error;
@@ -378,33 +469,62 @@ export class InventoryService {
   async unlockItem(userId, itemId) {
     try {
       const playerKey = this.redis.generateKey('player', userId);
-      
-      return await this.redis.transaction(async (multi) => {
-        const playerData = await this.redis.get(playerKey);
-        
-        if (!playerData || !playerData.inventory || !playerData.inventory[itemId]) {
-          return {
-            success: false,
-            message: `仓库中没有 ${this._getItemName(itemId)}`
-          };
-        }
-        
-        // 移除锁定标志
-        delete playerData.inventory[itemId].locked;
-        delete playerData.inventory[itemId].lockedAt;
-        playerData.inventory[itemId].lastUpdated = Date.now();
-        playerData.lastUpdated = Date.now();
-        
-        multi.set(playerKey, this.redis.serialize(playerData));
-        
-        this.logger.info(`[InventoryService] 玩家 ${userId} 解锁物品: ${itemId}`);
-        
+
+      // 先获取玩家数据（在事务外）
+      const exists = await this.redis.exists(playerKey);
+      if (!exists) {
         return {
-          success: true,
-          message: `成功解锁 ${this._getItemName(itemId)}`,
-          item: playerData.inventory[itemId]
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
         };
-      });
+      }
+
+      const hashData = await this.redis.client.hGetAll(playerKey);
+      if (!hashData || Object.keys(hashData).length === 0) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      // 解析inventory字段
+      let inventory = {};
+      if (hashData.inventory) {
+        try {
+          inventory = JSON.parse(hashData.inventory);
+        } catch (error) {
+          console.warn(`[InventoryService] 解析inventory字段失败: ${error.message}`);
+          inventory = {};
+        }
+      }
+
+      if (!inventory[itemId]) {
+        return {
+          success: false,
+          message: `仓库中没有 ${this._getItemName(itemId)}`
+        };
+      }
+
+      // 移除锁定标志
+      delete inventory[itemId].locked;
+      delete inventory[itemId].lockedAt;
+      inventory[itemId].lastUpdated = Date.now();
+
+      // 更新Redis Hash
+      const updates = {
+        inventory: JSON.stringify(inventory),
+        lastUpdated: Date.now().toString()
+      };
+
+      await this.redis.client.hSet(playerKey, updates);
+
+      this.logger.info(`[InventoryService] 玩家 ${userId} 解锁物品: ${itemId}`);
+
+      return {
+        success: true,
+        message: `成功解锁 ${this._getItemName(itemId)}`,
+        item: inventory[itemId]
+      };
     } catch (error) {
       this.logger.error(`[InventoryService] 解锁物品失败 [${userId}]: ${error.message}`);
       throw error;
@@ -442,14 +562,14 @@ export class InventoryService {
   async lockItems(userId, itemIds) {
     try {
       const results = [];
-      
+
       for (const itemId of itemIds) {
         const result = await this.lockItem(userId, itemId);
         results.push({ itemId, ...result });
       }
-      
+
       const successful = results.filter(r => r.success).length;
-      
+
       return {
         success: successful === itemIds.length,
         message: `批量锁定完成，成功锁定 ${successful}/${itemIds.length} 个物品`,

@@ -41,7 +41,7 @@ export class ProtectionService {
 
       // 解析物品配置
       const itemInfo = this.itemResolver.findItemById(itemId);
-      
+
       if (!itemInfo) {
         throw new Error(`未找到物品: ${itemId}`);
       }
@@ -58,7 +58,7 @@ export class ProtectionService {
       }
 
       // 获取玩家数据
-      const playerData = await this.playerService.getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -111,7 +111,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -147,7 +147,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -200,7 +200,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -247,7 +247,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -304,7 +304,7 @@ export class ProtectionService {
   async isProtected(userId) {
     try {
       const status = await this.getProtectionStatus(userId);
-      
+
       return {
         isProtected: status.isProtected,
         protectionTypes: {
@@ -330,7 +330,7 @@ export class ProtectionService {
   getAvailableDogFoodTypes() {
     try {
       const dogFoodConfig = this.config.items?.dogFood || {};
-      
+
       return Object.keys(dogFoodConfig).map(type => ({
         type,
         name: dogFoodConfig[type].name,
@@ -355,16 +355,16 @@ export class ProtectionService {
     try {
       // 基础防御成功率为50%
       const baseRate = 50;
-      
+
       // 防御加成影响
       const bonusRate = defenseBonus || 0;
-      
+
       // 攻击力影响（简化计算）
       const validAttackPower = isNaN(Number(attackPower)) ? 100 : Number(attackPower);
       const attackPenalty = Math.max(0, (validAttackPower - 100) / 10);
-      
+
       const finalRate = Math.min(95, Math.max(5, baseRate + bonusRate - attackPenalty));
-      
+
       return Math.round(finalRate);
     } catch (error) {
       this.logger.error(`[ProtectionService] 计算防御成功率失败: ${error.message}`);

@@ -2,11 +2,6 @@
  * 商店服务 - 管理买卖交易（根据PRD v3.2设计）
  * 包含：商店浏览、购买、出售、价格查询等功能
  */
-
-// {{CHENGQI:
-// Action: Created; Timestamp: 2025-06-30T12:22:31+08:00; Reason: Shrimp Task ID: #faf85478, implementing shop system for T5;
-// }}
-
 import { ItemResolver } from '../utils/ItemResolver.js';
 
 export class ShopService {
@@ -27,18 +22,20 @@ export class ShopService {
   async getShopItems(category = null) {
     try {
       const itemsConfig = this.config.items || {};
+
+
       const shopConfig = itemsConfig.shop?.categories || [];
-      
+
       let items = [];
-      
+
       for (const categoryInfo of shopConfig) {
         // 如果指定了类别且不匹配，跳过
         if (category && categoryInfo.name !== category) {
           continue;
         }
-        
+
         const categoryItems = [];
-        
+
         for (const itemId of categoryInfo.items) {
           const itemInfo = this.itemResolver.getItemInfo(itemId);
 
@@ -53,7 +50,7 @@ export class ShopService {
             });
           }
         }
-        
+
         if (categoryItems.length > 0) {
           items.push({
             category: categoryInfo.name,
@@ -61,7 +58,7 @@ export class ShopService {
           });
         }
       }
-      
+
       return items;
     } catch (error) {
       this.logger.error(`[ShopService] 获取商店商品失败: ${error.message}`);
@@ -89,19 +86,19 @@ export class ShopService {
       }
 
       const itemInfo = this.itemResolver.getItemInfo(itemId);
-      
+
       if (!itemInfo || itemInfo.price === undefined) {
         return {
           success: false,
           message: `${itemName} 不可购买`
         };
       }
-      
+
       const totalCost = itemInfo.price * quantity;
-      
+
       // 检查玩家信息
       const playerData = await this.playerService.getPlayerData(userId);
-      
+
       // 检查等级要求
       if (itemInfo.requiredLevel && playerData.level < itemInfo.requiredLevel) {
         return {
@@ -109,7 +106,7 @@ export class ShopService {
           message: `需要等级 ${itemInfo.requiredLevel} 才能购买 ${itemName}，当前等级: ${playerData.level}`
         };
       }
-      
+
       // 检查金币是否足够
       if (playerData.coins < totalCost) {
         return {
@@ -117,17 +114,17 @@ export class ShopService {
           message: `金币不足！需要 ${totalCost} 金币，当前拥有: ${playerData.coins}`
         };
       }
-      
+
       // 检查仓库容量
       const hasCapacity = await this.inventoryService.hasCapacity(userId, quantity);
-      
+
       if (!hasCapacity) {
         return {
           success: false,
           message: `仓库容量不足！无法添加 ${quantity} 个物品`
         };
       }
-      
+
       // 执行购买事务 - 使用正确的PlayerDataService事务模式
       return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
         // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
@@ -217,14 +214,14 @@ export class ShopService {
       }
 
       const itemInfo = this.itemResolver.getItemInfo(itemId);
-      
+
       if (!itemInfo || itemInfo.sellPrice === undefined) {
         return {
           success: false,
           message: `${itemName} 无法出售`
         };
       }
-      
+
       // 检查物品是否被锁定
       const isLocked = await this.inventoryService.isItemLocked(userId, itemId);
       if (isLocked) {
@@ -233,10 +230,10 @@ export class ShopService {
           message: `${itemName} 已被锁定，无法出售`
         };
       }
-      
+
       // 检查仓库中的物品数量
       const currentQuantity = await this.inventoryService.getItemQuantity(userId, itemId);
-      
+
       if (currentQuantity < quantity) {
         return {
           success: false,
@@ -244,9 +241,9 @@ export class ShopService {
           available: currentQuantity
         };
       }
-      
+
       const totalEarnings = itemInfo.sellPrice * quantity;
-      
+
       // 执行出售事务 - 使用正确的PlayerDataService事务模式
       return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
         // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
@@ -323,7 +320,7 @@ export class ShopService {
       const inventory = await this.inventoryService.getInventory(userId);
       const cropItems = [];
       let totalEarnings = 0;
-      
+
       // 找出所有作物（排除被锁定的）
       for (const [itemId, item] of Object.entries(inventory.items)) {
         if (item.category === 'crops' && !item.locked) {
@@ -340,14 +337,14 @@ export class ShopService {
           }
         }
       }
-      
+
       if (cropItems.length === 0) {
         return {
           success: false,
           message: '仓库中没有可出售的作物'
         };
       }
-      
+
       // 执行批量出售 - 使用正确的PlayerDataService事务模式
       return await this.playerService.getDataService().executeWithTransaction(userId, async (multi, playerKey) => {
         // 在事务内获取最新玩家数据 - 使用正确的Hash读取方式
@@ -419,13 +416,13 @@ export class ShopService {
     try {
       const itemsConfig = this.config.items || {};
       const prices = [];
-      
+
       const categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
-      
+
       for (const category of categories) {
         if (itemsConfig[category]) {
           const categoryPrices = [];
-          
+
           for (const [, itemInfo] of Object.entries(itemsConfig[category])) {
             if (itemInfo.sellPrice !== undefined) {
               categoryPrices.push({
@@ -435,7 +432,7 @@ export class ShopService {
               });
             }
           }
-          
+
           if (categoryPrices.length > 0) {
             prices.push({
               category: this._getCategoryDisplayName(category),
@@ -444,7 +441,7 @@ export class ShopService {
           }
         }
       }
-      
+
       return prices;
     } catch (error) {
       this.logger.error(`[ShopService] 获取市场价格失败: ${error.message}`);

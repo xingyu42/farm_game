@@ -25,13 +25,13 @@ export class StealService {
     this.protectionService = protectionService;
     this.landService = landService;
     this.logger = logger || console;
-    
+
     // 初始化Redis锁
     this.redisLock = new RedisLock(redisClient, logger);
-    
+
     // 获取偷窃配置
     this.stealConfig = this.config?.steal || this._getDefaultConfig();
-    
+
     this.logger.info('[StealService] 偷窃服务已初始化');
   }
 
@@ -62,12 +62,12 @@ export class StealService {
       // 获取双重锁
       for (const key of lockKeys) {
         const lock = await this.redisLock.acquire(
-          `steal:${key}`, 
+          `steal:${key}`,
           lockTimeout,
           this.stealConfig.locks?.retryDelay || 100,
           this.stealConfig.locks?.maxRetries || 50
         );
-        
+
         if (!lock) {
           throw new Error(`获取用户锁失败: ${key}，请稍后再试`);
         }
@@ -126,10 +126,10 @@ export class StealService {
 
     // 5. 计算偷窃成功率
     const successRate = await this._calculateSuccessRate(attackerId, targetId);
-    
+
     // 6. 执行偷窃判定
     const isSuccess = Math.random() * 100 < successRate;
-    
+
     if (isSuccess) {
       return await this._handleStealSuccess(attackerId, targetId, stealableLands, successRate);
     } else {
@@ -148,57 +148,57 @@ export class StealService {
    */
   async _handleStealSuccess(attackerId, targetId, stealableLands, successRate) {
     const rewards = [];
-    
+
     // 随机选择要偷取的土地（最多maxStealPerAttempt块）
     const maxSteal = this.stealConfig.basic?.maxStealPerAttempt || 3;
     const selectedLands = this._selectRandomLands(stealableLands, maxSteal);
-    
+
     // 使用Redis Pipeline优化连续写操作
     const pipeline = this.redisClient.multi();
-    
+
     for (const land of selectedLands) {
       // 计算偷取数量
       const stealAmount = await this._calculateStealAmount(land);
-      
+
       if (stealAmount > 0) {
         // 减少目标作物数量
         const newQuantity = Math.max(0, land.crop.quantity - stealAmount);
-        
+
         // 更新土地数据
         await this.landService.updateLandCrop(targetId, land.landId, {
           ...land.crop,
           quantity: newQuantity
         });
-        
+
         // 偷窃者获得作物
         await this.inventoryService.addItem(attackerId, land.crop.cropId, stealAmount);
-        
+
         rewards.push({
           cropId: land.crop.cropId,
           cropName: land.crop.cropName,
           quantity: stealAmount,
           fromLand: land.landId
         });
-        
+
         this.logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${land.crop.cropName}`);
       }
     }
-    
+
     // 执行Pipeline
     await pipeline.exec();
-    
+
     // 设置偷窃冷却
     await this._setStealCooldown(attackerId);
-    
+
     // 设置目标保护
     await this.protectionService.setFarmProtection(
-      targetId, 
+      targetId,
       this.stealConfig.basic?.protectionMinutes || 30
     );
-    
+
     // 记录偷窃记录
     await this._recordStealAttempt(attackerId, targetId, true, rewards);
-    
+
     return {
       success: true,
       result: 'steal_success',
@@ -221,20 +221,20 @@ export class StealService {
   async _handleStealFailure(attackerId, targetId, successRate) {
     // 计算失败惩罚
     const penalty = await this._calculateFailurePenalty(attackerId);
-    
+
     if (penalty > 0) {
       // 扣除偷窃者金币
       await this.playerService.updateEconomyField(attackerId, 'coins', -penalty);
-      
+
       this.logger.info(`[StealService] 偷窃失败：${attackerId} 被罚款 ${penalty} 金币`);
     }
-    
+
     // 设置偷窃冷却（失败也有冷却）
     await this._setStealCooldown(attackerId);
-    
+
     // 记录偷窃记录
     await this._recordStealAttempt(attackerId, targetId, false, [], penalty);
-    
+
     return {
       success: false,
       result: 'steal_failed',
@@ -254,7 +254,7 @@ export class StealService {
     try {
       const key = `steal_cooldown:${userId}`;
       const cooldownEnd = await this.redisClient.get(key);
-      
+
       if (!cooldownEnd) {
         return {
           canSteal: true,
@@ -262,11 +262,11 @@ export class StealService {
           remainingTime: 0
         };
       }
-      
+
       const now = Date.now();
       const endTime = parseInt(cooldownEnd);
       const remainingTime = Math.max(0, endTime - now);
-      
+
       return {
         canSteal: remainingTime <= 0,
         cooldownEnd: endTime,
@@ -286,14 +286,14 @@ export class StealService {
   async getStealableStatus(targetId) {
     try {
       // 检查目标是否存在
-      const targetData = await this.playerService.getPlayerFromHash(targetId);
+      const targetData = await this.playerService.getDataService().getPlayerFromHash(targetId);
       if (!targetData) {
         return {
           canBeStolen: false,
           reason: '目标玩家不存在'
         };
       }
-      
+
       // 检查目标是否受保护
       const protectionStatus = await this.protectionService.isProtected(targetId);
       if (protectionStatus.isProtected) {
@@ -303,7 +303,7 @@ export class StealService {
           reason: `目标受到保护，剩余时间: ${remainingMinutes} 分钟`
         };
       }
-      
+
       // 检查目标是否有可偷取的作物
       const stealableLands = await this._getStealableLands(targetId);
       if (stealableLands.length === 0) {
@@ -312,7 +312,7 @@ export class StealService {
           reason: '目标没有可偷取的作物'
         };
       }
-      
+
       return {
         canBeStolen: true,
         availableLands: stealableLands.length,
@@ -336,35 +336,35 @@ export class StealService {
       const stealableLands = [];
       const minGrowthProgress = this.stealConfig.landRequirements?.minGrowthProgress || 0.5;
       const excludeStates = this.stealConfig.landRequirements?.excludeStates || ['empty', 'harvested'];
-      
+
       for (const land of allLands) {
         // 检查土地状态
         if (excludeStates.includes(land.status)) {
           continue;
         }
-        
+
         // 检查是否有作物
         if (!land.crop || !land.crop.cropId) {
           continue;
         }
-        
+
         // 检查生长进度
         if (land.crop.growthProgress < minGrowthProgress) {
           continue;
         }
-        
+
         // 检查作物数量
         if (land.crop.quantity <= 0) {
           continue;
         }
-        
+
         stealableLands.push({
           landId: land.landId,
           crop: land.crop,
           quality: land.quality
         });
       }
-      
+
       return stealableLands;
     } catch (error) {
       this.logger.error(`[StealService] 获取可偷取土地失败 [${targetId}]: ${error.message}`);
@@ -383,32 +383,32 @@ export class StealService {
     try {
       const baseRate = this.stealConfig.basic?.baseSuccessRate || 50;
       const factors = this.stealConfig.successRateFactors || {};
-      
+
       let finalRate = baseRate;
-      
+
       // 获取玩家数据
       const [attackerData, targetData] = await Promise.all([
-        this.playerService.getPlayerFromHash(attackerId),
-        this.playerService.getPlayerFromHash(targetId)
+        this.playerService.getDataService().getPlayerFromHash(attackerId),
+        this.playerService.getDataService().getPlayerFromHash(targetId)
       ]);
-      
+
       // 等级差异影响
       const levelDiff = attackerData.level - targetData.level;
       const levelFactor = factors.levelDifferenceFactor || 0.1;
       finalRate += levelDiff * levelFactor * 10; // 每级差异影响1%（levelFactor * 10）
-      
+
       // 目标防护加成
       const protectionBonus = await this.protectionService.getProtectionBonus(targetId);
       if (protectionBonus > 0) {
         const protectionPenalty = factors.targetProtectionPenalty || 0.5;
         finalRate -= protectionBonus * protectionPenalty;
       }
-      
+
       // 限制成功率范围
       const maxRate = factors.maxSuccessRate || 95;
       const minRate = factors.minSuccessRate || 5;
       finalRate = Math.min(maxRate, Math.max(minRate, finalRate));
-      
+
       return Math.round(finalRate);
     } catch (error) {
       this.logger.error(`[StealService] 计算成功率失败: ${error.message}`);
@@ -428,20 +428,20 @@ export class StealService {
       const baseRate = rewardConfig.baseRewardRate || 0.1;
       const maxRate = rewardConfig.maxRewardRate || 0.3;
       const qualityBonus = rewardConfig.bonusByQuality || {};
-      
+
       // 基础偷取比例
       let stealRate = baseRate;
-      
+
       // 土地品质加成
       const qualityMultiplier = qualityBonus[land.quality] || 1.0;
       stealRate *= qualityMultiplier;
-      
+
       // 限制最大偷取比例
       stealRate = Math.min(maxRate, stealRate);
-      
+
       // 计算偷取数量（至少偷1个，如果有的话）
       const stealAmount = Math.max(1, Math.floor(land.crop.quantity * stealRate));
-      
+
       return Math.min(stealAmount, land.crop.quantity);
     } catch (error) {
       this.logger.error(`[StealService] 计算偷取数量失败: ${error.message}`);
@@ -461,18 +461,18 @@ export class StealService {
       const penaltyRate = penaltyConfig.basePenaltyRate || 0.05;
       const maxPenalty = penaltyConfig.maxPenalty || 1000;
       const minPenalty = penaltyConfig.minPenalty || 10;
-      
+
       // 获取玩家金币
-      const playerData = await this.playerService.getPlayerFromHash(attackerId);
+      const playerData = await this.playerService.getDataService().getPlayerFromHash(attackerId);
       const currentCoins = playerData.economy?.coins || 0;
-      
+
       // 计算惩罚金额
       let penalty = Math.floor(currentCoins * penaltyRate);
       penalty = Math.min(maxPenalty, Math.max(minPenalty, penalty));
-      
+
       // 确保不超过玩家现有金币
       penalty = Math.min(penalty, currentCoins);
-      
+
       return penalty;
     } catch (error) {
       this.logger.error(`[StealService] 计算失败惩罚失败: ${error.message}`);
@@ -490,10 +490,10 @@ export class StealService {
       const cooldownMinutes = this.stealConfig.basic?.cooldownMinutes || 60;
       const cooldownMs = cooldownMinutes * 60 * 1000;
       const cooldownEnd = Date.now() + cooldownMs;
-      
+
       const key = `steal_cooldown:${userId}`;
       await this.redisClient.setex(key, Math.ceil(cooldownMs / 1000), cooldownEnd.toString());
-      
+
       this.logger.debug(`[StealService] 设置偷窃冷却 [${userId}]: ${cooldownMinutes} 分钟`);
     } catch (error) {
       this.logger.error(`[StealService] 设置偷窃冷却失败 [${userId}]: ${error.message}`);
@@ -513,18 +513,18 @@ export class StealService {
       const antiRepeatConfig = this.stealConfig.antiRepeat || {};
       const cooldownMinutes = antiRepeatConfig.sameTargetCooldownMinutes || 30;
       const maxAttempts = antiRepeatConfig.maxAttemptsPerTarget || 3;
-      
+
       const now = Date.now();
       const today = new Date(now).toDateString();
-      
+
       // 检查对同一目标的冷却
       const cooldownKey = `steal_target_cooldown:${attackerId}:${targetId}`;
       const lastAttemptTime = await this.redisClient.get(cooldownKey);
-      
+
       if (lastAttemptTime) {
         const timeDiff = now - parseInt(lastAttemptTime);
         const cooldownMs = cooldownMinutes * 60 * 1000;
-        
+
         if (timeDiff < cooldownMs) {
           const remainingMinutes = Math.ceil((cooldownMs - timeDiff) / 60000);
           return {
@@ -533,18 +533,18 @@ export class StealService {
           };
         }
       }
-      
+
       // 检查今日尝试次数
       const attemptsKey = `steal_attempts:${attackerId}:${targetId}:${today}`;
       const attemptCount = parseInt(await this.redisClient.get(attemptsKey) || '0');
-      
+
       if (attemptCount >= maxAttempts) {
         return {
           allowed: false,
           reason: `今日对此目标的偷窃次数已达上限 (${maxAttempts})`
         };
       }
-      
+
       return { allowed: true };
     } catch (error) {
       this.logger.error(`[StealService] 检查防重复偷取失败: ${error.message}`);
@@ -565,17 +565,17 @@ export class StealService {
     try {
       const now = Date.now();
       const today = new Date(now).toDateString();
-      
+
       // 更新目标冷却时间
       const cooldownKey = `steal_target_cooldown:${attackerId}:${targetId}`;
       const cooldownMinutes = this.stealConfig.antiRepeat?.sameTargetCooldownMinutes || 30;
       await this.redisClient.setex(cooldownKey, cooldownMinutes * 60, now.toString());
-      
+
       // 更新今日尝试次数
       const attemptsKey = `steal_attempts:${attackerId}:${targetId}:${today}`;
       await this.redisClient.incr(attemptsKey);
       await this.redisClient.expire(attemptsKey, 24 * 60 * 60); // 24小时过期
-      
+
       // 记录详细日志（可用于后续统计分析）
       const logData = {
         timestamp: now,
@@ -586,7 +586,7 @@ export class StealService {
         totalStolen: rewards.reduce((sum, r) => sum + r.quantity, 0),
         penalty
       };
-      
+
       this.logger.info(`[StealService] 偷窃记录: ${JSON.stringify(logData)}`);
     } catch (error) {
       this.logger.error(`[StealService] 记录偷窃尝试失败: ${error.message}`);
@@ -605,15 +605,15 @@ export class StealService {
     if (lands.length <= maxCount) {
       return [...lands];
     }
-    
+
     const selected = [];
     const available = [...lands];
-    
+
     for (let i = 0; i < maxCount && available.length > 0; i++) {
       const randomIndex = Math.floor(Math.random() * available.length);
       selected.push(available.splice(randomIndex, 1)[0]);
     }
-    
+
     return selected;
   }
 
@@ -676,17 +676,17 @@ export class StealService {
     try {
       const today = new Date().toDateString();
       const cooldownStatus = await this.getStealCooldownStatus(userId);
-      
+
       // 获取今日偷窃次数（所有目标）
       const pattern = `steal_attempts:${userId}:*:${today}`;
       const keys = await this.redisClient.keys(pattern);
       let totalAttemptsToday = 0;
-      
+
       for (const key of keys) {
         const count = parseInt(await this.redisClient.get(key) || '0');
         totalAttemptsToday += count;
       }
-      
+
       return {
         cooldownStatus,
         totalAttemptsToday,
@@ -713,9 +713,9 @@ export class StealService {
         'steal_target_cooldown:*',
         'steal_attempts:*'
       ];
-      
+
       let totalCleaned = 0;
-      
+
       for (const pattern of patterns) {
         const keys = await this.redisClient.keys(pattern);
         for (const key of keys) {
@@ -726,9 +726,9 @@ export class StealService {
           }
         }
       }
-      
+
       this.logger.info(`[StealService] 清理过期数据完成，清理 ${totalCleaned} 个键`);
-      
+
       return {
         success: true,
         cleanedKeys: totalCleaned

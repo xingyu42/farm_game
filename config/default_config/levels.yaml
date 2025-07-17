@@ -2,7 +2,6 @@
 default:
   startingCoins: 100 # 新玩家初始金币
 
-levels:
   # 等级经验需求表
   requirements:
     1:

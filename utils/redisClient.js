@@ -380,6 +380,34 @@ class RedisClient {
   }
 
   /**
+   * 获取匹配模式的所有keys
+   * @param {string} pattern 匹配模式
+   * @returns {Promise<Array<string>>} 匹配的keys列表
+   */
+  async keys(pattern) {
+    try {
+      return await this.client.keys(pattern);
+    } catch (error) {
+      // 保留原始错误堆栈跟踪
+      throw new Error(`Keys search failed for pattern ${pattern}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取key的TTL
+   * @param {string} key Redis Key
+   * @returns {Promise<number>} TTL值
+   */
+  async ttl(key) {
+    try {
+      return await this.client.ttl(key);
+    } catch (error) {
+      // 保留原始错误堆栈跟踪
+      throw new Error(`TTL check failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
    * 私有方法：睡眠等待
    * @param {number} ms 毫秒数
    * @returns {Promise<void>}

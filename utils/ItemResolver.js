@@ -6,19 +6,19 @@
 class ItemResolver {
   constructor(config) {
     this.config = config;
-    
+
     // 物品类别配置
     this.categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
-    
+
     // 类别显示名称映射
     this.categoryDisplayNames = {
       seeds: '种子',
-      fertilizers: '肥料', 
+      fertilizers: '肥料',
       dogFood: '防御',
       landMaterials: '材料',
       crops: '作物'
     };
-    
+
     // 类别标准化映射（用于统一不同服务的类别命名）
     this.categoryNormalization = {
       fertilizers: 'fertilizer',
@@ -34,11 +34,11 @@ class ItemResolver {
    */
   findItemById(itemId) {
     const itemsConfig = this.config.items || {};
-    
+
     for (const category of this.categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {
         const itemConfig = itemsConfig[category][itemId];
-        
+
         return {
           ...itemConfig,
           id: itemId,
@@ -47,7 +47,7 @@ class ItemResolver {
         };
       }
     }
-    
+
     return null;
   }
 
@@ -58,7 +58,7 @@ class ItemResolver {
    */
   findItemByName(itemName) {
     const itemsConfig = this.config.items || {};
-    
+
     for (const category of this.categories) {
       if (itemsConfig[category]) {
         for (const [itemId, itemInfo] of Object.entries(itemsConfig[category])) {
@@ -68,7 +68,7 @@ class ItemResolver {
         }
       }
     }
-    
+
     return null;
   }
 
@@ -89,13 +89,13 @@ class ItemResolver {
    */
   getItemInfo(itemId) {
     const itemsConfig = this.config.items || {};
-    
+
     for (const category of this.categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {
         return itemsConfig[category][itemId];
       }
     }
-    
+
     return null;
   }
 
@@ -145,7 +145,7 @@ class ItemResolver {
   getItemsByCategory(category) {
     const itemsConfig = this.config.items || {};
     const categoryItems = itemsConfig[category] || {};
-    
+
     return Object.entries(categoryItems).map(([itemId, itemInfo]) => ({
       id: itemId,
       ...itemInfo,
@@ -184,7 +184,7 @@ class ItemResolver {
     const itemsConfig = this.config.items || {};
     const searchCategories = category ? [category] : this.categories;
     const results = [];
-    
+
     for (const cat of searchCategories) {
       if (itemsConfig[cat]) {
         for (const [itemId, itemInfo] of Object.entries(itemsConfig[cat])) {
@@ -199,7 +199,7 @@ class ItemResolver {
         }
       }
     }
-    
+
     return results;
   }
 }

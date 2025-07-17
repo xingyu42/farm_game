@@ -17,7 +17,6 @@ export class ShopCommands extends plugin {
       event: 'message',
       priority: 100,
       rule: [
-        // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading regex to named capture groups for better readability and safety; Principle_Applied: RegexPattern-Modernization;}}
         {
           reg: '^#(nc)?商店$',
           fnc: 'viewShop'

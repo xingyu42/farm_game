@@ -20,18 +20,10 @@ export class steal extends plugin {
         {
           reg: '^#(nc)?使用狗粮(?:\\s+(.+))?$',
           fnc: 'useDogFood'
-        },
-        {
-          reg: '^#(nc)?防护状态$',
-          fnc: 'showProtectionStatus'
-        },
-        {
-          reg: '^#(nc)?偷菜状态$',
-          fnc: 'showStealStatus'
         }
       ]
     })
-    
+
     // 初始化配置
     this.config = Config
   }
@@ -52,34 +44,34 @@ export class steal extends plugin {
       // 1. 提取被@用户的QQ号
       const targetUserId = e.at
       const thiefUserId = e.user_id
-      
+
       // 2. 确保服务已初始化
       await this._ensureServicesInitialized()
-      
+
       const playerService = serviceContainer.getService('playerService')
       const stealService = serviceContainer.getService('stealService')
-      
+
       // 3. 确保偷菜者已注册
       await playerService.ensurePlayer(thiefUserId)
-      
+
       // 4. 检查目标玩家是否存在（不自动创建）
       const targetPlayerData = await playerService.getDataService().getPlayerFromHash(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true
       }
-      
+
       // 5. 执行偷菜操作
       const result = await stealService.executeSteal(thiefUserId, targetUserId)
-      
+
       // 6. 构建回复消息
       let replyMessage = this._buildStealResultMessage(result)
-      
+
       e.reply(replyMessage)
       return true
     } catch (error) {
       logger.error('[偷菜与防御] 偷菜失败:', error)
-      
+
       // 根据错误类型提供友好的错误信息
       let errorMessage = '偷菜失败，请稍后重试'
       if (error.message.includes('冷却')) {
@@ -91,7 +83,7 @@ export class steal extends plugin {
       } else if (error.message.includes('没有可偷取')) {
         errorMessage = '该农场暂无可偷取的成熟作物'
       }
-      
+
       e.reply(errorMessage)
       return true
     }
@@ -146,7 +138,7 @@ export class steal extends plugin {
 
       // 应用防护效果
       const result = await protectionService.applyDogFood(userId, dogFoodId)
-      
+
       // 消费物品
       await inventoryService.removeItem(userId, dogFoodId, 1)
 
@@ -170,116 +162,6 @@ export class steal extends plugin {
   }
 
   /**
-   * 显示防护状态
-   * @param {Object} e 消息事件对象
-   */
-  async showProtectionStatus(e) {
-    try {
-      const userId = e.user_id
-      
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      const protectionService = serviceContainer.getService('protectionService')
-      
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      const playerData = await playerService.getPlayerData(userId)
-      
-      if (!playerData) {
-        e.reply('获取防护状态失败，请稍后重试')
-        return true
-      }
-      
-      // 获取当前防护加成
-      const currentBonus = await protectionService.getProtectionBonus(userId)
-      
-      const message = [
-        `🛡️ ${playerData.name || '玩家'} 的防护状态`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `当前防御：+${currentBonus}%`,
-        `━━━━━━━━━━━━━━━━━━`
-      ]
-      
-      // 狗粮防护状态
-      const now = Date.now()
-      if (playerData.protection?.dogFood?.effectEndTime > now) {
-        const remainingTime = Math.ceil((playerData.protection.dogFood.effectEndTime - now) / (1000 * 60))
-        const dogFoodType = playerData.protection.dogFood.type
-        const defenseBonus = playerData.protection.dogFood.defenseBonus
-        
-        message.push(`🍖 狗粮防护：激活中`)
-        message.push(`   类型：${this._getDogFoodName(dogFoodType)}`)
-        message.push(`   加成：+${defenseBonus}%`)
-        message.push(`   剩余：${remainingTime}分钟`)
-      } else {
-        message.push(`🍖 狗粮防护：未激活`)
-      }
-      
-      message.push(`━━━━━━━━━━━━━━━━━━`)
-      
-      // 偷菜冷却状态
-      if (playerData.stealing?.cooldownEndTime > now) {
-        const cooldownTime = Math.ceil((playerData.stealing.cooldownEndTime - now) / (1000 * 60))
-        message.push(`⏰ 偷菜冷却：${cooldownTime}分钟`)
-      } else {
-        message.push(`⏰ 偷菜冷却：可偷菜`)
-      }
-      
-      message.push(`💡 使用 #使用狗粮 激活防护`)
-      
-      e.reply(message.join('\n'))
-      return true
-    } catch (error) {
-      logger.error('[偷菜与防御] 显示防护状态失败:', error)
-      e.reply('获取防护状态失败，请稍后重试')
-      return true
-    }
-  }
-
-  /**
-   * 显示偷菜状态
-   * @param {Object} e 消息事件对象
-   */
-  async showStealStatus(e) {
-    try {
-      const userId = e.user_id
-      
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-      
-      const playerService = serviceContainer.getService('playerService')
-      const stealService = serviceContainer.getService('stealService')
-      
-      // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      
-      // 获取偷菜统计信息
-      const stealStats = await stealService.getStealStatistics(userId)
-      
-      let message = '🥷 偷菜状态\n'
-      
-      if (stealStats.cooldownStatus.canSteal) {
-        message += `状态: 可以偷菜\n`
-      } else {
-        const remainingMinutes = Math.ceil(stealStats.cooldownStatus.remainingTime / 60000)
-        message += `状态: 冷却中\n`
-        message += `剩余时间: ${remainingMinutes} 分钟\n`
-      }
-      
-      message += `今日偷菜次数: ${stealStats.totalAttemptsToday}\n`
-      message += `基础成功率: ${stealStats.config.baseSuccessRate}%\n`
-      message += `每次最多偷取: ${stealStats.config.maxStealPerAttempt} 块土地`
-      
-      e.reply(message)
-      return true
-    } catch (error) {
-      logger.error('[偷菜与防御] 显示偷菜状态失败:', error)
-      e.reply('获取偷菜状态失败，请稍后重试')
-      return true
-    }
-  }
-
-  /**
    * 构建偷菜结果消息
    * @param {Object} result 偷菜结果
    * @returns {string} 消息文本
@@ -287,11 +169,11 @@ export class steal extends plugin {
    */
   _buildStealResultMessage(result) {
     let message = ''
-    
+
     if (result.success) {
       message += `🎉 偷菜成功！\n`
       message += `成功率: ${result.successRate}%\n`
-      
+
       if (result.rewards && result.rewards.length > 0) {
         message += `获得奖励:\n`
         result.rewards.forEach(reward => {
@@ -302,12 +184,12 @@ export class steal extends plugin {
     } else {
       message += `😅 偷菜失败！\n`
       message += `成功率: ${result.successRate}%\n`
-      
+
       if (result.penalty > 0) {
         message += `被罚款: ${result.penalty} 金币`
       }
     }
-    
+
     return message
   }
 
@@ -319,20 +201,20 @@ export class steal extends plugin {
    */
   async _parseDogFoodType(dogFoodName) {
     const itemsConfig = this.config?.items?.dogFood || {}
-    
+
     // 直接匹配ID
     if (itemsConfig[dogFoodName]) {
       return dogFoodName
     }
-    
+
     // 匹配中文名称
     for (const [dogFoodId, config] of Object.entries(itemsConfig)) {
-      if (config.name === dogFoodName || 
-          (config.aliases && config.aliases.includes(dogFoodName))) {
+      if (config.name === dogFoodName ||
+        (config.aliases && config.aliases.includes(dogFoodName))) {
         return dogFoodId
       }
     }
-    
+
     return null
   }
 
@@ -347,16 +229,16 @@ export class steal extends plugin {
       await this._ensureServicesInitialized()
       const inventoryService = serviceContainer.getService('inventoryService')
       const inventory = await inventoryService.getInventory(userId)
-      
+
       // 按防御加成排序的狗粮优先级
       const dogFoodPriority = ['deluxe', 'premium', 'normal']
-      
+
       for (const dogFoodId of dogFoodPriority) {
         if (inventory[dogFoodId] && inventory[dogFoodId].quantity > 0) {
           return dogFoodId
         }
       }
-      
+
       return null
     } catch (error) {
       logger.error('[偷菜与防御] 选择最好狗粮失败:', error)
@@ -366,14 +248,5 @@ export class steal extends plugin {
 
 
 
-  /**
-   * 获取狗粮名称
-   * @param {string} dogFoodId 狗粮ID
-   * @returns {string} 狗粮名称
-   * @private
-   */
-  _getDogFoodName(dogFoodId) {
-    const dogFoodConfig = this.config?.items?.dogFood?.[dogFoodId]
-    return dogFoodConfig?.name || dogFoodId
-  }
+
 }
