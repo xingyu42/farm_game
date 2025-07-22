@@ -11,13 +11,14 @@ import redisClient from '../utils/redisClient.js';
 import PlayerService from './player/PlayerService.js';
 import AdminService from './AdminService.js';
 import StatisticsService from './StatisticsService.js';
-import { PlantingService } from './PlantingService.js';
-import { InventoryService } from './InventoryService.js';
-import { ShopService } from './ShopService.js';
-import { LandService } from './LandService.js';
-import { ProtectionService } from './ProtectionService.js';
-import { StealService } from './StealService.js';
-import { ItemResolver } from '../utils/ItemResolver.js';
+import PlantingService from './PlantingService.js';
+import InventoryService from './InventoryService.js';
+import ShopService from './ShopService.js';
+import LandService from './LandService.js';
+import ProtectionService from './ProtectionService.js';
+import StealService from './StealService.js';
+import PlantingDataService from './planting/PlantingDataService.js';
+import ItemResolver from '../utils/ItemResolver.js';
 
 class ServiceContainer {
   constructor() {
@@ -39,7 +40,6 @@ class ServiceContainer {
       config = Config;
     }
 
-
     // 实例化ItemResolver（通用工具服务）
     this.services.itemResolver = new ItemResolver(config);
 
@@ -60,29 +60,39 @@ class ServiceContainer {
       null // logger使用默认值
     );
 
-    // 实例化PlantingService（依赖 playerDataService）
+    // 实例化InventoryService
+    this.services.inventoryService = new InventoryService(redisClient, config);
+
+    // 实例化LandService (需要依赖PlayerService)
+    this.services.landService = new LandService(
+      redisClient,
+      config,
+      this.services.playerService
+    );
+
+    // 实例化PlantingDataService（种植模块的数据访问层）
+    this.services.plantingDataService = new PlantingDataService(
+      redisClient,
+      config,
+      null // logger使用默认值
+    );
+
+    // 实例化PlantingService（需要依赖多个服务）
     this.services.plantingService = new PlantingService(
       redisClient,
       config,
-      null, // logger 使用默认值
-      this.services.playerService.getDataService() // 注入 PlayerDataService
+      this.services.plantingDataService,
+      this.services.inventoryService,
+      this.services.landService,
+      this.services.playerService,
+      null // logger 使用默认值
     );
-
-    // 实例化InventoryService
-    this.services.inventoryService = new InventoryService(redisClient, config);
 
     // 实例化ShopService (需要依赖InventoryService和PlayerService)
     this.services.shopService = new ShopService(
       redisClient,
       config,
       this.services.inventoryService,
-      this.services.playerService
-    );
-
-    // 实例化LandService (需要依赖PlayerService)
-    this.services.landService = new LandService(
-      redisClient,
-      config,
       this.services.playerService
     );
 
@@ -153,5 +163,4 @@ class ServiceContainer {
 
 // 导出单例实例
 const serviceContainer = new ServiceContainer();
-
 export default serviceContainer;

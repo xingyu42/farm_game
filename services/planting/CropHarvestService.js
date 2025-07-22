@@ -4,21 +4,24 @@
  */
 
 import { Calculator } from '../../utils/calculator.js';
-import { PlantingValidator } from './validators/PlantingValidator.js';
-import { MessageBuilder } from './utils/MessageBuilder.js';
-import LevelCalculator from '../player/utils/LevelCalculator.js';
+import { PlantingUtils } from './PlantingUtils.js';
+import PlantingMessageBuilder from './PlantingMessageBuilder.js';
+import LevelCalculator from '../player/LevelCalculator.js';
 
 class CropHarvestService {
-  constructor(playerDataService, cropScheduleService, config, logger = null) {
-    this.playerDataService = playerDataService;
-    this.cropScheduleService = cropScheduleService;
+  constructor(plantingDataService, inventoryService, landService, playerService, cropMonitorService, config, logger = null) {
+    this.plantingDataService = plantingDataService;
+    this.inventoryService = inventoryService;
+    this.landService = landService;
+    this.playerService = playerService;
+    this.cropMonitorService = cropMonitorService;
     this.config = config;
     this.logger = logger || console;
-    
+
     // 初始化依赖组件
     this.calculator = new Calculator(config);
-    this.validator = new PlantingValidator(config, logger);
-    this.messageBuilder = new MessageBuilder();
+    this.validator = new PlantingUtils(config, logger);
+    this.messageBuilder = new PlantingMessageBuilder();
     this.levelCalculator = new LevelCalculator(config);
   }
 
@@ -30,90 +33,122 @@ class CropHarvestService {
    */
   async harvestCrop(userId, landId = null) {
     try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
-        // 1. 在事务内获取最新数据
-        const playerData = await this.playerDataService.getPlayerFromHash(userId);
-        
-        // 2. 验证玩家数据
-        const playerError = this.validator.validatePlayerData(playerData);
-        if (playerError) {
-          throw new Error(playerError.message);
-        }
-
+      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
         const now = Date.now();
         const cropsConfig = this.config.crops;
-        
+
         let harvestedCrops = [];
         let totalExp = 0;
 
-        // 3. 确定要收获的土地
-        const landsToHarvest = landId ? [landId - 1] : 
-          playerData.lands.map((_, index) => index);
+        // 1. 确定要收获的土地
+        const landsToHarvest = landId ? [landId] : await this._getMatureLandIds(userId, now);
 
-        // 4. 处理每块土地的收获
-        for (const landIndex of landsToHarvest) {
-          if (landIndex < 0 || landIndex >= playerData.lands.length) {
-            continue;
+        if (landsToHarvest.length === 0) {
+          if (landId) {
+            throw new Error(`第${landId}块土地没有可收获的作物`);
+          } else {
+            return this.messageBuilder.buildInfoMessage('没有可收获的成熟作物');
           }
+        }
 
-          const land = playerData.lands[landIndex];
-          
-          // 检查是否可以收获
-          if (!land.crop || land.status === 'empty') {
-            continue;
-          }
+        // 2. 验证仓库空间
+        const spaceValidation = await this.inventoryService.checkSpaceForItems(userId, landsToHarvest.length);
+        if (!spaceValidation.success) {
+          throw new Error('仓库空间不足，无法收获作物');
+        }
 
-          // 检查成熟度
-          if (!this.validator.canHarvest(land, now)) {
-            if (landId) {
-              throw new Error(`第${landId}块土地的${this._getCropName(land.crop, cropsConfig)}还未成熟`);
+        // 3. 批量收获处理
+        const landUpdates = {};
+        const inventoryAdditions = {};
+
+        for (const currentLandId of landsToHarvest) {
+          try {
+            const landData = await this.landService.getLandById(userId, currentLandId);
+            if (!landData || !landData.crop || landData.status === 'empty') {
+              continue;
             }
-            continue;
-          }
 
-          // 检查仓库空间
-          const inventoryError = this.validator.validateInventorySpace(playerData);
-          if (inventoryError) {
-            if (landId) {
-              throw new Error(inventoryError.message);
+            // 检查成熟度
+            if (!this._canHarvest(landData, now)) {
+              if (landId) {
+                const cropName = this._getCropName(landData.crop, cropsConfig);
+                throw new Error(`第${landId}块土地的${cropName}还未成熟`);
+              }
+              continue;
             }
-            break; // 仓库满了，停止收获
-          }
 
-          // 执行收获
-          const harvestResult = this._harvestSingleCrop(playerData, landIndex, land, cropsConfig);
-          if (harvestResult) {
-            harvestedCrops.push(harvestResult);
+            const cropConfig = cropsConfig[landData.crop];
+            if (!cropConfig) {
+              this.logger.warn(`[CropHarvestService] 未找到作物配置: ${landData.crop}`);
+              continue;
+            }
+
+            // 计算收获产量和经验
+            const harvestResult = this._calculateHarvestResult(landData, cropConfig, now);
+
+            // 准备土地重置数据
+            landUpdates[currentLandId] = {
+              crop: null,
+              plantTime: null,
+              harvestTime: null,
+              status: 'empty',
+              health: 100,
+              needsWater: false,
+              hasPests: false,
+              stealable: false
+            };
+
+            // 累计物品添加
+            for (const [itemId, amount] of Object.entries(harvestResult.items)) {
+              inventoryAdditions[itemId] = (inventoryAdditions[itemId] || 0) + amount;
+            }
+
             totalExp += harvestResult.experience;
-            
-            // 从收获计划中移除
-            await this.cropScheduleService.removeHarvestSchedule(userId, landIndex + 1);
+
+            harvestedCrops.push({
+              landId: currentLandId,
+              cropType: landData.crop,
+              cropName: cropConfig.name,
+              items: harvestResult.items,
+              experience: harvestResult.experience,
+              quality: harvestResult.quality
+            });
+
+          } catch (error) {
+            this.logger.error(`[CropHarvestService] 收获土地${currentLandId}失败: ${error.message}`);
+            if (landId) {
+              throw error; // 单个土地收获失败时抛出异常
+            }
+            // 批量收获时继续处理其他土地
           }
         }
 
-        // 5. 检查是否有收获
         if (harvestedCrops.length === 0) {
-          const message = landId ? 
-            `第${landId}块土地没有可收获的作物` : 
-            '没有可收获的成熟作物';
-          throw new Error(message);
+          throw new Error('没有成功收获任何作物');
         }
 
-        // 6. 处理经验和升级
-        let levelUpInfo = null;
+        // 4. 批量执行更新操作
+        // 批量添加物品到仓库
+        for (const [itemId, amount] of Object.entries(inventoryAdditions)) {
+          await this.inventoryService.addItem(userId, itemId, amount);
+        }
+
+        // 批量重置土地状态
+        await this.plantingDataService.updateMultipleLands(userId, landUpdates);
+
+        // 添加经验值
         if (totalExp > 0) {
-          levelUpInfo = this._handleExperienceAndLevelUp(playerData, totalExp);
+          await this.playerService.addExp(userId, totalExp);
         }
 
-        // 7. 保存玩家数据
-        const serializer = this.playerDataService.getSerializer();
-        multi.hSet(playerKey, serializer.serializeForHash(playerData));
+        // 5. 从收获计划中移除
+        const harvestedLandIds = harvestedCrops.map(crop => crop.landId);
+        await this.cropScheduleService.batchRemoveHarvestSchedules(harvestedLandIds);
 
-        this.logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}种作物`);
+        this.logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}块土地的作物`);
 
-        // 8. 构建返回消息
-        const result = this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp, levelUpInfo);
-        return result;
+        // 6. 构建返回消息
+        return this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp);
       });
 
     } catch (error) {
@@ -123,113 +158,149 @@ class CropHarvestService {
   }
 
   /**
-   * 收获单个作物
-   * @param {Object} playerData 玩家数据
-   * @param {number} landIndex 土地索引
-   * @param {Object} land 土地对象
-   * @param {Object} cropsConfig 作物配置
-   * @returns {Object|null} 收获结果
-   * @private
-   */
-  _harvestSingleCrop(playerData, landIndex, land, cropsConfig) {
-    const cropConfig = cropsConfig[land.crop];
-    if (!cropConfig) {
-      this.logger.warn(`[CropHarvestService] 未知作物类型: ${land.crop}`);
-      return null;
-    }
-
-    // 计算产量（复用 calculator）
-    const baseYield = 1;
-    const finalYield = this.calculator.calculateYield(
-      baseYield, 
-      land.quality || 'normal', 
-      land.health || 100
-    );
-
-    // 计算经验（复用 calculator）
-    const finalExp = this.calculator.calculateCropExperience(
-      land.crop, 
-      finalYield, 
-      land.quality || 'normal'
-    );
-
-    // 添加到仓库
-    const cropItemId = land.crop;
-    playerData.inventory[cropItemId] = (playerData.inventory[cropItemId] || 0) + finalYield;
-    
-    // 清空土地
-    playerData.lands[landIndex] = this._createEmptyLand(landIndex + 1, land.quality);
-
-    return {
-      landId: landIndex + 1,
-      cropName: this._getCropName(land.crop, cropsConfig),
-      yield: finalYield,
-      experience: finalExp
-    };
-  }
-
-  /**
-   * 创建空土地对象
+   * 检查是否可以收获
+   * @param {string} userId 用户ID
    * @param {number} landId 土地编号
-   * @param {string} quality 土地品质
-   * @returns {Object} 空土地对象
+   * @returns {Object} 检查结果
+   */
+  async canHarvest(userId, landId) {
+    try {
+      const landData = await this.landService.getLandById(userId, landId);
+      if (!landData) {
+        return { success: false, message: `土地 ${landId} 不存在` };
+      }
+
+      if (!landData.crop || landData.status === 'empty') {
+        return { success: false, message: `第${landId}块土地没有种植作物` };
+      }
+
+      const now = Date.now();
+      if (!this._canHarvest(landData, now)) {
+        const cropName = this._getCropName(landData.crop, this.config.crops);
+        const remainingTime = landData.harvestTime - now;
+        return {
+          success: false,
+          message: `${cropName}还未成熟，剩余时间: ${this._formatTime(remainingTime)}`
+        };
+      }
+
+      // 检查仓库空间
+      const spaceValidation = await this.inventoryService.checkSpaceForItems(userId, 1);
+      if (!spaceValidation.success) {
+        return { success: false, message: '仓库空间不足' };
+      }
+
+      const cropConfig = this.config.crops[landData.crop];
+      return {
+        success: true,
+        message: '可以收获',
+        cropName: cropConfig.name,
+        estimatedYield: this._estimateYield(landData, cropConfig)
+      };
+
+    } catch (error) {
+      this.logger.error(`[CropHarvestService] 检查收获条件失败 [${userId}]: ${error.message}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * 获取所有成熟作物的土地编号
+   * @param {string} userId 用户ID
+   * @param {number} now 当前时间
+   * @returns {Array} 成熟土地编号列表
    * @private
    */
-  _createEmptyLand(landId, quality = 'normal') {
+  async _getMatureLandIds(userId, now) {
+    try {
+      const allLands = await this.landService.getAllLands(userId);
+      if (!allLands || !allLands.success || !allLands.lands) {
+        return [];
+      }
+
+      return allLands.lands
+        .filter(land => land.crop && land.status === 'growing' && this._canHarvest(land, now))
+        .map(land => land.id);
+
+    } catch (error) {
+      this.logger.error(`[CropHarvestService] 获取成熟土地失败: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * 检查作物是否可以收获
+   * @param {Object} landData 土地数据
+   * @param {number} now 当前时间
+   * @returns {boolean} 是否可以收获
+   * @private
+   */
+  _canHarvest(landData, now) {
+    return landData.harvestTime && now >= landData.harvestTime;
+  }
+
+  /**
+   * 计算收获结果
+   * @param {Object} landData 土地数据
+   * @param {Object} cropConfig 作物配置
+   * @param {number} now 当前时间
+   * @returns {Object} 收获结果
+   * @private
+   */
+  _calculateHarvestResult(landData, cropConfig, now) {
+    // 基础产量
+    const baseYield = cropConfig.baseYield || 1;
+
+    // 品质加成
+    const qualityMultiplier = this.calculator.getQualityMultiplier(landData.quality || 'normal');
+
+    // 健康度影响
+    const healthMultiplier = (landData.health || 100) / 100;
+
+    // 计算最终产量
+    const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
+
+    // 经验值计算
+    const baseExp = cropConfig.experience || 10;
+    const experience = Math.floor(baseExp * qualityMultiplier);
+
+    // 生成收获物品
+    const items = {};
+    items[landData.crop] = finalYield;
+
+    // 额外产出（种子、特殊物品等）
+    if (Math.random() < 0.1) { // 10%概率获得种子
+      const seedKey = `${landData.crop}_seed`;
+      items[seedKey] = 1;
+    }
+
     return {
-      id: landId,
-      crop: null,
-      quality: quality,
-      plantTime: null,
-      harvestTime: null,
-      status: 'empty',
-      health: 100,
-      needsWater: false,
-      hasPests: false,
-      stealable: false
+      items: items,
+      experience: experience,
+      quality: landData.quality || 'normal',
+      yield: finalYield
     };
   }
 
   /**
-   * 处理经验和升级
-   * @param {Object} playerData 玩家数据
-   * @param {number} expToAdd 要添加的经验
-   * @returns {Object|null} 升级信息
+   * 估算收获产量
+   * @param {Object} landData 土地数据
+   * @param {Object} cropConfig 作物配置
+   * @returns {Object} 估算结果
    * @private
    */
-  _handleExperienceAndLevelUp(playerData, expToAdd) {
-    const oldLevel = playerData.level;
-    const oldExperience = playerData.experience || 0;
-    
-    // 添加经验
-    playerData.experience = oldExperience + expToAdd;
-    
-    // 计算新等级（复用 LevelCalculator）
-    const levelResult = this.levelCalculator.calculateLevel(playerData.experience);
-    const newLevel = levelResult.level;
-    
-    // 检查是否升级
-    if (newLevel > oldLevel) {
-      playerData.level = newLevel;
-      
-      // 获取升级奖励
-      const levelUpRewards = this.levelCalculator.getLevelUpRewards(oldLevel, newLevel);
-      
-      // 发放升级奖励
-      if (levelUpRewards.coins > 0) {
-        playerData.coins = (playerData.coins || 0) + levelUpRewards.coins;
-      }
-      
-      this.logger.info(`[CropHarvestService] 用户升级: ${oldLevel} -> ${newLevel}`);
-      
-      return {
-        oldLevel,
-        newLevel,
-        rewards: levelUpRewards
-      };
-    }
-    
-    return null;
+  _estimateYield(landData, cropConfig) {
+    const baseYield = cropConfig.baseYield || 1;
+    const qualityMultiplier = this.calculator.getQualityMultiplier(landData.quality || 'normal');
+    const healthMultiplier = (landData.health || 100) / 100;
+
+    const estimatedYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
+
+    return {
+      min: Math.max(1, estimatedYield - 1),
+      max: estimatedYield + 1,
+      expected: estimatedYield
+    };
   }
 
   /**
@@ -240,137 +311,28 @@ class CropHarvestService {
    * @private
    */
   _getCropName(cropType, cropsConfig) {
-    const cropConfig = cropsConfig[cropType];
-    return cropConfig ? cropConfig.name : cropType;
+    return cropsConfig[cropType]?.name || cropType;
   }
 
   /**
-   * 批量收获所有成熟作物
-   * @param {string} userId 用户ID
-   * @returns {Object} 批量收获结果
+   * 格式化时间显示
+   * @param {number} milliseconds 毫秒数
+   * @returns {string} 格式化的时间字符串
+   * @private
    */
-  async harvestAllMatureCrops(userId) {
-    try {
-      return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
-        const playerData = await this.playerDataService.getPlayerFromHash(userId);
-        
-        // 验证玩家数据
-        const playerError = this.validator.validatePlayerData(playerData);
-        if (playerError) {
-          throw new Error(playerError.message);
-        }
+  _formatTime(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
 
-        const now = Date.now();
-        const cropsConfig = this.config.crops;
-        
-        let harvestedCrops = [];
-        let totalExp = 0;
-        let skippedCount = 0;
-
-        // 遍历所有土地
-        for (let landIndex = 0; landIndex < playerData.lands.length; landIndex++) {
-          const land = playerData.lands[landIndex];
-          
-          // 跳过空地或未成熟的作物
-          if (!land.crop || land.status === 'empty' || !this.validator.canHarvest(land, now)) {
-            continue;
-          }
-
-          // 检查仓库空间
-          const inventoryError = this.validator.validateInventorySpace(playerData);
-          if (inventoryError) {
-            skippedCount++;
-            continue;
-          }
-
-          // 执行收获
-          const harvestResult = this._harvestSingleCrop(playerData, landIndex, land, cropsConfig);
-          if (harvestResult) {
-            harvestedCrops.push(harvestResult);
-            totalExp += harvestResult.experience;
-            
-            // 从收获计划中移除
-            await this.cropScheduleService.removeHarvestSchedule(userId, landIndex + 1);
-          }
-        }
-
-        // 处理经验和升级
-        let levelUpInfo = null;
-        if (totalExp > 0) {
-          levelUpInfo = this._handleExperienceAndLevelUp(playerData, totalExp);
-        }
-
-        // 保存玩家数据
-        const serializer = this.playerDataService.getSerializer();
-        multi.hSet(playerKey, serializer.serializeForHash(playerData));
-
-        this.logger.info(`[CropHarvestService] 用户${userId}批量收获了${harvestedCrops.length}种作物`);
-
-        // 构建结果消息
-        if (harvestedCrops.length === 0) {
-          throw new Error('没有可收获的成熟作物');
-        }
-
-        const result = this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp, levelUpInfo);
-        
-        // 添加跳过信息
-        if (skippedCount > 0) {
-          result.message += `\n⚠️ 由于仓库空间不足，跳过了${skippedCount}块土地的收获`;
-        }
-
-        return result;
-      });
-
-    } catch (error) {
-      this.logger.error(`[CropHarvestService] 批量收获失败 [${userId}]: ${error.message}`);
-      return this.messageBuilder.buildErrorMessage('批量收获', error.message);
-    }
-  }
-
-  /**
-   * 获取可收获的作物信息
-   * @param {string} userId 用户ID
-   * @returns {Object} 可收获作物信息
-   */
-  async getHarvestableInfo(userId) {
-    try {
-      const playerData = await this.playerDataService.getPlayerFromHash(userId);
-      
-      if (!playerData) {
-        return this.messageBuilder.buildErrorMessage('查询', '玩家数据不存在');
-      }
-
-      const now = Date.now();
-      const cropsConfig = this.config.crops;
-      const harvestableList = [];
-      
-      for (let landIndex = 0; landIndex < playerData.lands.length; landIndex++) {
-        const land = playerData.lands[landIndex];
-        
-        if (land.crop && land.status !== 'empty' && this.validator.canHarvest(land, now)) {
-          harvestableList.push({
-            landId: landIndex + 1,
-            cropName: this._getCropName(land.crop, cropsConfig),
-            cropType: land.crop,
-            quality: land.quality || 'normal',
-            health: land.health || 100
-          });
-        }
-      }
-
-      return {
-        success: true,
-        data: {
-          harvestableCount: harvestableList.length,
-          harvestableList: harvestableList
-        }
-      };
-
-    } catch (error) {
-      this.logger.error(`[CropHarvestService] 获取可收获信息失败 [${userId}]: ${error.message}`);
-      return this.messageBuilder.buildErrorMessage('查询', error.message);
+    if (hours > 0) {
+      return `${hours}小时${minutes % 60}分钟`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟`;
+    } else {
+      return `${seconds}秒`;
     }
   }
 }
 
-export { CropHarvestService };
+export default CropHarvestService;

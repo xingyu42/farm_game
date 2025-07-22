@@ -3,7 +3,7 @@
  * 统一种植相关的消息构建逻辑，保持项目消息格式一致性
  */
 
-class MessageBuilder {
+class PlantingMessageBuilder {
   constructor() {
     // 消息图标配置
     this.icons = {
@@ -67,7 +67,7 @@ class MessageBuilder {
   buildPlantingMessage(cropName, landId, harvestTime, options = {}) {
     const expectedTime = this._formatTime(new Date(harvestTime));
     const message = `${this.icons.success} 成功在第${landId}块土地种植了${cropName}！\n${this.icons.time} 预计收获时间：${expectedTime}`;
-    
+
     return {
       success: true,
       message: message,
@@ -90,17 +90,17 @@ class MessageBuilder {
    */
   buildHarvestMessage(harvestedCrops, totalExp = 0, options = {}) {
     const messages = [`${this.icons.harvest} 收获成功！`];
-    
+
     // 添加收获详情
     for (const crop of harvestedCrops) {
       messages.push(`${this.icons.land}[${crop.landId}] ${crop.cropName} x${crop.yield}`);
     }
-    
+
     // 添加经验信息
     if (totalExp > 0) {
       messages.push(`${this.icons.experience} 获得经验: ${totalExp}`);
     }
-    
+
     return {
       success: true,
       message: messages.join('\n'),
@@ -130,18 +130,18 @@ class MessageBuilder {
     };
 
     const careName = careNames[careType] || '护理';
-    
+
     let message = `${this.icons.success} 成功为第${landId}块土地的${cropName}${careName}！`;
-    
+
     // 添加具体效果信息
     if (effectData.health !== undefined) {
       message += `\n${this.icons.health} 健康度恢复到${effectData.health}%`;
     }
-    
+
     if (effectData.timeReduced) {
-      message += `\n${this.icons.time} 生长时间减少${Math.floor(effectData.timeReduced/1000)}秒`;
+      message += `\n${this.icons.time} 生长时间减少${Math.floor(effectData.timeReduced / 1000)}秒`;
     }
-    
+
     if (effectData.fertilizerUsed) {
       const selectionPrefix = effectData.selectionType === '手动选择' ? '使用了指定的' : '自动使用了';
       message += `\n${this.icons.fertilizer} ${selectionPrefix}${effectData.fertilizerUsed}`;
@@ -194,11 +194,11 @@ class MessageBuilder {
    */
   buildValidationErrorMessage(reason, suggestions = {}) {
     let message = `${this.icons.error} ${reason}`;
-    
+
     if (suggestions.availableOptions && suggestions.availableOptions.length > 0) {
       message += `\n可用选项：${suggestions.availableOptions.join('、')}`;
     }
-    
+
     if (suggestions.requirement) {
       message += `\n${this.icons.info} ${suggestions.requirement}`;
     }
@@ -219,7 +219,7 @@ class MessageBuilder {
   buildBatchOperationMessage(operation, results) {
     const successCount = results.filter(r => r.success).length;
     const totalCount = results.length;
-    
+
     const messages = [
       `${this.icons.success} ${operation}完成！`,
       `成功: ${successCount}/${totalCount}`
@@ -277,9 +277,9 @@ class MessageBuilder {
       fertilize: this.icons.fertilizer,
       pesticide: this.icons.pesticide
     };
-    
+
     return operationIcons[operation] || this.icons.success;
   }
 }
 
-export { MessageBuilder };
+export default PlantingMessageBuilder;
