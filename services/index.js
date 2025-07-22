@@ -8,7 +8,7 @@ import Config from '../models/Config.js';
 import redisClient from '../utils/redisClient.js';
 
 // 导入业务服务
-import PlayerManagerService from './player/PlayerManagerService.js';
+import PlayerService from './player/PlayerService.js';
 import AdminService from './AdminService.js';
 import StatisticsService from './StatisticsService.js';
 import { PlantingService } from './PlantingService.js';
@@ -43,14 +43,14 @@ class ServiceContainer {
     // 实例化ItemResolver（通用工具服务）
     this.services.itemResolver = new ItemResolver(config);
 
-    // 实例化PlayerManagerService（新的重构后的服务）
-    this.services.playerService = new PlayerManagerService(redisClient, config);
+    // 实例化PlayerService（新的统一玩家服务）
+    this.services.playerService = new PlayerService(redisClient, config);
 
-    // 实例化AdminService（依赖PlayerManagerService）
+    // 实例化AdminService（依赖PlayerService）
     this.services.adminService = new AdminService(
       redisClient,
       config,
-      this.services.playerService, // 依赖PlayerManagerService
+      this.services.playerService, // 依赖PlayerService
       null // logger使用默认值
     );
 
@@ -60,7 +60,7 @@ class ServiceContainer {
       null // logger使用默认值
     );
 
-    // 实例化PlantingService（重构后需要 playerDataService 依赖）
+    // 实例化PlantingService（依赖 playerDataService）
     this.services.plantingService = new PlantingService(
       redisClient,
       config,
@@ -73,16 +73,16 @@ class ServiceContainer {
 
     // 实例化ShopService (需要依赖InventoryService和PlayerService)
     this.services.shopService = new ShopService(
-      redisClient, 
-      config, 
-      this.services.inventoryService, 
+      redisClient,
+      config,
+      this.services.inventoryService,
       this.services.playerService
     );
 
     // 实例化LandService (需要依赖PlayerService)
     this.services.landService = new LandService(
-      redisClient, 
-      config, 
+      redisClient,
+      config,
       this.services.playerService
     );
 
@@ -154,5 +154,4 @@ class ServiceContainer {
 // 导出单例实例
 const serviceContainer = new ServiceContainer();
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #3777483d, converting CommonJS module.exports to ES Modules export default; Principle_Applied: ModuleSystem-Standardization;}}
 export default serviceContainer;

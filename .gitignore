@@ -3,6 +3,7 @@ coverage/
 .cursor/
 tests/
 .claude/
+.vscode/
 
 config.json
 FileScopeMCP-tree.json
