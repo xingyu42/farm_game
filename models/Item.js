@@ -3,10 +3,6 @@
  * 支持作物、种子、材料等各类物品的统一管理
  */
 
-// {{CHENGQI:
-// Action: Created; Timestamp: 2025-06-30T14:41:00+08:00; Reason: Shrimp Task ID: #5492e748, implementing Item data model for T8;
-// }}
-// {{START MODIFICATIONS}}
 
 class Item {
   constructor(data = {}, config = null) {

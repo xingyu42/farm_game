@@ -15,7 +15,7 @@ class PlayerManagerService {
     this.redis = redisClient;
     this.config = config;
     this.logger = logger || console;
-    
+
     // 初始化子服务
     this.dataService = new PlayerDataService(redisClient, config, logger);
     this.economyService = new EconomyService(this.dataService, config, logger);
@@ -23,7 +23,7 @@ class PlayerManagerService {
     this.protectionService = new ProtectionService(this.dataService, config, logger);
     this.statisticsService = new StatisticsService(this.dataService, config, logger);
     this.landManagerService = new LandManagerService(this.dataService, this.economyService, config, logger);
-    
+
     // 保持原有字段定义（向后兼容）
     this.simpleFields = this.dataService.serializer.simpleFields;
     this.complexFields = this.dataService.serializer.complexFields;
@@ -40,17 +40,17 @@ class PlayerManagerService {
     try {
       // 尝试从Redis Hash获取玩家数据
       let playerData = await this.dataService.getPlayerFromHash(userId);
-      
+
       // 如果玩家不存在，创建新玩家
       if (!playerData) {
         playerData = this.dataService.createNewPlayerData();
         await this.dataService.savePlayerToHash(userId, playerData);
         this.logger.info(`[PlayerManagerService] 创建新玩家: ${userId}`);
-        
+
         // 发放初始礼包
         await this._giveInitialGift(userId, playerData);
       }
-      
+
       return playerData;
     } catch (error) {
       this.logger.error(`[PlayerManagerService] 获取玩家数据失败 [${userId}]: ${error.message}`);
@@ -295,7 +295,7 @@ class PlayerManagerService {
   async _giveInitialGift(userId, _playerData) {
     try {
       const initialGift = this.config.items?.initial_gift;
-      
+
       if (initialGift && initialGift.length > 0) {
         this.logger.info(`[PlayerManagerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);
         // 注意：这里不能直接调用InventoryService，因为会造成循环依赖

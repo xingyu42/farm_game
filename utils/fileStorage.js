@@ -3,6 +3,21 @@
 // }}
 // {{START MODIFICATIONS}}
 
+/**
+ * 文件存储操作工具类
+ * 提供统一的文件读写接口，支持JSON数据持久化
+ * 
+ * TODO: 【中等价值未使用模块】
+ * 这是一个文件存储工具类，包含：
+ * - 统一的文件读写接口
+ * - JSON数据持久化支持
+ * - 目录管理功能
+ * - 异步文件操作
+ * 
+ * 当前状态：完全未使用，创建时间：2025-01-30
+ * 建议：可用于配置文件管理、数据备份等场景
+ */
+
 import fs from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
