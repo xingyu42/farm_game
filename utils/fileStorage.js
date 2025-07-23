@@ -5,12 +5,12 @@
 
 /**
  * 文件存储操作工具类
- * 提供统一的文件读写接口，支持JSON数据持久化
+ * 提供统一的文件读写接口，支持JSON和YAML数据持久化
  * 
  * TODO: 【中等价值未使用模块】
  * 这是一个文件存储工具类，包含：
  * - 统一的文件读写接口
- * - JSON数据持久化支持
+ * - JSON和YAML数据持久化支持
  * - 目录管理功能
  * - 异步文件操作
  * 
@@ -21,6 +21,7 @@
 import fs from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import yaml from 'yaml'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -28,7 +29,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /**
  * 文件存储操作工具类
- * 提供统一的文件读写接口，支持JSON数据持久化
+ * 提供统一的文件读写接口，支持JSON和YAML数据持久化
  */
 export class FileStorage {
   constructor(baseDir = 'data') {
@@ -95,6 +96,55 @@ export class FileStorage {
   }
 
   /**
+   * 读取YAML文件
+   * @param {string} filename 文件名
+   * @param {any} defaultValue 默认值
+   * @returns {Promise<any>}
+   */
+  async readYAML(filename, defaultValue = null) {
+    try {
+      const filePath = join(this.baseDir, filename)
+      const data = await fs.readFile(filePath, 'utf8')
+      return yaml.parse(data)
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        logger.info(`[FileStorage] YAML文件不存在，返回默认值: ${filename}`)
+        return defaultValue
+      }
+      logger.error(`[FileStorage] 读取YAML文件失败 ${filename}:`, error)
+      // 对于YAML解析错误，抛出异常而不是返回默认值，保留原始堆栈
+      if (error.name === 'YAMLParseError') {
+        throw new Error(`YAML parse error in file ${filename}: ${error.message}`, { cause: error })
+      }
+      return defaultValue
+    }
+  }
+
+  /**
+   * 写入YAML文件
+   * @param {string} filename 文件名
+   * @param {any} data 数据
+   * @returns {Promise<boolean>}
+   */
+  async writeYAML(filename, data) {
+    try {
+      const filePath = join(this.baseDir, filename)
+      const yamlData = yaml.stringify(data, {
+        indent: 2,
+        lineWidth: 0,
+        minContentWidth: 0
+      })
+      await fs.writeFile(filePath, yamlData, 'utf8')
+      logger.info(`[FileStorage] 成功写入YAML文件: ${filename}`)
+      return true
+    } catch (error) {
+      logger.error(`[FileStorage] 写入YAML文件失败 ${filename}:`, error)
+      // 对于关键操作失败，抛出异常而不是静默返回false
+      throw new Error(`Failed to write YAML file ${filename}: ${error.message}`, { cause: error })
+    }
+  }
+
+  /**
    * 删除文件
    * @param {string} filename 文件名
    * @returns {Promise<boolean>}
@@ -157,7 +207,7 @@ export class FileStorage {
     try {
       const sourcePath = join(this.baseDir, filename)
       const backupPath = join(this.baseDir, filename + backupSuffix)
-      
+
       const data = await fs.readFile(sourcePath)
       await fs.writeFile(backupPath, data)
       return true

@@ -1,0 +1,25 @@
+# 数据备份服务配置
+backup:
+  # 备份间隔（毫秒）- 默认每小时备份一次
+  interval: 3600000 # 1小时 = 60 * 60 * 1000 毫秒
+
+  # 保留备份文件数量
+  maxBackups: 24 # 保留最近24份备份（24小时）
+
+  # 备份文件名前缀
+  filePrefix: "player_data_backup"
+
+  # 是否启用备份服务
+  enabled: true
+
+  # 启动延迟（毫秒）- 服务启动后延迟多久开始首次备份
+  startDelay: 60000 # 1分钟
+
+  # 备份时是否压缩数据
+  compress: false
+
+  # 备份失败重试次数
+  retryCount: 3
+
+  # 重试间隔（毫秒）
+  retryInterval: 5000 # 5秒

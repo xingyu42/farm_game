@@ -18,6 +18,7 @@ import LandService from './LandService.js';
 import ProtectionService from './ProtectionService.js';
 import StealService from './StealService.js';
 import PlantingDataService from './planting/PlantingDataService.js';
+import DataBackupService from './DataBackupService.js';
 import ItemResolver from '../utils/ItemResolver.js';
 
 class ServiceContainer {
@@ -115,10 +116,20 @@ class ServiceContainer {
       null // logger 使用默认值
     );
 
-    // TODO: 在后续任务中，这里将依次实例化其他服务
-    // this.services.timeService = new TimeService(redisClient, config);
+    // 实例化DataBackupService (数据备份服务)
+    this.services.dataBackupService = new DataBackupService(
+      redisClient,
+      config,
+      this.services.playerService,
+      null // logger 使用默认值
+    );
 
     this.initialized = true;
+
+    // 启动备份服务
+    if (this.services.dataBackupService) {
+      await this.services.dataBackupService.start();
+    }
   }
 
   /**
@@ -155,6 +166,11 @@ class ServiceContainer {
    * 关闭所有服务
    */
   async shutdown() {
+    // 停止备份服务
+    if (this.services.dataBackupService) {
+      await this.services.dataBackupService.stop();
+    }
+
     // 清理服务
     this.services = {};
     this.initialized = false;
