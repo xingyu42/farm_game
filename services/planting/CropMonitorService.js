@@ -617,7 +617,7 @@ class CropMonitorService {
      * @param {number} now 当前时间
      * @private
      */
-    _generateCareNeeds(landUpdate, landData, now) {
+    _generateCareNeeds(landUpdate, landData, _now) {
         // 基于作物类型和生长时间生成护理需求
         const cropConfig = this.config.crops[landData.crop];
         if (!cropConfig) return;

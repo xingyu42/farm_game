@@ -33,7 +33,7 @@ class CropHarvestService {
    */
   async harvestCrop(userId, landId = null) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const now = Date.now();
         const cropsConfig = this.config.crops;
 
@@ -247,7 +247,7 @@ class CropHarvestService {
    * @returns {Object} 收获结果
    * @private
    */
-  _calculateHarvestResult(landData, cropConfig, now) {
+  _calculateHarvestResult(landData, cropConfig, _now) {
     // 基础产量
     const baseYield = cropConfig.baseYield || 1;
 

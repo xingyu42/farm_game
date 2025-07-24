@@ -4,7 +4,7 @@
  * 支持分级存储：频繁字段存储在Redis，长周期字段存储在YAML文件
  */
 
-import PlayerSerializer from './utils/PlayerSerializer.js';
+import PlayerSerializer from './PlayerSerializer.js';
 import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';
 
 class PlayerDataService {

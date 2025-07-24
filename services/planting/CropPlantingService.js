@@ -31,7 +31,7 @@ class CropPlantingService {
    */
   async plantCrop(userId, landId, cropType) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         // 1. 获取作物配置
         const cropsConfig = this.config.crops;
         const cropConfig = cropsConfig[cropType];
@@ -113,7 +113,7 @@ class CropPlantingService {
    */
   async batchPlantCrop(userId, plantingPlans) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const results = [];
         const landUpdates = {};
         const inventoryUpdates = {};

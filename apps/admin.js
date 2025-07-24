@@ -134,63 +134,71 @@ export class adminApp extends plugin {
         case 'execute':
         case '执行':
           await e.reply('开始执行数据备份，请稍候...');
-          const backupResult = await dataBackupService.executeBackup();
+          {
+            const backupResult = await dataBackupService.executeBackup();
 
-          if (backupResult.success) {
-            let message = `✅ 备份完成\n`;
-            message += `文件名: ${backupResult.filename}\n`;
-            message += `玩家数: ${backupResult.playerCount}\n`;
-            message += `耗时: ${backupResult.duration}ms`;
-            await e.reply(message);
-          } else {
-            await e.reply(`❌ 备份失败: ${backupResult.message || '未知错误'}`);
+            if (backupResult.success) {
+              let message = `✅ 备份完成\n`;
+              message += `文件名: ${backupResult.filename}\n`;
+              message += `玩家数: ${backupResult.playerCount}\n`;
+              message += `耗时: ${backupResult.duration}ms`;
+              await e.reply(message);
+            } else {
+              await e.reply(`❌ 备份失败: ${backupResult.message || '未知错误'}`);
+            }
+            break;
           }
-          break;
 
         case 'status':
         case '状态':
-          const status = dataBackupService.getStatus();
-          let statusMessage = `📊 备份服务状态\n`;
-          statusMessage += `运行状态: ${status.isRunning ? '✅ 运行中' : '❌ 已停止'}\n`;
-          statusMessage += `备份间隔: ${Math.round(status.config.interval / 1000 / 60)}分钟\n`;
-          statusMessage += `保留备份数: ${status.config.maxBackups}份\n`;
+          {
+            const status = dataBackupService.getStatus();
+            let statusMessage = `📊 备份服务状态\n`;
+            statusMessage += `运行状态: ${status.isRunning ? '✅ 运行中' : '❌ 已停止'}\n`;
+            statusMessage += `备份间隔: ${Math.round(status.config.interval / 1000 / 60)}分钟\n`;
+            statusMessage += `保留备份数: ${status.config.maxBackups}份\n`;
 
-          if (status.nextBackupTime) {
-            statusMessage += `下次备份: ${status.nextBackupTime.toLocaleString()}`;
+            if (status.nextBackupTime) {
+              statusMessage += `下次备份: ${status.nextBackupTime.toLocaleString()}`;
+            }
+
+            await e.reply(statusMessage);
+            break;
           }
-
-          await e.reply(statusMessage);
-          break;
 
         case 'history':
         case '历史':
-          const history = await dataBackupService.getBackupHistory();
+          {
+            const history = await dataBackupService.getBackupHistory();
 
-          if (history.length === 0) {
-            await e.reply('📋 暂无备份历史记录');
-            return;
+            if (history.length === 0) {
+              await e.reply('📋 暂无备份历史记录');
+              return;
+            }
+
+            let historyMessage = `📋 备份历史记录 (最近${Math.min(history.length, 5)}份)\n`;
+            const recentHistory = history.slice(0, 5);
+
+            for (let i = 0; i < recentHistory.length; i++) {
+              const backup = recentHistory[i];
+              historyMessage += `${i + 1}. ${backup.filename}\n`;
+              historyMessage += `   时间: ${backup.timestamp.toLocaleString()}\n`;
+            }
+
+            await e.reply(historyMessage);
+            break;
           }
-
-          let historyMessage = `📋 备份历史记录 (最近${Math.min(history.length, 5)}份)\n`;
-          const recentHistory = history.slice(0, 5);
-
-          for (let i = 0; i < recentHistory.length; i++) {
-            const backup = recentHistory[i];
-            historyMessage += `${i + 1}. ${backup.filename}\n`;
-            historyMessage += `   时间: ${backup.timestamp.toLocaleString()}\n`;
-          }
-
-          await e.reply(historyMessage);
-          break;
 
         default:
-          let helpMessage = `🔧 备份管理指令帮助\n\n`;
-          helpMessage += `#nc管理 备份 [execute|执行] - 立即执行备份\n`;
-          helpMessage += `#nc管理 备份 [status|状态] - 查看备份服务状态\n`;
-          helpMessage += `#nc管理 备份 [history|历史] - 查看备份历史记录\n`;
+          {
+            let helpMessage = `🔧 备份管理指令帮助\n\n`;
+            helpMessage += `#nc管理 备份 [execute|执行] - 立即执行备份\n`;
+            helpMessage += `#nc管理 备份 [status|状态] - 查看备份服务状态\n`;
+            helpMessage += `#nc管理 备份 [history|历史] - 查看备份历史记录\n`;
 
-          await e.reply(helpMessage);
-          break;
+            await e.reply(helpMessage);
+            break;
+          }
       }
     } catch (error) {
       logger.error(`[AdminApp] 备份操作失败: ${error.message}`);

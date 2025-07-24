@@ -77,7 +77,7 @@ export class ProtectionService {
       };
 
       // 更新玩家防护数据
-      await this.playerService.updateMixedFields(
+      await this.playerService.getDataService().updateMixedFields(
         userId,
         { lastUpdated: now },
         { protection: newProtection }
@@ -173,12 +173,21 @@ export class ProtectionService {
         remainingTime: farmProtectionActive ? protection.farmProtection.endTime - now : 0
       };
 
+      // 偷菜冷却状态
+      const stealCooldownActive = playerData.stealing?.cooldownEndTime > now;
+      const stealCooldownInfo = {
+        active: stealCooldownActive,
+        endTime: playerData.stealing?.cooldownEndTime || 0,
+        remainingTime: stealCooldownActive ? playerData.stealing.cooldownEndTime - now : 0
+      };
+
       // 总防御加成
       const totalDefenseBonus = dogFoodInfo.defenseBonus;
 
       return {
         dogFood: dogFoodInfo,
         farmProtection: farmProtectionInfo,
+        stealCooldown: stealCooldownInfo,
         totalDefenseBonus,
         isProtected: dogFoodActive || farmProtectionActive
       };
@@ -216,7 +225,7 @@ export class ProtectionService {
         }
       };
 
-      await this.playerService.updateMixedFields(
+      await this.playerService.getDataService().updateMixedFields(
         userId,
         { lastUpdated: now },
         { protection: newProtection }
@@ -257,6 +266,7 @@ export class ProtectionService {
       const clearedEffects = [];
 
       const newProtection = { ...playerData.protection };
+      const newStealing = { ...playerData.stealing };
 
       // 清除过期的狗粮效果
       if (newProtection.dogFood?.effectEndTime > 0 && newProtection.dogFood.effectEndTime <= now) {
@@ -276,11 +286,18 @@ export class ProtectionService {
         clearedEffects.push('农场防护');
       }
 
+      // 清除过期的偷菜冷却
+      if (newStealing.cooldownEndTime > 0 && newStealing.cooldownEndTime <= now) {
+        newStealing.cooldownEndTime = 0;
+        hasChanges = true;
+        clearedEffects.push('偷菜冷却');
+      }
+
       if (hasChanges) {
-        await this.playerService.updateMixedFields(
+        await this.playerService.getDataService().updateMixedFields(
           userId,
           { lastUpdated: now },
-          { protection: newProtection }
+          { protection: newProtection, stealing: newStealing }
         );
 
         this.logger.info(`[ProtectionService] 清除玩家 ${userId} 过期防御效果: ${clearedEffects.join(', ')}`);
@@ -369,6 +386,69 @@ export class ProtectionService {
     } catch (error) {
       this.logger.error(`[ProtectionService] 计算防御成功率失败: ${error.message}`);
       return 50; // 出错时返回默认值
+    }
+  }
+
+  /**
+   * 设置偷菜冷却
+   * @param {string} userId 用户ID
+   * @param {number} cooldownMinutes 冷却时间（分钟）
+   */
+  async setStealCooldown(userId, cooldownMinutes = 5) {
+    try {
+      if (!userId) {
+        throw new Error('用户ID不能为空');
+      }
+
+      const dataService = this.playerService.getDataService();
+      const playerData = await dataService.getPlayerFromHash(userId);
+
+      if (!playerData) {
+        throw new Error('玩家不存在');
+      }
+
+      const now = Date.now();
+      const newStealing = {
+        ...playerData.stealing,
+        lastStealTime: now,
+        cooldownEndTime: now + cooldownMinutes * 60 * 1000
+      };
+
+      await dataService.updateMixedFields(
+        userId,
+        { lastUpdated: now },
+        { stealing: newStealing }
+      );
+
+      this.logger.info(`[ProtectionService] 玩家 ${userId} 偷菜冷却 ${cooldownMinutes} 分钟`);
+      return {
+        success: true,
+        endTime: newStealing.cooldownEndTime,
+        cooldownMinutes
+      };
+    } catch (error) {
+      this.logger.error(`[ProtectionService] 设置偷菜冷却失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查是否可以偷菜
+   * @param {string} userId 用户ID
+   * @returns {Object} 检查结果
+   */
+  async canSteal(userId) {
+    try {
+      const status = await this.getProtectionStatus(userId);
+
+      return {
+        canSteal: !status.stealCooldown.active,
+        reason: status.stealCooldown.active ? '偷菜冷却中' : '可以偷菜',
+        cooldownRemaining: status.stealCooldown.remainingTime
+      };
+    } catch (error) {
+      this.logger.error(`[ProtectionService] 检查偷菜状态失败 [${userId}]: ${error.message}`);
+      throw error;
     }
   }
 }

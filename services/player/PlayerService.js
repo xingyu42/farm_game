@@ -7,7 +7,7 @@ import PlayerDataService from './PlayerDataService.js';
 import LevelCalculator from './LevelCalculator.js';
 import EconomyService from './EconomyService.js';
 import SignInService from './SignInService.js';
-import ProtectionService from './ProtectionService.js';
+// ProtectionService 将由 ServiceContainer 注入，避免循环依赖
 import StatisticsService from './StatisticsService.js';
 import LandManagerService from './LandManagerService.js';
 
@@ -30,9 +30,17 @@ class PlayerService {
         // 初始化子服务
         this.economyService = new EconomyService(redisClient, config, logger);
         this.signInService = new SignInService(redisClient, config, logger);
-        this.protectionService = new ProtectionService(redisClient, config, logger);
+        this.protectionService = null; // 延迟注入
         this.statisticsService = new StatisticsService(redisClient, config, logger);
         this.landManagerService = new LandManagerService(redisClient, config, logger);
+    }
+
+    /**
+     * 注入外部 ProtectionService 单例（解决循环依赖）
+     * @param {Object} protectionService ProtectionService 实例
+     */
+    setProtectionService(protectionService) {
+        this.protectionService = protectionService;
     }
 
     // ==================== 核心玩家管理方法 ====================

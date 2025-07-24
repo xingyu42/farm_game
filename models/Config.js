@@ -66,12 +66,7 @@ class Config {
     }
   }
 
-  /** 获取主配置设置 */
-  get config() {
-    return this.getDefOrConfig('config');
-  }
-
-  /** 获取作物设置 */
+  /** 获取作物设置 */ // TODO: 后续实现自动读取配置文件列表，并实现配置文件的监听
   get crops() {
     return this.getDefOrConfig('crops');
   }

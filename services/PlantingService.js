@@ -8,13 +8,12 @@ import CropPlantingService from './planting/CropPlantingService.js';
 import CropHarvestService from './planting/CropHarvestService.js';
 import CropCareService from './planting/CropCareService.js';
 import CropMonitorService from './planting/CropMonitorService.js';
-import PlantingDataService from './planting/PlantingDataService.js';
 
 class PlantingService {
   constructor(redisClient, config, plantingDataService, inventoryService, landService, playerService, logger = null) {
     this.redis = redisClient;
     this.config = config;
-    this.plantingDataService = plantingDataService;
+    this._plantingDataService = plantingDataService;
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.playerService = playerService;
@@ -30,8 +29,8 @@ class PlantingService {
    */
   _initializeServices() {
     // 初始化监控服务（合并了状态和调度功能）
-    this.cropMonitorService = new CropMonitorService(
-      this.plantingDataService,
+    this._cropMonitorService = new CropMonitorService(
+      this._plantingDataService,
       this.landService,
       this.redis,
       this.config,
@@ -39,30 +38,30 @@ class PlantingService {
     );
 
     // 初始化专门服务，注入新的依赖
-    this.cropPlantingService = new CropPlantingService(
-      this.plantingDataService,
+    this._cropPlantingService = new CropPlantingService(
+      this._plantingDataService,
       this.inventoryService,
       this.landService,
-      this.cropMonitorService,
+      this._cropMonitorService,
       this.config,
       this.logger
     );
 
-    this.cropHarvestService = new CropHarvestService(
-      this.plantingDataService,
+    this._cropHarvestService = new CropHarvestService(
+      this._plantingDataService,
       this.inventoryService,
       this.landService,
       this.playerService,
-      this.cropMonitorService,
+      this._cropMonitorService,
       this.config,
       this.logger
     );
 
-    this.cropCareService = new CropCareService(
-      this.plantingDataService,
+    this._cropCareService = new CropCareService(
+      this._plantingDataService,
       this.inventoryService,
       this.landService,
-      this.cropMonitorService,
+      this._cropMonitorService,
       this.config,
       this.logger
     );
@@ -77,7 +76,7 @@ class PlantingService {
    */
   async plantCrop(userId, landId, cropType) {
     // 委托给专门的种植服务
-    return await this.cropPlantingService.plantCrop(userId, landId, cropType);
+    return await this._cropPlantingService.plantCrop(userId, landId, cropType);
   }
 
   /**
@@ -87,7 +86,7 @@ class PlantingService {
    * @returns {Object} 批量种植结果
    */
   async batchPlantCrop(userId, plantingPlans) {
-    return await this.cropPlantingService.batchPlantCrop(userId, plantingPlans);
+    return await this._cropPlantingService.batchPlantCrop(userId, plantingPlans);
   }
 
   /**
@@ -98,7 +97,7 @@ class PlantingService {
    * @returns {Object} 检查结果
    */
   async canPlant(userId, landId, cropType) {
-    return await this.cropPlantingService.canPlant(userId, landId, cropType);
+    return await this._cropPlantingService.canPlant(userId, landId, cropType);
   }
 
   /**
@@ -107,7 +106,7 @@ class PlantingService {
    * @returns {Object} 可种植作物列表
    */
   async getAvailableCrops(userId) {
-    return await this.cropPlantingService.getAvailableCrops(userId);
+    return await this._cropPlantingService.getAvailableCrops(userId);
   }
 
   /**
@@ -118,7 +117,7 @@ class PlantingService {
    */
   async harvestCrop(userId, landId = null) {
     // 委托给专门的收获服务
-    return await this.cropHarvestService.harvestCrop(userId, landId);
+    return await this._cropHarvestService.harvestCrop(userId, landId);
   }
 
   /**
@@ -128,7 +127,7 @@ class PlantingService {
    * @returns {Object} 检查结果
    */
   async canHarvest(userId, landId) {
-    return await this.cropHarvestService.canHarvest(userId, landId);
+    return await this._cropHarvestService.canHarvest(userId, landId);
   }
 
   /**
@@ -138,7 +137,7 @@ class PlantingService {
    * @returns {Object} 浇水结果
    */
   async waterCrop(userId, landId) {
-    return await this.cropCareService.waterCrop(userId, landId);
+    return await this._cropCareService.waterCrop(userId, landId);
   }
 
   /**
@@ -149,7 +148,7 @@ class PlantingService {
    * @returns {Object} 施肥结果
    */
   async fertilizeCrop(userId, landId, fertilizerType = null) {
-    return await this.cropCareService.fertilizeCrop(userId, landId, fertilizerType);
+    return await this._cropCareService.fertilizeCrop(userId, landId, fertilizerType);
   }
 
   /**
@@ -160,7 +159,7 @@ class PlantingService {
    * @returns {Object} 除虫结果
    */
   async treatPests(userId, landId, pesticideType = null) {
-    return await this.cropCareService.treatPests(userId, landId, pesticideType);
+    return await this._cropCareService.treatPests(userId, landId, pesticideType);
   }
 
   /**
@@ -170,7 +169,7 @@ class PlantingService {
    * @returns {Object} 批量护理结果
    */
   async batchCareCrops(userId, careActions) {
-    return await this.cropCareService.batchCareCrops(userId, careActions);
+    return await this._cropCareService.batchCareCrops(userId, careActions);
   }
 
   /**
@@ -181,7 +180,7 @@ class PlantingService {
    * @returns {Object} 检查结果
    */
   async canCare(userId, landId, careType) {
-    return await this.cropCareService.canCare(userId, landId, careType);
+    return await this._cropCareService.canCare(userId, landId, careType);
   }
 
   /**
@@ -190,7 +189,7 @@ class PlantingService {
    */
   async updateAllCropsStatus() {
     // 委托给监控服务
-    return await this.cropMonitorService.updateAllCropsStatus();
+    return await this._cropMonitorService.updateAllCropsStatus();
   }
 
   /**
@@ -200,7 +199,7 @@ class PlantingService {
    * @returns {Object} 更新结果
    */
   async updateSingleCropStatus(userId, landId) {
-    return await this.cropMonitorService.updateSingleCropStatus(userId, landId);
+    return await this._cropMonitorService.updateSingleCropStatus(userId, landId);
   }
 
   /**
@@ -209,7 +208,7 @@ class PlantingService {
    * @returns {Object} 作物状态信息
    */
   async getPlayerCropsStatus(userId) {
-    return await this.cropMonitorService.getPlayerCropsStatus(userId);
+    return await this._cropMonitorService.getPlayerCropsStatus(userId);
   }
 
   /**
@@ -218,67 +217,7 @@ class PlantingService {
    * @returns {Object} 清理结果
    */
   async cleanWitheredCrops(userId) {
-    return await this.cropMonitorService.cleanWitheredCrops(userId);
-  }
-
-  // ==================== 服务访问器 ====================
-
-  /**
-   * 获取种植数据服务实例
-   * @returns {PlantingDataService} 种植数据服务实例
-   */
-  getDataService() {
-    return this.plantingDataService;
-  }
-
-  /**
-   * 获取种植服务实例
-   * @returns {CropPlantingService} 种植服务实例
-   */
-  getPlantingService() {
-    return this.cropPlantingService;
-  }
-
-  /**
-   * 获取收获服务实例
-   * @returns {CropHarvestService} 收获服务实例
-   */
-  getHarvestService() {
-    return this.cropHarvestService;
-  }
-
-  /**
-   * 获取护理服务实例
-   * @returns {CropCareService} 护理服务实例
-   */
-  getCareService() {
-    return this.cropCareService;
-  }
-
-  /**
-   * 获取监控服务实例（包含状态和调度功能）
-   * @returns {CropMonitorService} 监控服务实例
-   */
-  getMonitorService() {
-    return this.cropMonitorService;
-  }
-
-  /**
-   * 获取状态服务实例（向后兼容）
-   * @returns {CropMonitorService} 监控服务实例
-   * @deprecated 请使用 getMonitorService()
-   */
-  getStatusService() {
-    return this.cropMonitorService;
-  }
-
-  /**
-   * 获取调度服务实例（向后兼容）
-   * @returns {CropMonitorService} 监控服务实例
-   * @deprecated 请使用 getMonitorService()
-   */
-  getScheduleService() {
-    return this.cropMonitorService;
+    return await this._cropMonitorService.cleanWitheredCrops(userId);
   }
 }
 

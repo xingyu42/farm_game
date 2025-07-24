@@ -28,7 +28,7 @@ class CropCareService {
    */
   async waterCrop(userId, landId) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         // 1. 获取土地数据
         const landData = await this.landService.getLandById(userId, landId);
         if (!landData) {
@@ -77,7 +77,7 @@ class CropCareService {
    */
   async fertilizeCrop(userId, landId, fertilizerType = null) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         // 1. 获取土地数据
         const landData = await this.landService.getLandById(userId, landId);
         if (!landData) {
@@ -156,7 +156,7 @@ class CropCareService {
    */
   async treatPests(userId, landId, pesticideType = null) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         // 1. 获取土地数据
         const landData = await this.landService.getLandById(userId, landId);
         if (!landData) {
@@ -222,7 +222,7 @@ class CropCareService {
    */
   async batchCareCrops(userId, careActions) {
     try {
-      return await this.plantingDataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
         const results = [];
         const landUpdates = {};
         const inventoryUpdates = {};
@@ -271,32 +271,36 @@ class CropCareService {
               break;
 
             case 'fertilize':
-              const fertilizerConfig = this.config.items[itemType];
-              const healthBonus = fertilizerConfig?.effects?.health || 20;
-              const growthSpeedBonus = fertilizerConfig?.effects?.growthSpeed || 0.1;
+              {
+                const fertilizerConfig = this.config.items[itemType];
+                const healthBonus = fertilizerConfig?.effects?.health || 20;
+                const growthSpeedBonus = fertilizerConfig?.effects?.growthSpeed || 0.1;
 
-              landUpdate = {
-                health: Math.min(100, (landData.health || 100) + healthBonus),
-                lastFertilized: Date.now()
-              };
+                landUpdate = {
+                  health: Math.min(100, (landData.health || 100) + healthBonus),
+                  lastFertilized: Date.now()
+                };
 
-              if (growthSpeedBonus > 0 && landData.harvestTime) {
-                const remainingTime = landData.harvestTime - Date.now();
-                const speedUpTime = Math.floor(remainingTime * growthSpeedBonus);
-                landUpdate.harvestTime = landData.harvestTime - speedUpTime;
+                if (growthSpeedBonus > 0 && landData.harvestTime) {
+                  const remainingTime = landData.harvestTime - Date.now();
+                  const speedUpTime = Math.floor(remainingTime * growthSpeedBonus);
+                  landUpdate.harvestTime = landData.harvestTime - speedUpTime;
+                }
+                break;
               }
-              break;
 
             case 'pesticide':
-              const pesticideConfig = this.config.items[itemType];
-              const healthRecovery = pesticideConfig?.effects?.health || 15;
+              {
+                const pesticideConfig = this.config.items[itemType];
+                const healthRecovery = pesticideConfig?.effects?.health || 15;
 
-              landUpdate = {
-                hasPests: false,
-                health: Math.min(100, (landData.health || 100) + healthRecovery),
-                lastTreated: Date.now()
-              };
-              break;
+                landUpdate = {
+                  hasPests: false,
+                  health: Math.min(100, (landData.health || 100) + healthRecovery),
+                  lastTreated: Date.now()
+                };
+                break;
+              }
           }
 
           landUpdates[landId] = landUpdate;

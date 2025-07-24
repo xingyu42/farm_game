@@ -105,6 +105,11 @@ class ServiceContainer {
       null // logger 使用默认值
     );
 
+    // 将 ProtectionService 注入到 PlayerService，解决循环依赖
+    if (this.services.playerService?.setProtectionService) {
+      this.services.playerService.setProtectionService(this.services.protectionService);
+    }
+
     // 实例化StealService (需要依赖多个服务)
     this.services.stealService = new StealService(
       redisClient,
