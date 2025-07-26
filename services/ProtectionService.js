@@ -3,7 +3,7 @@
  * 负责管理狗粮等防御效果，与Player模型的protection字段完全兼容
  */
 
-import { ItemResolver } from '../utils/ItemResolver.js';
+import ItemResolver from '../utils/ItemResolver.js';
 
 // {{RIPER-5:
 // Action: Added

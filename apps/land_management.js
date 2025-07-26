@@ -3,7 +3,7 @@
  * 处理土地扩张、品质升级、强化等相关指令
  */
 import serviceContainer from '../services/index.js';
-import { ItemResolver } from '../utils/ItemResolver.js';
+import ItemResolver from '../utils/ItemResolver.js';
 
 export class LandManagementCommands extends plugin {
   constructor() {

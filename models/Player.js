@@ -3,7 +3,7 @@
  * 支持玩家信息管理、仓库系统、土地管理和游戏统计
  */
 
-import { Calculator } from '../utils/calculator.js';
+import Calculator from '../utils/calculator.js';
 
 // {{CHENGQI: Action: Added; Timestamp: 2025-07-01 19:48:40 +08:00; Reason: Shrimp Task ID: #092f4ab7, creating Player class basic structure to replace dynamic method injection; Principle_Applied: OOP-Encapsulation-TypeSafety;}}
 // {{START MODIFICATIONS}}

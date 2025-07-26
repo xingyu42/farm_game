@@ -3,7 +3,7 @@
  * 专门处理作物种植逻辑，包括种植条件检查、种子扣除、土地状态更新等
  */
 
-import { Calculator } from '../../utils/calculator.js';
+import Calculator from '../../utils/calculator.js';
 import { PlantingUtils } from './PlantingUtils.js';
 import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 

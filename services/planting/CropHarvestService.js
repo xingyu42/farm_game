@@ -3,7 +3,7 @@
  * 专门处理作物收获逻辑，包括成熟度检查、产量计算、经验计算、仓库更新等
  */
 
-import { Calculator } from '../../utils/calculator.js';
+import Calculator from '../../utils/calculator.js';
 import { PlantingUtils } from './PlantingUtils.js';
 import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 import LevelCalculator from '../player/LevelCalculator.js';

@@ -196,4 +196,20 @@ inventory:
       cost: 15000
     - capacity: 200
       cost: 25000
+  # 稀有度排序配置
+  rarityOrder:
+    mythic: 6
+    legendary: 5
+    epic: 4
+    rare: 3
+    uncommon: 2
+    common: 1
+  # 稀有度图标配置
+  rarityIcons:
+    mythic: '💎'
+    legendary: '🟡'
+    epic: '🟣'
+    rare: '🔵'
+    uncommon: '🟢'
+    common: '⚪'
 

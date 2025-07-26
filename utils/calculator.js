@@ -3,6 +3,8 @@
  * 包括土地品质加成、作物产量、经验计算等核心逻辑
  */
 
+import ItemResolver from './ItemResolver.js';
+
 // {{CHENGQI:
 // Action: Created; Timestamp: 2025-06-30T14:41:00+08:00; Reason: Shrimp Task ID: #5492e748, implementing calculator utilities with land quality bonuses for T8;
 // }}
@@ -11,6 +13,7 @@
 class Calculator {
   constructor(config = null) {
     this.config = config;
+    this.itemResolver = config ? new ItemResolver(config) : null;
   }
 
   /**
@@ -293,7 +296,7 @@ class Calculator {
    * @returns {number} 仓库使用量
    * @static
    * @example
-   * // 对象格式仓库
+   * // 对象格式仓库（包含quantity字段）
    * Calculator.calculateInventoryUsage({
    *   'wheat': { quantity: 10, name: '小麦' },
    *   'corn': { quantity: 5, name: '玉米' }
@@ -303,6 +306,12 @@ class Calculator {
    * Calculator.calculateInventoryUsage({
    *   'wheat': 10,
    *   'corn': 5
+   * }); // 返回 15
+   * 
+   * // Item实例格式（支持Item模型）
+   * Calculator.calculateInventoryUsage({
+   *   'wheat': itemInstance1, // itemInstance.quantity = 10
+   *   'corn': itemInstance2   // itemInstance.quantity = 5
    * }); // 返回 15
    */
   static calculateInventoryUsage(inventory) {
@@ -414,21 +423,17 @@ class Calculator {
   }
 
   /**
-   * 私有方法：获取物品配置
+   * 私有方法：获取物品配置 - 使用统一的ItemResolver
    * @param {string} itemId 物品ID
    * @returns {Object} 物品配置
    */
   _getItemConfig(itemId) {
-    const items = this.config?.items || {};
-    
-    // 查找各个类别中的物品
-    for (const category of ['crops', 'seeds', 'materials', 'landMaterials']) {
-      if (items[category] && items[category][itemId]) {
-        return items[category][itemId];
-      }
+    if (!this.itemResolver) {
+      logger.warn('[Calculator] ItemResolver未初始化，无法获取物品配置');
+      return null;
     }
     
-    return null;
+    return this.itemResolver.findItemById(itemId);
   }
 
   /**
@@ -501,7 +506,7 @@ class Calculator {
 }
 
 // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 19:48:40 +08:00; Reason: Shrimp Task ID: #10c63387, adding static calculateInventoryUsage method to unify inventory calculation logic; Principle_Applied: DRY-CodeReuse-Standardization;}}
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-13 15:15:00 +08:00; Reason: PlantingService重构测试, adding named export for Calculator to support refactored services; Principle_Applied: ModuleSystem-Compatibility;}}
-export { Calculator };
+// {{CHENGQI: Action: Modified; Timestamp: 2025-07-13 15:15:00 +08:00; Reason: PlantingService重构测试, converting to default export for consistency; Principle_Applied: ModuleSystem-Standardization;}}
+export default Calculator;
 
 // {{END MODIFICATIONS}}

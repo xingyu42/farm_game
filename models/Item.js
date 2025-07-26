@@ -1,8 +1,9 @@
 /**
  * 物品数据模型 - 提供物品数据结构、验证和业务逻辑
  * 支持作物、种子、材料等各类物品的统一管理
- * TODO: 未被使用
  */
+
+import ItemResolver from '../utils/ItemResolver.js';
 
 
 class Item {
@@ -39,31 +40,22 @@ class Item {
   }
 
   /**
-   * 从配置创建物品实例
+   * 从配置创建物品实例 - 优化版本，避免重复创建ItemResolver
    * @param {string} itemId 物品ID
    * @param {number} quantity 数量
    * @param {Object} config 配置对象
+   * @param {ItemResolver} itemResolver 可选的ItemResolver实例，避免重复创建
    * @returns {Item} 物品实例
    */
-  static fromConfig(itemId, quantity = 1, config = null) {
-    if (!config || !config.items) {
+  static fromConfig(itemId, quantity = 1, config = null, itemResolver = null) {
+    if (!config) {
       throw new Error('配置数据不存在');
     }
 
-    let itemConfig = null;
+    // 如果没有提供ItemResolver实例，则创建一个新的（向后兼容）
+    const resolver = itemResolver || new ItemResolver(config);
+    const itemConfig = resolver.findItemById(itemId);
     
-    // 查找物品配置（支持不同类别）
-    for (const category of ['crops', 'seeds', 'materials', 'landMaterials']) {
-      if (config.items[category] && config.items[category][itemId]) {
-        itemConfig = {
-          ...config.items[category][itemId],
-          category: category,
-          id: itemId
-        };
-        break;
-      }
-    }
-
     if (!itemConfig) {
       throw new Error(`找不到物品配置: ${itemId}`);
     }
@@ -369,12 +361,14 @@ class Item {
    * @returns {Object} 显示信息
    */
   getDisplayInfo() {
-    const rarityIcons = {
+    // 从配置文件获取稀有度图标
+    const rarityIcons = this.config?.items?.inventory?.rarityIcons || {
       common: '⚪',
       uncommon: '🟢', 
       rare: '🔵',
       epic: '🟣',
-      legendary: '🟡'
+      legendary: '🟡',
+      mythic: '💎'
     };
 
     const statusInfo = [];

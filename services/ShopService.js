@@ -2,7 +2,7 @@
  * 商店服务 - 管理买卖交易（根据PRD v3.2设计）
  * 包含：商店浏览、购买、出售、价格查询等功能
  */
-import { ItemResolver } from '../utils/ItemResolver.js';
+import ItemResolver from '../utils/ItemResolver.js';
 
 export class ShopService {
   constructor(redisClient, config, inventoryService, playerService, logger = null) {

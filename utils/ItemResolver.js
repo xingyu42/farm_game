@@ -204,4 +204,4 @@ class ItemResolver {
   }
 }
 
-export { ItemResolver };
+export default ItemResolver;
