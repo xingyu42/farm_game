@@ -1,0 +1,63 @@
+# 市场动态定价配置（增强版本 v2.0）
+# 配置动态定价机制的各项参数，支持大规模数据处理和性能优化
+
+# 全局开关
+enabled: true
+
+# 价格调整参数
+pricing:
+  sensitivity: 0.1      # 价格敏感度系数K
+  min_ratio: 0.5        # 最小价格比率（基准价的50%）
+  max_ratio: 1.5        # 最大价格比率（基准价的150%）
+  sell_price_ratio: 0.5 # 售价比例（相对于买价）
+  stability_threshold: 2 # 价格稳定性判断阈值（百分比）
+  extreme_ratio_max: 10  # 极端供需比上限
+  extreme_ratio_min: 0.1 # 极端供需比下限
+
+# 更新策略
+update:
+  interval: 3600        # 价格更新间隔（秒）
+  reset_stats: true     # 是否重置24小时统计
+
+# 批量处理配置（新增）
+batch_size: 100         # 默认批次大小
+performance:
+  cache_enabled: true   # 是否启用缓存
+  cache_ttl: 300       # 缓存TTL（秒）
+  max_batch_size: 500  # 最大批次大小
+  connection_pool_size: 10  # Redis连接池大小
+  max_total_duration: 60000  # 总耗时告警阈值（毫秒）
+  max_avg_time_per_item: 100 # 单项平均耗时告警阈值（毫秒）
+
+# 浮动价格物品配置
+floating_items:
+  # 基于类别的物品
+  categories:
+    - crops              # 作物类别
+    - basic_seeds        # 基础种子类别（可通过items.yaml的category字段匹配）
+  
+  # 特定物品ID列表（如果需要特别指定某些物品）
+  items:
+    - carrot            # 胡萝卜
+    - tomato            # 西红柿
+    - wheat             # 小麦
+
+# 监控和告警（增强版本）
+monitoring:
+  enabled: true         # 是否启用监控
+  price_change_threshold: 0.3  # 价格变化超过30%时告警
+  extreme_ratio_threshold: 2.0 # 供需比极端值告警阈值
+  alert_cooldown: 300   # 告警冷却时间（秒）
+
+# 任务调度器配置（新增）
+scheduler:
+  enabled: true         # 是否启用任务调度器
+  max_concurrent_tasks: 3  # 最大并发任务数
+  task_timeout: 300000  # 任务超时时间（毫秒）
+  retry_attempts: 2     # 任务重试次数
+  lock_ttl: 600000     # 分布式锁TTL（毫秒）
+
+# 价格历史
+history:
+  keep_days: 7          # 保留价格历史天数
+  max_records: 168      # 最大历史记录数（7天 * 24小时）

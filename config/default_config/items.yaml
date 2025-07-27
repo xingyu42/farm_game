@@ -8,6 +8,7 @@ seeds:
     price: 5
     sellPrice: 2
     category: "seeds"
+    is_dynamic_price: true    # 启用动态定价
     description: "常见的蔬菜种子"
 
   tomato_seed:
@@ -15,6 +16,7 @@ seeds:
     price: 8
     sellPrice: 3
     category: "seeds"
+    is_dynamic_price: true    # 启用动态定价
     description: "营养丰富的蔬菜种子"
 
   wheat_seed:
@@ -22,6 +24,7 @@ seeds:
     price: 3
     sellPrice: 1
     category: "seeds"
+    is_dynamic_price: true    # 启用动态定价
     description: "基础的谷物种子"
 
 # 肥料配置
@@ -144,16 +147,19 @@ crops:
     name: "胡萝卜"
     sellPrice: 8
     category: "crops"
+    is_dynamic_price: true    # 启用动态定价
     baseExp: 5
   tomato:
     name: "西红柿"
     sellPrice: 12
     category: "crops"
+    is_dynamic_price: true    # 启用动态定价
     baseExp: 8
   wheat:
     name: "小麦"
     sellPrice: 5
     category: "crops"
+    is_dynamic_price: true    # 启用动态定价
     baseExp: 3
 # 商店分类显示
 shop:
