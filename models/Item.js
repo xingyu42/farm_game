@@ -3,40 +3,40 @@
  * 支持作物、种子、材料等各类物品的统一管理
  */
 
-import ItemResolver from '../utils/ItemResolver.js';
+
 
 
 class Item {
   constructor(data = {}, config = null) {
     this.config = config;
-    
+
     // 基础属性
     this.id = data.id || null;
     this.type = data.type || 'unknown';
     this.category = data.category || 'general';
     this.name = data.name || '';
     this.description = data.description || '';
-    
+
     // 数量和容量
-    this.quantity = data.quantity || 0;
-    this.stackable = data.stackable !== false; // 默认可堆叠
-    this.maxStack = data.maxStack || 99;
-    
+    this.quantity = data.quantity;
+    this.stackable = data.stackable;
+    this.maxStack = data.maxStack;
+
     // 经济属性
-    this.buyPrice = data.buyPrice || 0;
-    this.sellPrice = data.sellPrice || 0;
-    this.rarity = data.rarity || 'common';
-    
+    this.buyPrice = data.buyPrice;
+    this.sellPrice = data.sellPrice;
+    this.rarity = data.rarity;
+
     // 功能属性
-    this.usable = data.usable || false;
-    this.consumable = data.consumable || false;
-    this.tradeable = data.tradeable !== false; // 默认可交易
-    
+    this.usable = data.usable;
+    this.consumable = data.consumable;
+    this.tradeable = data.tradeable;
+
     // 扩展属性
-    this.icon = data.icon || '📦';
-    this.requiredLevel = data.requiredLevel || 1;
-    this.expiryTime = data.expiryTime || null;
-    this.metadata = data.metadata || {};
+    this.icon = data.icon;
+    this.requiredLevel = data.requiredLevel;
+    this.expiryTime = data.expiryTime;
+    this.metadata = data.metadata;
   }
 
   /**
@@ -53,9 +53,9 @@ class Item {
     }
 
     // 如果没有提供ItemResolver实例，则创建一个新的（向后兼容）
-    const resolver = itemResolver || new ItemResolver(config);
+    const resolver = itemResolver;
     const itemConfig = resolver.findItemById(itemId);
-    
+
     if (!itemConfig) {
       throw new Error(`找不到物品配置: ${itemId}`);
     }
@@ -63,21 +63,21 @@ class Item {
     return new Item({
       id: itemId,
       quantity: quantity,
-      type: itemConfig.type || 'item',
+      type: itemConfig.type,
       category: itemConfig.category,
-      name: itemConfig.name || itemId,
-      description: itemConfig.description || '',
-      buyPrice: itemConfig.buyPrice || 0,
-      sellPrice: itemConfig.sellPrice || 0,
-      rarity: itemConfig.rarity || 'common',
-      usable: itemConfig.usable || false,
-      consumable: itemConfig.consumable || false,
-      tradeable: itemConfig.tradeable !== false,
-      icon: itemConfig.icon || '📦',
-      requiredLevel: itemConfig.requiredLevel || 1,
-      stackable: itemConfig.stackable !== false,
-      maxStack: itemConfig.maxStack || 99,
-      metadata: itemConfig.metadata || {}
+      name: itemConfig.name,
+      description: itemConfig.description,
+      buyPrice: itemConfig.buyPrice,
+      sellPrice: itemConfig.sellPrice,
+      rarity: itemConfig.rarity,
+      usable: itemConfig.usable,
+      consumable: itemConfig.consumable,
+      tradeable: itemConfig.tradeable,
+      icon: itemConfig.icon,
+      requiredLevel: itemConfig.requiredLevel,
+      stackable: itemConfig.stackable,
+      maxStack: itemConfig.maxStack,
+      metadata: itemConfig.metadata
     }, config);
   }
 
@@ -90,15 +90,15 @@ class Item {
    */
   static createStack(itemId, quantity, config = null) {
     const item = Item.fromConfig(itemId, quantity, config);
-    
+
     if (!item.stackable && quantity > 1) {
       throw new Error(`物品 ${itemId} 不支持堆叠`);
     }
-    
+
     if (quantity > item.maxStack) {
       throw new Error(`物品 ${itemId} 超过最大堆叠数量 ${item.maxStack}`);
     }
-    
+
     return item;
   }
 
@@ -168,10 +168,10 @@ class Item {
    * @returns {boolean}
    */
   canUse(playerLevel) {
-    return this.usable && 
-           playerLevel >= this.requiredLevel && 
-           !this.isExpired() && 
-           this.quantity > 0;
+    return this.usable &&
+      playerLevel >= this.requiredLevel &&
+      !this.isExpired() &&
+      this.quantity > 0;
   }
 
   /**
@@ -205,7 +205,7 @@ class Item {
     }
 
     const newQuantity = this.quantity + amount;
-    
+
     if (newQuantity > this.maxStack) {
       throw new Error(`超过最大堆叠数量 ${this.maxStack}`);
     }
@@ -275,10 +275,10 @@ class Item {
     // 创建新的物品实例
     const newItem = this.clone();
     newItem.setQuantity(splitQuantity);
-    
+
     // 减少当前物品数量
     this.removeQuantity(splitQuantity);
-    
+
     return newItem;
   }
 
@@ -293,7 +293,7 @@ class Item {
     }
 
     const totalQuantity = this.quantity + otherItem.quantity;
-    
+
     if (totalQuantity <= this.maxStack) {
       // 可以完全合并
       this.quantity = totalQuantity;
@@ -315,12 +315,12 @@ class Item {
    */
   canMergeWith(otherItem) {
     return this.stackable &&
-           otherItem.stackable &&
-           this.id === otherItem.id &&
-           this.type === otherItem.type &&
-           this.category === otherItem.category &&
-           !this.isExpired() &&
-           !otherItem.isExpired();
+      otherItem.stackable &&
+      this.id === otherItem.id &&
+      this.type === otherItem.type &&
+      this.category === otherItem.category &&
+      !this.isExpired() &&
+      !otherItem.isExpired();
   }
 
   /**
@@ -346,7 +346,7 @@ class Item {
       itemId: this.id,
       usedAmount: amount,
       remainingQuantity: this.quantity - amount,
-      effects: this.metadata.effects || {}
+      effects: this.metadata.effects
     };
 
     if (this.consumable) {
@@ -362,27 +362,20 @@ class Item {
    */
   getDisplayInfo() {
     // 从配置文件获取稀有度图标
-    const rarityIcons = this.config?.items?.inventory?.rarityIcons || {
-      common: '⚪',
-      uncommon: '🟢', 
-      rare: '🔵',
-      epic: '🟣',
-      legendary: '🟡',
-      mythic: '💎'
-    };
+    const rarityIcons = this.config.items.inventory.rarityIcons;
 
     const statusInfo = [];
-    
+
     if (this.isExpired()) {
       statusInfo.push('已过期');
     }
-    
+
     if (!this.tradeable) {
       statusInfo.push('绑定');
     }
 
     const statusText = statusInfo.length > 0 ? ` [${statusInfo.join(', ')}]` : '';
-    const rarityIcon = rarityIcons[this.rarity] || '⚪';
+    const rarityIcon = rarityIcons[this.rarity];
     const quantityText = this.stackable && this.quantity > 1 ? ` x${this.quantity}` : '';
 
     return {

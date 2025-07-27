@@ -24,13 +24,13 @@ export class StealService {
     this.inventoryService = inventoryService;
     this.protectionService = protectionService;
     this.landService = landService;
-    this.logger = logger || console;
+    this.logger = logger;
 
     // 初始化Redis锁
     this.redisLock = new RedisLock(redisClient, logger);
 
     // 获取偷窃配置
-    this.stealConfig = this.config?.steal || this._getDefaultConfig();
+    this.stealConfig = this.config.steal;
 
     this.logger.info('[StealService] 偷窃服务已初始化');
   }
@@ -55,7 +55,7 @@ export class StealService {
 
     // 双重分布式锁：确保操作原子性
     const lockKeys = [attackerId, targetId].sort(); // 按字母序排序防止死锁
-    const lockTimeout = this.stealConfig.locks?.timeout || 10000;
+    const lockTimeout = this.stealConfig.locks.timeout;
     const locks = [];
 
     try {
@@ -64,8 +64,8 @@ export class StealService {
         const lock = await this.redisLock.acquire(
           `steal:${key}`,
           lockTimeout,
-          this.stealConfig.locks?.retryDelay || 100,
-          this.stealConfig.locks?.maxRetries || 50
+          this.stealConfig.locks.retryDelay,
+          this.stealConfig.locks.maxRetries
         );
 
         if (!lock) {
@@ -109,7 +109,7 @@ export class StealService {
     // 2. 检查目标可偷状态
     const targetStatus = await this.getStealableStatus(targetId);
     if (!targetStatus.canBeStolen) {
-      throw new Error(targetStatus.reason || '目标当前不可偷窃');
+      throw new Error(targetStatus.reason);
     }
 
     // 3. 检查防重复偷取
@@ -150,7 +150,7 @@ export class StealService {
     const rewards = [];
 
     // 随机选择要偷取的土地（最多maxStealPerAttempt块）
-    const maxSteal = this.stealConfig.basic?.maxStealPerAttempt || 3;
+    const maxSteal = this.stealConfig.basic.maxStealPerAttempt;
     const selectedLands = this._selectRandomLands(stealableLands, maxSteal);
 
     // 使用Redis Pipeline优化连续写操作
@@ -193,7 +193,7 @@ export class StealService {
     // 设置目标保护
     await this.protectionService.setFarmProtection(
       targetId,
-      this.stealConfig.basic?.protectionMinutes || 30
+      this.stealConfig.basic.protectionMinutes
     );
 
     // 记录偷窃记录
@@ -334,8 +334,8 @@ export class StealService {
     try {
       const allLands = await this.landService.getAllLands(targetId);
       const stealableLands = [];
-      const minGrowthProgress = this.stealConfig.landRequirements?.minGrowthProgress || 0.5;
-      const excludeStates = this.stealConfig.landRequirements?.excludeStates || ['empty', 'harvested'];
+      const minGrowthProgress = this.stealConfig.landRequirements.minGrowthProgress;
+      const excludeStates = this.stealConfig.landRequirements.excludeStates;
 
       for (const land of allLands) {
         // 检查土地状态
@@ -381,8 +381,8 @@ export class StealService {
    */
   async _calculateSuccessRate(attackerId, targetId) {
     try {
-      const baseRate = this.stealConfig.basic?.baseSuccessRate || 50;
-      const factors = this.stealConfig.successRateFactors || {};
+      const baseRate = this.stealConfig.basic.baseSuccessRate;
+      const factors = this.stealConfig.successRateFactors;
 
       let finalRate = baseRate;
 
@@ -394,25 +394,25 @@ export class StealService {
 
       // 等级差异影响
       const levelDiff = attackerData.level - targetData.level;
-      const levelFactor = factors.levelDifferenceFactor || 0.1;
+      const levelFactor = factors.levelDifferenceFactor;
       finalRate += levelDiff * levelFactor * 10; // 每级差异影响1%（levelFactor * 10）
 
       // 目标防护加成
       const protectionBonus = await this.protectionService.getProtectionBonus(targetId);
       if (protectionBonus > 0) {
-        const protectionPenalty = factors.targetProtectionPenalty || 0.5;
+        const protectionPenalty = factors.targetProtectionPenalty;
         finalRate -= protectionBonus * protectionPenalty;
       }
 
       // 限制成功率范围
-      const maxRate = factors.maxSuccessRate || 95;
-      const minRate = factors.minSuccessRate || 5;
+      const maxRate = factors.maxSuccessRate;
+      const minRate = factors.minSuccessRate;
       finalRate = Math.min(maxRate, Math.max(minRate, finalRate));
 
       return Math.round(finalRate);
     } catch (error) {
       this.logger.error(`[StealService] 计算成功率失败: ${error.message}`);
-      return this.stealConfig.basic?.baseSuccessRate || 50;
+      return this.stealConfig.basic.baseSuccessRate;
     }
   }
 
@@ -424,16 +424,16 @@ export class StealService {
    */
   async _calculateStealAmount(land) {
     try {
-      const rewardConfig = this.stealConfig.rewards || {};
-      const baseRate = rewardConfig.baseRewardRate || 0.1;
-      const maxRate = rewardConfig.maxRewardRate || 0.3;
-      const qualityBonus = rewardConfig.bonusByQuality || {};
+      const rewardConfig = this.stealConfig.rewards;
+      const baseRate = rewardConfig.baseRewardRate;
+      const maxRate = rewardConfig.maxRewardRate;
+      const qualityBonus = rewardConfig.bonusByQuality;
 
       // 基础偷取比例
       let stealRate = baseRate;
 
       // 土地品质加成
-      const qualityMultiplier = qualityBonus[land.quality] || 1.0;
+      const qualityMultiplier = qualityBonus[land.quality];
       stealRate *= qualityMultiplier;
 
       // 限制最大偷取比例
@@ -457,14 +457,14 @@ export class StealService {
    */
   async _calculateFailurePenalty(attackerId) {
     try {
-      const penaltyConfig = this.stealConfig.penalties || {};
-      const penaltyRate = penaltyConfig.basePenaltyRate || 0.05;
-      const maxPenalty = penaltyConfig.maxPenalty || 1000;
-      const minPenalty = penaltyConfig.minPenalty || 10;
+      const penaltyConfig = this.stealConfig.penalties;
+      const penaltyRate = penaltyConfig.basePenaltyRate;
+      const maxPenalty = penaltyConfig.maxPenalty;
+      const minPenalty = penaltyConfig.minPenalty;
 
       // 获取玩家金币
       const playerData = await this.playerService.getDataService().getPlayerFromHash(attackerId);
-      const currentCoins = playerData.economy?.coins || 0;
+      const currentCoins = playerData.economy.coins;
 
       // 计算惩罚金额
       let penalty = Math.floor(currentCoins * penaltyRate);
@@ -476,7 +476,7 @@ export class StealService {
       return penalty;
     } catch (error) {
       this.logger.error(`[StealService] 计算失败惩罚失败: ${error.message}`);
-      return this.stealConfig.penalties?.minPenalty || 10;
+      return this.stealConfig.penalties.minPenalty;
     }
   }
 
@@ -487,7 +487,7 @@ export class StealService {
    */
   async _setStealCooldown(userId) {
     try {
-      const cooldownMinutes = this.stealConfig.basic?.cooldownMinutes || 60;
+      const cooldownMinutes = this.stealConfig.basic.cooldownMinutes;
       const cooldownMs = cooldownMinutes * 60 * 1000;
       const cooldownEnd = Date.now() + cooldownMs;
 
@@ -510,9 +510,9 @@ export class StealService {
    */
   async _checkAntiRepeat(attackerId, targetId) {
     try {
-      const antiRepeatConfig = this.stealConfig.antiRepeat || {};
-      const cooldownMinutes = antiRepeatConfig.sameTargetCooldownMinutes || 30;
-      const maxAttempts = antiRepeatConfig.maxAttemptsPerTarget || 3;
+      const antiRepeatConfig = this.stealConfig.antiRepeat;
+      const cooldownMinutes = antiRepeatConfig.sameTargetCooldownMinutes;
+      const maxAttempts = antiRepeatConfig.maxAttemptsPerTarget;
 
       const now = Date.now();
       const today = new Date(now).toDateString();
@@ -536,7 +536,7 @@ export class StealService {
 
       // 检查今日尝试次数
       const attemptsKey = `steal_attempts:${attackerId}:${targetId}:${today}`;
-      const attemptCount = parseInt(await this.redisClient.get(attemptsKey) || '0');
+      const attemptCount = parseInt(await this.redisClient.get(attemptsKey));
 
       if (attemptCount >= maxAttempts) {
         return {
@@ -568,7 +568,7 @@ export class StealService {
 
       // 更新目标冷却时间
       const cooldownKey = `steal_target_cooldown:${attackerId}:${targetId}`;
-      const cooldownMinutes = this.stealConfig.antiRepeat?.sameTargetCooldownMinutes || 30;
+      const cooldownMinutes = this.stealConfig.antiRepeat.sameTargetCooldownMinutes;
       await this.redisClient.setex(cooldownKey, cooldownMinutes * 60, now.toString());
 
       // 更新今日尝试次数
@@ -683,7 +683,7 @@ export class StealService {
       let totalAttemptsToday = 0;
 
       for (const key of keys) {
-        const count = parseInt(await this.redisClient.get(key) || '0');
+        const count = parseInt(await this.redisClient.get(key));
         totalAttemptsToday += count;
       }
 
@@ -691,9 +691,9 @@ export class StealService {
         cooldownStatus,
         totalAttemptsToday,
         config: {
-          cooldownMinutes: this.stealConfig.basic?.cooldownMinutes || 60,
-          maxStealPerAttempt: this.stealConfig.basic?.maxStealPerAttempt || 3,
-          baseSuccessRate: this.stealConfig.basic?.baseSuccessRate || 50
+          cooldownMinutes: this.stealConfig.basic.cooldownMinutes,
+          maxStealPerAttempt: this.stealConfig.basic.maxStealPerAttempt,
+          baseSuccessRate: this.stealConfig.basic.baseSuccessRate
         }
       };
     } catch (error) {

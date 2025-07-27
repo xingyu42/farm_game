@@ -186,7 +186,7 @@ export class farm extends plugin {
 
     // 获取作物信息
     const cropConfig = cropsConfig[land.crop]
-    const cropName = cropConfig?.name || land.crop
+    const cropName = cropConfig.name
 
     // 健康度
     const health = land.health || 100
@@ -564,7 +564,7 @@ export class farm extends plugin {
     const normalizedCropName = cropName.replace('种子', '')
 
     for (const [cropId, config] of Object.entries(cropsConfig)) {
-      const matchTargets = [config.name, ...(config.aliases || [])]
+      const matchTargets = [config.name, ...(config.aliases)]
 
       for (const target of matchTargets) {
         if (target === cropName || target === normalizedCropName) {
@@ -583,14 +583,14 @@ export class farm extends plugin {
    */
   async _parseFertilizerType(fertilizerName) {
     const itemsConfig = this.config.items
-    const fertilizersConfig = itemsConfig?.fertilizers || {}
+    const fertilizersConfig = itemsConfig.fertilizers
 
     // 2. 统一匹配中文名称和配置化别名
     const normalizedFertilizerName = fertilizerName.replace('肥料', '')
 
     for (const [fertilizerId, config] of Object.entries(fertilizersConfig)) {
       // 构建匹配目标数组：名称 + 别名
-      const matchTargets = [config.name, ...(config.aliases || [])]
+      const matchTargets = [config.name, ...(config.aliases)]
 
       // 精确匹配
       for (const target of matchTargets) {

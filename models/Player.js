@@ -20,7 +20,7 @@ class Player {
 
     // 土地系统
     this.landCount = data.landCount
-    this.lands = data.lands || this._createDefaultLands(this.landCount);
+    this.lands = data.lands;
     this.maxLandCount = data.maxLandCount
 
     // 仓库系统
@@ -45,9 +45,9 @@ class Player {
     this.statistics = data.statistics
 
     // 时间戳
-    this.createdAt = data.createdAt || Date.now();
-    this.lastUpdated = data.lastUpdated || Date.now();
-    this.lastActiveTime = data.lastActiveTime || Date.now();
+    this.createdAt = data.createdAt;
+    this.lastUpdated = data.lastUpdated;
+    this.lastActiveTime = data.lastActiveTime;
 
     // 向后兼容的金币访问器
     Object.defineProperty(this, 'gold', {
@@ -515,7 +515,7 @@ class Player {
    */
   getInventoryInfo() {
     const usage = this.getInventoryUsage();
-    const capacity = this.inventory_capacity || this.inventoryCapacity;
+    const capacity = this.inventory_capacity;
 
     return {
       usage,

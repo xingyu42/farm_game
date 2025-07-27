@@ -413,11 +413,11 @@ class PlantingUtils {
      * @returns {any} 默认值
      */
     _getDefaultComplexField(field) {
-        const landConfig = this.config?.land?.default;
+        const landConfig = this.config.land.default;
 
         switch (field) {
             case 'lands':
-                return new Array(landConfig?.startingLands || 6).fill(null).map((_, i) => ({
+                return new Array(landConfig.startingLands).fill(null).map((_, i) => ({
                     id: i + 1,
                     crop: null,
                     quality: 'normal',

@@ -24,14 +24,14 @@ class DataBackupService {
 
         // 从配置获取备份设置
         this.backupConfig = {
-            interval: config?.backup?.interval || 3600000,      // 1小时
-            maxBackups: config?.backup?.maxBackups || 24,       // 保留24份
-            filePrefix: config?.backup?.filePrefix || 'player_data_backup',
-            enabled: config?.backup?.enabled !== false,         // 默认启用
-            startDelay: config?.backup?.startDelay || 60000,    // 1分钟启动延迟
-            compress: config?.backup?.compress || false,
-            retryCount: config?.backup?.retryCount || 3,
-            retryInterval: config?.backup?.retryInterval || 5000
+            interval: config.backup.interval,
+            maxBackups: config.backup.maxBackups,
+            filePrefix: config.backup.filePrefix,
+            enabled: config.backup.enabled,
+            startDelay: config.backup.startDelay,
+            compress: config.backup.compress,
+            retryCount: config.backup.retryCount,
+            retryInterval: config.backup.retryInterval
         };
     }
 

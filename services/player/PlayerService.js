@@ -15,7 +15,7 @@ class PlayerService {
     constructor(redisClient, config, logger = null) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
+        this.logger = logger;
 
         // 初始化数据服务
         this.dataService = new PlayerDataService(redisClient, config, logger);
@@ -550,7 +550,7 @@ class PlayerService {
      */
     async _giveInitialGift(userId, _playerData) {
         try {
-            const initialGift = this.config.items?.initial_gift;
+            const initialGift = this.config.items.initial_gift;
 
             if (initialGift && initialGift.length > 0) {
                 this.logger.info(`[PlayerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);

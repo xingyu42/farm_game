@@ -200,7 +200,7 @@ export class steal extends plugin {
    * @private
    */
   async _parseDogFoodType(dogFoodName) {
-    const itemsConfig = this.config?.items?.dogFood || {}
+    const itemsConfig = this.config.items.dogFood
 
     // 直接匹配ID
     if (itemsConfig[dogFoodName]) {

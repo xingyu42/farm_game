@@ -24,12 +24,12 @@ class Calculator {
    */
   calculateGrowTime(baseGrowTime, landQuality = 'normal') {
     const qualityConfig = this._getLandQualityConfig(landQuality);
-    const timeReduction = qualityConfig?.timeReduction || 0;
-    
+    const timeReduction = qualityConfig.timeReduction;
+
     // 时间减少百分比计算
     const reduction = timeReduction / 100;
     const actualGrowTime = Math.floor(baseGrowTime * (1 - reduction));
-    
+
     return Math.max(actualGrowTime, 1000); // 最小1秒
   }
 
@@ -42,16 +42,16 @@ class Calculator {
    */
   calculateYield(baseYield, landQuality = 'normal', landHealth = 100) {
     const qualityConfig = this._getLandQualityConfig(landQuality);
-    const productionBonus = qualityConfig?.productionBonus || 0;
-    
+    const productionBonus = qualityConfig.productionBonus;
+
     // 品质加成计算
     const qualityMultiplier = 1 + (productionBonus / 100);
-    
+
     // 健康度影响计算（健康度低于50%时开始影响产量）
     const healthMultiplier = landHealth >= 50 ? 1 : (landHealth / 50);
-    
+
     const actualYield = Math.floor(baseYield * qualityMultiplier * healthMultiplier);
-    
+
     return Math.max(actualYield, 1); // 最小产量为1
   }
 
@@ -64,16 +64,16 @@ class Calculator {
    */
   calculateCropExperience(cropType, quantity = 1, landQuality = 'normal') {
     const cropConfig = this._getCropConfig(cropType);
-    const baseExp = cropConfig?.experience || 1;
-    
+    const baseExp = cropConfig.experience;
+
     const qualityConfig = this._getLandQualityConfig(landQuality);
-    const expBonus = qualityConfig?.experienceBonus || 0;
-    
+    const expBonus = qualityConfig.experienceBonus;
+
     // 品质经验加成
     const expMultiplier = 1 + (expBonus / 100);
-    
+
     const totalExp = Math.floor(baseExp * quantity * expMultiplier);
-    
+
     return Math.max(totalExp, 1);
   }
 
@@ -83,12 +83,12 @@ class Calculator {
    * @returns {Object} 等级信息
    */
   calculateLevel(experience) {
-    if (!this.config?.levels) {
+    if (!this.config.levels) {
       // 默认等级计算公式
       const level = Math.floor(Math.sqrt(experience / 100)) + 1;
       const currentLevelExp = (level - 1) * (level - 1) * 100;
       const nextLevelExp = level * level * 100;
-      
+
       return {
         level,
         currentExp: experience,
@@ -103,7 +103,7 @@ class Calculator {
     const levels = this.config.levels;
     let level = 1;
     let currentLevelExp = 0;
-    
+
     for (const [levelStr, levelData] of Object.entries(levels)) {
       const levelNum = parseInt(levelStr);
       if (experience >= levelData.experience) {
@@ -135,16 +135,16 @@ class Calculator {
    * @returns {Object} 扩张成本信息
    */
   calculateLandExpansionCost(currentLandCount, targetLandCount) {
-    if (!this.config?.land?.expansion) {
+    if (!this.config.land.expansion) {
       // 默认扩张成本计算
       const baseCost = 1000;
       const costMultiplier = 1.5;
       let totalCost = 0;
-      
+
       for (let i = currentLandCount + 1; i <= targetLandCount; i++) {
         totalCost += Math.floor(baseCost * Math.pow(costMultiplier, i - 7));
       }
-      
+
       return {
         totalCost,
         canAfford: false,
@@ -159,15 +159,15 @@ class Calculator {
 
     for (let landNum = currentLandCount + 1; landNum <= targetLandCount; landNum++) {
       const landConfig = expansionConfig[landNum];
-      
+
       if (landConfig) {
-        totalGoldCost += landConfig.goldCost || 0;
-        maxLevelRequired = Math.max(maxLevelRequired, landConfig.levelRequired || 1);
-        
+        totalGoldCost += landConfig.goldCost;
+        maxLevelRequired = Math.max(maxLevelRequired, landConfig.levelRequired);
+
         expansionSteps.push({
           landNumber: landNum,
-          goldCost: landConfig.goldCost || 0,
-          levelRequired: landConfig.levelRequired || 1
+          goldCost: landConfig.goldCost,
+          levelRequired: landConfig.levelRequired
         });
       }
     }
@@ -206,11 +206,11 @@ class Calculator {
     for (let i = currentIndex + 1; i <= targetIndex; i++) {
       const quality = qualityOrder[i];
       const qualityConfig = this._getLandQualityConfig(quality);
-      const upgradeConfig = qualityConfig?.upgrade;
+      const upgradeConfig = qualityConfig.upgrade;
 
       if (upgradeConfig) {
-        totalGoldCost += upgradeConfig.goldCost || 0;
-        maxLevelRequired = Math.max(maxLevelRequired, upgradeConfig.levelRequired || 1);
+        totalGoldCost += upgradeConfig.goldCost;
+        maxLevelRequired = Math.max(maxLevelRequired, upgradeConfig.levelRequired);
 
         // 累计材料需求
         if (upgradeConfig.materials) {
@@ -222,9 +222,9 @@ class Calculator {
         upgradeSteps.push({
           fromQuality: qualityOrder[i - 1],
           toQuality: quality,
-          goldCost: upgradeConfig.goldCost || 0,
-          levelRequired: upgradeConfig.levelRequired || 1,
-          materials: upgradeConfig.materials || {}
+          goldCost: upgradeConfig.goldCost,
+          levelRequired: upgradeConfig.levelRequired,
+          materials: upgradeConfig.materials
         });
       }
     }
@@ -249,7 +249,7 @@ class Calculator {
    */
   calculateShopPrice(itemId, quantity, operation = 'buy', playerLevel = 1) {
     const itemConfig = this._getItemConfig(itemId);
-    
+
     if (!itemConfig) {
       return {
         success: false,
@@ -258,7 +258,7 @@ class Calculator {
     }
 
     const basePrice = operation === 'buy' ? itemConfig.buyPrice : itemConfig.sellPrice;
-    
+
     if (!basePrice || basePrice <= 0) {
       return {
         success: false,
@@ -268,10 +268,10 @@ class Calculator {
 
     // 等级折扣（高等级玩家购买便宜，出售贵）
     const levelDiscount = this._calculateLevelDiscount(playerLevel, operation);
-    
+
     // 批量折扣（大量购买/出售时的折扣）
     const bulkDiscount = this._calculateBulkDiscount(quantity, operation);
-    
+
     const finalPrice = Math.floor(basePrice * levelDiscount * bulkDiscount);
     const totalPrice = finalPrice * quantity;
 
@@ -379,18 +379,18 @@ class Calculator {
   calculateStealYield(cropType, baseYield, landQuality = 'normal', stealerLevel = 1, ownerLevel = 1) {
     // 基础偷菜比例（10-30%）
     const baseStealRatio = 0.2;
-    
+
     // 等级差异影响（偷菜者等级高时收益增加）
     const levelDiff = stealerLevel - ownerLevel;
     const levelBonus = Math.max(-0.1, Math.min(0.1, levelDiff * 0.01));
-    
+
     // 土地品质影响（高品质土地偷菜收益更高）
     const qualityConfig = this._getLandQualityConfig(landQuality);
-    const qualityBonus = (qualityConfig?.productionBonus || 0) / 200; // 品质加成的一半
-    
+    const qualityBonus = qualityConfig.productionBonus / 200; // 品质加成的一半
+
     const finalStealRatio = baseStealRatio + levelBonus + qualityBonus;
     const stealYield = Math.floor(baseYield * finalStealRatio);
-    
+
     // 主人损失（通常是偷菜者收益的1.5倍）
     const ownerLoss = Math.floor(stealYield * 1.5);
 
@@ -410,7 +410,7 @@ class Calculator {
    * @returns {Object} 品质配置
    */
   _getLandQualityConfig(quality) {
-    return this.config?.land?.quality?.[quality] || {};
+    return this.config.land.quality[quality];
   }
 
   /**
@@ -419,7 +419,7 @@ class Calculator {
    * @returns {Object} 作物配置
    */
   _getCropConfig(cropType) {
-    return this.config?.crops?.[cropType] || {};
+    return this.config.crops[cropType];
   }
 
   /**
@@ -432,7 +432,7 @@ class Calculator {
       logger.warn('[Calculator] ItemResolver未初始化，无法获取物品配置');
       return null;
     }
-    
+
     return this.itemResolver.findItemById(itemId);
   }
 
@@ -446,9 +446,9 @@ class Calculator {
     // 每10级提供1%的折扣
     const discountRate = Math.floor(playerLevel / 10) * 0.01;
     const maxDiscount = 0.1; // 最大10%折扣
-    
+
     const actualDiscount = Math.min(discountRate, maxDiscount);
-    
+
     if (operation === 'buy') {
       return 1 - actualDiscount; // 购买时减少成本
     } else {
@@ -464,13 +464,13 @@ class Calculator {
    */
   _calculateBulkDiscount(quantity, operation) {
     if (quantity < 10) return 1; // 少于10个不打折
-    
+
     // 每增加10个提供0.5%折扣，最大5%
     const discountRate = Math.floor(quantity / 10) * 0.005;
     const maxDiscount = 0.05;
-    
+
     const actualDiscount = Math.min(discountRate, maxDiscount);
-    
+
     if (operation === 'buy') {
       return 1 - actualDiscount;
     } else {

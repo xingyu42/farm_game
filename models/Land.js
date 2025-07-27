@@ -11,27 +11,27 @@
 class Land {
   constructor(data = {}, config = null) {
     this.config = config;
-    
+
     // 基础属性
-    this.id = data.id || null;
-    this.quality = data.quality || 'normal';
-    this.status = data.status || 'empty';
-    
+    this.id = data.id;
+    this.quality = data.quality;
+    this.status = data.status;
+
     // 作物信息
-    this.crop = data.crop || null;
-    this.plantTime = data.plantTime || null;
-    this.harvestTime = data.harvestTime || null;
-    
+    this.crop = data.crop;
+    this.plantTime = data.plantTime;
+    this.harvestTime = data.harvestTime;
+
     // 土地状态
-    this.health = data.health || 100;
-    this.needsWater = data.needsWater || false;
-    this.hasPests = data.hasPests || false;
-    this.stealable = data.stealable || false;
-    
+    this.health = data.health;
+    this.needsWater = data.needsWater;
+    this.hasPests = data.hasPests;
+    this.stealable = data.stealable;
+
     // 扩展属性
-    this.lastUpgradeTime = data.lastUpgradeTime || null;
-    this.upgradeLevel = data.upgradeLevel || 0;
-    this.enhancementLevel = data.enhancementLevel || 0;
+    this.lastUpgradeTime = data.lastUpgradeTime;
+    this.upgradeLevel = data.upgradeLevel;
+    this.enhancementLevel = data.enhancementLevel;
   }
 
   /**
@@ -138,8 +138,8 @@ class Land {
    * @returns {boolean}
    */
   isWithered(currentTime = Date.now(), witherTimeout = 24 * 60 * 60 * 1000) {
-    return this.isReady(currentTime) && 
-           (currentTime - this.harvestTime) > witherTimeout;
+    return this.isReady(currentTime) &&
+      (currentTime - this.harvestTime) > witherTimeout;
   }
 
   /**
@@ -167,7 +167,7 @@ class Land {
     this.needsWater = false;
     this.hasPests = false;
     this.stealable = false;
-    
+
     return this;
   }
 
@@ -182,7 +182,7 @@ class Land {
 
     const harvestedCrop = this.crop;
     const plantDuration = this.harvestTime - this.plantTime;
-    
+
     // 重置土地状态
     this.crop = null;
     this.status = 'empty';
@@ -236,18 +236,18 @@ class Land {
     }
 
     const qualityConfig = this.config.land?.quality?.[this.quality];
-    
+
     if (!qualityConfig) {
       return null;
     }
 
     return {
       quality: this.quality,
-      icon: qualityConfig.icon || '🟫',
-      name: qualityConfig.name || this.quality,
-      productionBonus: qualityConfig.productionBonus || 0,
-      timeReduction: qualityConfig.timeReduction || 0,
-      description: qualityConfig.description || '',
+      icon: qualityConfig.icon,
+      name: qualityConfig.name,
+      productionBonus: qualityConfig.productionBonus,
+      timeReduction: qualityConfig.timeReduction,
+      description: qualityConfig.description,
       upgradeLevel: this.upgradeLevel
     };
   }
@@ -263,7 +263,7 @@ class Land {
 
     const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
     const currentIndex = qualityOrder.indexOf(this.quality);
-    
+
     if (currentIndex === -1 || currentIndex >= qualityOrder.length - 1) {
       return null; // 已是最高品质
     }
@@ -277,9 +277,9 @@ class Land {
 
     return {
       targetQuality: nextQuality,
-      levelRequired: upgradeConfig.levelRequired || 0,
-      goldCost: upgradeConfig.goldCost || 0,
-      materials: upgradeConfig.materials || {},
+      levelRequired: upgradeConfig.levelRequired,
+      goldCost: upgradeConfig.goldCost,
+      materials: upgradeConfig.materials,
       canUpgrade: true
     };
   }
@@ -314,8 +314,8 @@ class Land {
     const qualityInfo = this.getQualityInfo();
     const baseInfo = {
       id: this.id,
-      qualityIcon: qualityInfo?.icon || '🟫',
-      qualityName: qualityInfo?.name || this.quality,
+      qualityIcon: qualityInfo.icon,
+      qualityName: qualityInfo.name,
       status: this.status,
       health: this.health
     };
@@ -328,7 +328,7 @@ class Land {
       };
     }
 
-    const cropName = cropsConfig[this.crop]?.name || this.crop;
+    const cropName = cropsConfig[this.crop].name;
     let statusText = '';
     let timeInfo = '';
 

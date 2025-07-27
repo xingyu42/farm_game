@@ -346,7 +346,7 @@ export class ProtectionService {
    */
   getAvailableDogFoodTypes() {
     try {
-      const dogFoodConfig = this.config.items?.dogFood || {};
+      const dogFoodConfig = this.config.items.dogFood;
 
       return Object.keys(dogFoodConfig).map(type => ({
         type,

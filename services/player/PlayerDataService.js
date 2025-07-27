@@ -11,7 +11,7 @@ class PlayerDataService {
   constructor(redisClient, config, logger = null) {
     this.redis = redisClient;
     this.config = config;
-    this.logger = logger || console;
+    this.logger = logger;
     this.serializer = new PlayerSerializer(config);
     this.yamlStorage = new PlayerYamlStorage();
 

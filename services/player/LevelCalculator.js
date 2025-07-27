@@ -43,8 +43,8 @@ class LevelCalculator {
      * @returns {Object} 奖励信息
      */
     getLevelUpRewards(oldLevel, newLevel) {
-        const levelUpRewards = this.config?.levels?.levels?.rewards?.levelUp;
-        const coinsPerLevel = levelUpRewards?.coins || 0;
+        const levelUpRewards = this.config.levels.levels.rewards.levelUp;
+        const coinsPerLevel = levelUpRewards.coins;
 
         const levelsGained = newLevel - oldLevel;
 
@@ -106,7 +106,7 @@ class LevelCalculator {
         return {
             currentLevel,
             currentExp,
-            currentLevelDescription: currentLevelConfig?.description || '未知等级',
+            currentLevelDescription: currentLevelConfig.description,
             nextLevelExp: nextLevelConfig ? nextLevelConfig.experience : null,
             expToNextLevel: nextLevelConfig ? Math.max(0, nextLevelConfig.experience - currentExp) : 0,
             maxLevel
@@ -135,7 +135,7 @@ class LevelCalculator {
             level: level + 1,
             experienceRequired: levelConfig.experience,
             description: levelConfig.description,
-            unlocks: levelConfig.unlocks || []
+            unlocks: levelConfig.unlocks
         };
     }
 
@@ -173,9 +173,9 @@ class LevelCalculator {
      * @returns {Object} 计算结果
      */
     getExpToLevel(currentExp, targetLevel) {
-        const levels = this.config?.levels?.levels?.requirements;
+        const levels = this.config.levels.levels.requirements;
 
-        if (!levels || !levels[targetLevel]) {
+        if (!levels[targetLevel]) {
             return {
                 valid: false,
                 message: '目标等级不存在'
@@ -200,11 +200,7 @@ class LevelCalculator {
      * @returns {Object} 经验值来源配置
      */
     getExperienceSources() {
-        return this.config?.levels?.levels?.experienceSources || {
-            planting: 2,
-            harvesting: 5,
-            selling: 1
-        };
+        return this.config.levels.levels.experienceSources;
     }
 }
 

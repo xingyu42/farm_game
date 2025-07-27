@@ -27,9 +27,9 @@ class LandService {
     try {
       // 直接调用PlayerService的扩张方法
       const result = await this.playerService.expandLand(userId);
-      
+
       this.logger.info(`[LandService] 玩家 ${userId} 土地扩张结果: ${result.success ? '成功' : '失败'}`);
-      
+
       return result;
     } catch (error) {
       this.logger.error(`[LandService] 土地扩张失败 [${userId}]: ${error.message}`);
@@ -45,10 +45,10 @@ class LandService {
   async getLandExpansionInfo(userId) {
     try {
       const playerData = await this.playerService.getPlayerData(userId);
-      
+
       // 检查是否可以扩张
       const canExpand = playerData.landCount < playerData.maxLandCount;
-      
+
       if (!canExpand) {
         return {
           canExpand: false,
@@ -56,11 +56,11 @@ class LandService {
           maxLandCount: playerData.maxLandCount
         };
       }
-      
+
       // 获取下一块土地的配置
       const nextLandNumber = playerData.landCount + 1;
-      const landConfig = this.config.land?.expansion?.[nextLandNumber];
-      
+      const landConfig = this.config.land.expansion[nextLandNumber];
+
       if (!landConfig) {
         this.logger.warn(`[LandService] 找不到第 ${nextLandNumber} 块土地的配置`);
         return {
@@ -68,12 +68,12 @@ class LandService {
           error: '无法获取土地扩张配置'
         };
       }
-      
+
       // 检查是否满足扩张条件
       const meetsLevelRequirement = playerData.level >= landConfig.levelRequired;
       const meetsGoldRequirement = playerData.coins >= landConfig.goldCost;
       const meetsRequirements = meetsLevelRequirement && meetsGoldRequirement;
-      
+
       return {
         canExpand: true,
         nextLandNumber,
@@ -100,7 +100,7 @@ class LandService {
    */
   getLandConfig(landNumber) {
     try {
-      return this.config.land?.expansion?.[landNumber] || null;
+      return this.config.land.expansion[landNumber];
     } catch (error) {
       this.logger.error(`[LandService] 获取土地配置失败 [${landNumber}]: ${error.message}`);
       return null;
@@ -117,16 +117,16 @@ class LandService {
     try {
       const playerData = await this.playerService.getPlayerData(userId);
       const expansionPlan = [];
-      
+
       for (let i = 1; i <= count; i++) {
         const landNumber = playerData.landCount + i;
-        
+
         if (landNumber > playerData.maxLandCount) {
           break;
         }
-        
+
         const landConfig = this.getLandConfig(landNumber);
-        
+
         if (landConfig) {
           expansionPlan.push({
             landNumber,
@@ -137,7 +137,7 @@ class LandService {
           });
         }
       }
-      
+
       return expansionPlan;
     } catch (error) {
       this.logger.error(`[LandService] 获取土地扩张计划失败 [${userId}]: ${error.message}`);
@@ -152,10 +152,10 @@ class LandService {
   getLandSystemConfig() {
     try {
       return {
-        startingLands: this.config.land?.default?.startingLands || 6,
-        maxLands: this.config.land?.default?.maxLands || 24,
-        expansionConfig: this.config.land?.expansion || {},
-        qualityConfig: this.config.land?.quality || {}
+        startingLands: this.config.land.default.startingLands,
+        maxLands: this.config.land.default.maxLands,
+        expansionConfig: this.config.land.expansion,
+        qualityConfig: this.config.land.quality
       };
     } catch (error) {
       this.logger.error(`[LandService] 获取土地系统配置失败: ${error.message}`);
@@ -172,7 +172,7 @@ class LandService {
     try {
       const playerData = await this.playerService.getPlayerData(userId);
       const expansionInfo = await this.getLandExpansionInfo(userId);
-      
+
       if (!expansionInfo.canExpand) {
         return {
           valid: false,
@@ -180,17 +180,17 @@ class LandService {
           details: expansionInfo
         };
       }
-      
+
       const issues = [];
-      
+
       if (!expansionInfo.meetsLevelRequirement) {
         issues.push(`等级不足，需要 ${expansionInfo.nextLevelRequired} 级，当前 ${playerData.level} 级`);
       }
-      
+
       if (!expansionInfo.meetsGoldRequirement) {
         issues.push(`金币不足，需要 ${expansionInfo.nextCost} 金币，当前 ${playerData.coins} 金币`);
       }
-      
+
       return {
         valid: issues.length === 0,
         reason: issues.length > 0 ? issues.join('；') : '满足所有条件',
@@ -240,22 +240,22 @@ class LandService {
       }
 
       const currentQuality = land.quality || 'normal';
-      
+
       // 获取品质配置
-      const qualityConfig = this.config.land?.quality || {};
+      const qualityConfig = this.config.land.quality;
       const currentConfig = qualityConfig[currentQuality];
-      
+
       if (!currentConfig) {
         return {
           canUpgrade: false,
           error: `未知的土地品质: ${currentQuality}`
         };
       }
-      
+
       // 确定下一个品质级别
       const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
       const currentIndex = qualityOrder.indexOf(currentQuality);
-      
+
       if (currentIndex === -1 || currentIndex >= qualityOrder.length - 1) {
         return {
           canUpgrade: false,
@@ -264,39 +264,39 @@ class LandService {
           currentQualityName: currentConfig.name
         };
       }
-      
+
       const nextQuality = qualityOrder[currentIndex + 1];
       const nextConfig = qualityConfig[nextQuality];
-      
+
       if (!nextConfig) {
         return {
           canUpgrade: false,
           error: `下一级品质配置不存在: ${nextQuality}`
         };
       }
-      
+
       // 检查进阶条件
       const meetsLevelRequirement = playerData.level >= nextConfig.levelRequired;
       const meetsGoldRequirement = playerData.coins >= nextConfig.goldCost;
-      
+
       // 检查材料需求
       let meetsMaterialRequirement = true;
       const materialIssues = [];
-      
+
       if (nextConfig.materials && nextConfig.materials.length > 0) {
         for (const material of nextConfig.materials) {
           const inventory = playerData.inventory || {};
           const currentQuantity = inventory[material.item_id]?.quantity || 0;
-          
+
           if (currentQuantity < material.quantity) {
             meetsMaterialRequirement = false;
             materialIssues.push(`缺少 ${this._getItemName(material.item_id)} ${material.quantity - currentQuantity} 个`);
           }
         }
       }
-      
+
       const meetsAllRequirements = meetsLevelRequirement && meetsGoldRequirement && meetsMaterialRequirement;
-      
+
       return {
         canUpgrade: true,
         landId,
@@ -307,7 +307,7 @@ class LandService {
         requirements: {
           level: nextConfig.levelRequired,
           gold: nextConfig.goldCost,
-          materials: nextConfig.materials || []
+          materials: nextConfig.materials
         },
         meetsAllRequirements,
         meetsLevelRequirement,
@@ -336,48 +336,48 @@ class LandService {
     try {
       // 获取进阶信息
       const upgradeInfo = await this.getLandQualityUpgradeInfo(userId, landId);
-      
+
       if (!upgradeInfo.canUpgrade) {
         return {
           success: false,
           message: upgradeInfo.error || upgradeInfo.reason || '无法进阶'
         };
       }
-      
+
       if (!upgradeInfo.meetsAllRequirements) {
         const issues = [];
-        
+
         if (!upgradeInfo.meetsLevelRequirement) {
           issues.push(`等级不足，需要 ${upgradeInfo.requirements.level} 级，当前 ${upgradeInfo.playerStatus.level} 级`);
         }
-        
+
         if (!upgradeInfo.meetsGoldRequirement) {
           issues.push(`金币不足，需要 ${upgradeInfo.requirements.gold} 金币，当前 ${upgradeInfo.playerStatus.coins} 金币`);
         }
-        
+
         if (upgradeInfo.materialIssues.length > 0) {
           issues.push(...upgradeInfo.materialIssues);
         }
-        
+
         return {
           success: false,
           message: `进阶条件不满足：${issues.join('；')}`
         };
       }
-      
+
       // 执行进阶（Redis事务）
       const playerKey = this.redis.generateKey('player', userId);
-      
+
       // 获取当前玩家数据进行二次验证
       const playerData = await this.redis.get(playerKey);
-      
+
       if (!playerData) {
         return {
           success: false,
           message: '玩家不存在'
         };
       }
-      
+
       // 再次验证条件（防止并发问题）
       if (playerData.level < upgradeInfo.requirements.level || playerData.coins < upgradeInfo.requirements.gold) {
         return {
@@ -385,7 +385,7 @@ class LandService {
           message: '进阶条件已不满足，请重试'
         };
       }
-      
+
       // 验证材料
       for (const material of upgradeInfo.requirements.materials) {
         const currentQuantity = playerData.inventory?.[material.item_id]?.quantity || 0;
@@ -396,22 +396,22 @@ class LandService {
           };
         }
       }
-      
+
       // 扣除金币
       playerData.coins -= upgradeInfo.requirements.gold;
-      
+
       // 消耗材料
       for (const material of upgradeInfo.requirements.materials) {
         if (playerData.inventory && playerData.inventory[material.item_id]) {
           playerData.inventory[material.item_id].quantity -= material.quantity;
-          
+
           // 如果数量为0，删除物品记录
           if (playerData.inventory[material.item_id].quantity <= 0) {
             delete playerData.inventory[material.item_id];
           }
         }
       }
-      
+
       // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, using smart land update method for improved code structure; Principle_Applied: CodeStructure-Optimization;}}
       // 使用智能土地更新方法
       const updateResult = await this.playerService.updateLand(userId, landId, {
@@ -425,9 +425,9 @@ class LandService {
           message: updateResult.message
         };
       }
-      
+
       this.logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
-      
+
       return {
         success: true,
         message: `🎉 土地 ${landId} 成功进阶为${upgradeInfo.nextQualityName}！`,
@@ -480,7 +480,7 @@ class LandService {
 
       const player = await this.playerService.getPlayer(userId);
       const land = player.lands[landId - 1];
-      const enhancementConfig = this.config.land?.enhancement;
+      const enhancementConfig = this.config.land.enhancement;
 
       if (!enhancementConfig) {
         return { success: false, message: '未找到土地强化配置。' };
@@ -492,7 +492,7 @@ class LandService {
       }
 
       const nextLevel = currentLevel + 1;
-      const cost = enhancementConfig.costs?.[land.quality]?.[nextLevel];
+      const cost = enhancementConfig.costs[land.quality][nextLevel];
 
       if (cost === undefined) {
         return { success: false, message: `未找到${land.quality}品质土地强化到${nextLevel}级的成本配置。` };

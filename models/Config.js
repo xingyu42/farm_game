@@ -66,7 +66,7 @@ class Config {
     }
   }
 
-  /** 获取作物设置 */ // TODO: 后续实现自动读取配置文件列表，并实现配置文件的监听
+  /** 获取作物设置 */
   get crops() {
     return this.getDefOrConfig('crops');
   }
@@ -89,6 +89,16 @@ class Config {
   /** 获取偷窃设置 */
   get steal() {
     return this.getDefOrConfig('steal');
+  }
+
+  /** 获取备份设置 */
+  get backup() {
+    return this.getDefOrConfig('backup');
+  }
+
+  /** 获取市场设置 */
+  get market() {
+    return this.getDefOrConfig('market');
   }
 
   /**

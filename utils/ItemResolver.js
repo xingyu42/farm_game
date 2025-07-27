@@ -33,7 +33,7 @@ class ItemResolver {
    * @returns {Object|null} 物品配置对象，包含category字段
    */
   findItemById(itemId) {
-    const itemsConfig = this.config.items || {};
+    const itemsConfig = this.config.items;
 
     for (const category of this.categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {
@@ -42,7 +42,7 @@ class ItemResolver {
         return {
           ...itemConfig,
           id: itemId,
-          category: this.categoryNormalization[category] || category,
+          category: this.categoryNormalization[category],
           originalCategory: category
         };
       }
@@ -57,7 +57,7 @@ class ItemResolver {
    * @returns {string|null} 物品ID
    */
   findItemByName(itemName) {
-    const itemsConfig = this.config.items || {};
+    const itemsConfig = this.config.items;
 
     for (const category of this.categories) {
       if (itemsConfig[category]) {
@@ -79,7 +79,7 @@ class ItemResolver {
    */
   getItemName(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig?.name || itemId;
+    return itemConfig.name;
   }
 
   /**
@@ -88,7 +88,7 @@ class ItemResolver {
    * @returns {Object|null} 物品信息
    */
   getItemInfo(itemId) {
-    const itemsConfig = this.config.items || {};
+    const itemsConfig = this.config.items;
 
     for (const category of this.categories) {
       if (itemsConfig[category] && itemsConfig[category][itemId]) {
@@ -105,7 +105,7 @@ class ItemResolver {
    * @returns {string} 显示名称
    */
   getCategoryDisplayName(category) {
-    return this.categoryDisplayNames[category] || category;
+    return this.categoryDisplayNames[category];
   }
 
   /**
@@ -115,7 +115,7 @@ class ItemResolver {
    */
   getItemSellPrice(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig?.sellPrice || 0;
+    return itemConfig.sellPrice;
   }
 
   /**
@@ -125,7 +125,7 @@ class ItemResolver {
    */
   getItemPrice(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig?.price || 0;
+    return itemConfig.price;
   }
 
   /**
@@ -143,13 +143,13 @@ class ItemResolver {
    * @returns {Array} 物品列表
    */
   getItemsByCategory(category) {
-    const itemsConfig = this.config.items || {};
-    const categoryItems = itemsConfig[category] || {};
+    const itemsConfig = this.config.items;
+    const categoryItems = itemsConfig[category];
 
     return Object.entries(categoryItems).map(([itemId, itemInfo]) => ({
       id: itemId,
       ...itemInfo,
-      category: this.categoryNormalization[category] || category,
+      category: this.categoryNormalization[category],
       originalCategory: category
     }));
   }
@@ -181,7 +181,7 @@ class ItemResolver {
    * @returns {Array} 匹配的物品列表
    */
   searchItems(searchTerm, category = null) {
-    const itemsConfig = this.config.items || {};
+    const itemsConfig = this.config.items;
     const searchCategories = category ? [category] : this.categories;
     const results = [];
 
@@ -192,7 +192,7 @@ class ItemResolver {
             results.push({
               id: itemId,
               ...itemInfo,
-              category: this.categoryNormalization[cat] || cat,
+              category: this.categoryNormalization[cat],
               originalCategory: cat
             });
           }

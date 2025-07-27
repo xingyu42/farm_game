@@ -8,7 +8,7 @@ import Item from '../models/Item.js';
  * 包含：物品添加、移除、查询、仓库扩容等功能
  */
 export class InventoryService {
-  constructor(redisClient, config, logger = null) {
+  constructor(redisClient, config, _logger = null) {
     this.redis = redisClient;
     this.config = config;
   }
@@ -40,7 +40,7 @@ export class InventoryService {
       if (hashData.inventory) {
         try {
           const inventoryData = JSON.parse(hashData.inventory);
-          
+
           // 将每个物品数据转换为Item实例
           for (const [itemId, itemData] of Object.entries(inventoryData)) {
             try {
@@ -58,8 +58,8 @@ export class InventoryService {
 
       return {
         items: itemInstances,
-        capacity: parseInt(hashData.inventory_capacity || hashData.inventoryCapacity || this.config.items.inventory.startingCapacity),
-        maxCapacity: parseInt(hashData.maxInventoryCapacity || this.config.items.inventory.maxCapacity),
+        capacity: parseInt(hashData.inventory_capacity),
+        maxCapacity: parseInt(hashData.maxInventoryCapacity),
         usage: this._calculateInventoryUsage(itemInstances)
       };
     } catch (error) {
@@ -91,11 +91,11 @@ export class InventoryService {
       }
 
       let targetItem;
-      
+
       if (inventory.items[itemId]) {
         // 现有物品，尝试添加数量
         targetItem = inventory.items[itemId];
-        
+
         try {
           targetItem.addQuantity(quantity);
         } catch (error) {
@@ -123,7 +123,7 @@ export class InventoryService {
       } else {
         // 新物品，从配置创建
         targetItem = Item.fromConfig(itemId, quantity, this.config);
-        
+
         // 验证新创建的物品
         const validation = targetItem.validate();
         if (!validation.isValid) {
@@ -132,7 +132,7 @@ export class InventoryService {
             message: `物品验证失败: ${validation.errors.join(', ')}`
           };
         }
-        
+
         inventory.items[itemId] = targetItem;
       }
 
@@ -145,7 +145,7 @@ export class InventoryService {
       logger.info(`玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
 
       const displayInfo = targetItem.getDisplayInfo();
-      
+
       return {
         success: true,
         message: `成功添加 ${quantity} 个 ${displayInfo.name}`,
@@ -174,7 +174,7 @@ export class InventoryService {
     try {
       // 一次性获取仓库数据
       const inventory = await this.getInventory(userId);
-      
+
       const results = [];
       let totalQuantityToAdd = 0;
 
@@ -182,7 +182,7 @@ export class InventoryService {
       for (const item of items) {
         totalQuantityToAdd += item.quantity;
       }
-      
+
       if (inventory.usage + totalQuantityToAdd > inventory.capacity) {
         return {
           success: false,
@@ -196,15 +196,15 @@ export class InventoryService {
       // 批量处理物品
       for (const item of items) {
         let targetItem;
-        
+
         if (inventory.items[item.item_id]) {
           // 现有物品
           targetItem = inventory.items[item.item_id];
-          
+
           try {
             targetItem.addQuantity(item.quantity);
             targetItem.metadata.lastUpdated = Date.now();
-            
+
             results.push({
               success: true,
               item_id: item.item_id,
@@ -245,7 +245,7 @@ export class InventoryService {
           // 新物品
           try {
             targetItem = Item.fromConfig(item.item_id, item.quantity, this.config);
-            
+
             const validation = targetItem.validate();
             if (!validation.isValid) {
               results.push({
@@ -256,10 +256,10 @@ export class InventoryService {
               });
               continue;
             }
-            
+
             targetItem.metadata.lastUpdated = Date.now();
             inventory.items[item.item_id] = targetItem;
-            
+
             results.push({
               success: true,
               item_id: item.item_id,
@@ -387,7 +387,7 @@ export class InventoryService {
   async getItemQuantity(userId, itemId) {
     try {
       const inventory = await this.getInventory(userId);
-      return inventory.items[itemId]?.quantity || 0;
+      return inventory.items[itemId].quantity;
     } catch (error) {
       logger.error(`检查物品数量失败 [${userId}]: ${error.message}`);
       throw error;
@@ -436,8 +436,8 @@ export class InventoryService {
         // 使用Item的显示方法获取丰富信息
         const displayInfo = item.getDisplayInfo();
         const economicInfo = item.getEconomicInfo();
-        
-        const category = item.category || 'unknown';
+
+        const category = item.category;
         if (!groupedItems[category]) {
           groupedItems[category] = [];
         }
@@ -466,17 +466,15 @@ export class InventoryService {
       }
 
       // 按类别顺序组织显示，按稀有度和名称排序
-      const rarityOrder = this.config.items.inventory.rarityOrder || {
-        legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1
-      };
-      
+      const rarityOrder = this.config.items.inventory.rarityOrder;
+
       for (const [categoryKey, categoryName] of Object.entries(categories)) {
         if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
           const sortedItems = groupedItems[categoryKey].sort((a, b) => {
             // 首先按稀有度排序（稀有度越高越靠前）
-            const rarityDiff = (rarityOrder[b.rarity] || 1) - (rarityOrder[a.rarity] || 1);
+            const rarityDiff = rarityOrder[b.rarity] - rarityOrder[a.rarity];
             if (rarityDiff !== 0) return rarityDiff;
-            
+
             // 然后按名称排序
             return a.name.localeCompare(b.name);
           });
@@ -516,7 +514,7 @@ export class InventoryService {
   async _saveInventoryToRedis(userId, inventory) {
     const playerKey = this.redis.generateKey('player', userId);
     const serializedInventory = {};
-    
+
     for (const [id, item] of Object.entries(inventory.items)) {
       serializedInventory[id] = item.toJSON();
     }
@@ -689,10 +687,10 @@ export class InventoryService {
 
       for (const itemId of itemIds) {
         if (!inventory.items[itemId]) {
-          results.push({ 
-            itemId, 
-            success: false, 
-            message: `仓库中没有该物品` 
+          results.push({
+            itemId,
+            success: false,
+            message: `仓库中没有该物品`
           });
           continue;
         }
@@ -700,10 +698,10 @@ export class InventoryService {
         const targetItem = inventory.items[itemId];
 
         if (targetItem.metadata.locked) {
-          results.push({ 
-            itemId, 
-            success: false, 
-            message: `${targetItem.name} 已经被锁定` 
+          results.push({
+            itemId,
+            success: false,
+            message: `${targetItem.name} 已经被锁定`
           });
           continue;
         }
@@ -714,9 +712,9 @@ export class InventoryService {
         targetItem.metadata.lastUpdated = Date.now();
         hasChanges = true;
 
-        results.push({ 
-          itemId, 
-          success: true, 
+        results.push({
+          itemId,
+          success: true,
           message: `成功锁定 ${targetItem.name}`,
           item: {
             id: itemId,
@@ -762,10 +760,10 @@ export class InventoryService {
 
       for (const itemId of itemIds) {
         if (!inventory.items[itemId]) {
-          results.push({ 
-            itemId, 
-            success: false, 
-            message: `仓库中没有该物品` 
+          results.push({
+            itemId,
+            success: false,
+            message: `仓库中没有该物品`
           });
           continue;
         }
@@ -773,10 +771,10 @@ export class InventoryService {
         const targetItem = inventory.items[itemId];
 
         if (!targetItem.metadata.locked) {
-          results.push({ 
-            itemId, 
-            success: false, 
-            message: `${targetItem.name} 未被锁定` 
+          results.push({
+            itemId,
+            success: false,
+            message: `${targetItem.name} 未被锁定`
           });
           continue;
         }
@@ -787,9 +785,9 @@ export class InventoryService {
         targetItem.metadata.lastUpdated = Date.now();
         hasChanges = true;
 
-        results.push({ 
-          itemId, 
-          success: true, 
+        results.push({
+          itemId,
+          success: true,
           message: `成功解锁 ${targetItem.name}`,
           item: {
             id: itemId,
@@ -832,7 +830,7 @@ export class InventoryService {
       for (const [itemId, item] of Object.entries(inventory.items)) {
         if (item.metadata.locked) {
           const displayInfo = item.getDisplayInfo();
-          
+
           lockedItems.push({
             id: itemId,
             name: displayInfo.name,
@@ -846,7 +844,7 @@ export class InventoryService {
       }
 
       // 按锁定时间排序（最新的在前）
-      lockedItems.sort((a, b) => (b.lockedAt || 0) - (a.lockedAt || 0));
+      lockedItems.sort((a, b) => b.lockedAt - a.lockedAt);
 
       return {
         items: lockedItems,

@@ -403,10 +403,10 @@ class LandManagerService {
     getLandSystemConfig() {
         try {
             return {
-                startingLands: this.config.land?.default?.startingLands || 6,
-                maxLands: this.config.land?.default?.maxLands || 24,
-                expansionConfig: this.config.land?.expansion || {},
-                qualityConfig: this.config.land?.quality || {}
+                startingLands: this.config.land.default.startingLands,
+                maxLands: this.config.land.default.maxLands,
+                expansionConfig: this.config.land.expansion,
+                qualityConfig: this.config.land.quality
             };
         } catch (error) {
             this.logger.error(`[LandManagerService] 获取土地系统配置失败: ${error.message}`);
