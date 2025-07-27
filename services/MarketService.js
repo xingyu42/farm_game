@@ -183,8 +183,8 @@ export class MarketService {
           // 获取当前价格
           const currentBuyPrice = await this.getItemPrice(itemId, 'buy');
           const currentSellPrice = await this.getItemPrice(itemId, 'sell');
-          const basePrice = itemInfo.price || 0;
-          const baseSellPrice = itemInfo.sellPrice || 0;
+          const basePrice = itemInfo.price;
+          const baseSellPrice = itemInfo.sellPrice;
 
           // 获取价格趋势
           const statsKey = `market:stats:${itemId}`;
@@ -393,8 +393,8 @@ export class MarketService {
         totalItems: floatingItems.length,
         duration,
         strategy: floatingItems.length > this.batchSize ? 'batch' : 'direct',
-        priceChanges: result.priceChanges || [],
-        errors: result.errors || []
+        priceChanges: result.priceChanges,
+        errors: result.errors
       };
 
     } catch (error) {
@@ -549,7 +549,7 @@ export class MarketService {
       const clampedBuyPrice = this._clampPrice(calculatedPrice, basePrice);
       
       // 获取售价比例配置，默认为0.5
-      const sellPriceRatio = this.config.market?.pricing?.sell_price_ratio || 0.5;
+      const sellPriceRatio = this.config.market?.pricing?.sell_price_ratio;
       const newSellPrice = clampedBuyPrice * sellPriceRatio;
 
       // 验证最终价格
@@ -620,9 +620,9 @@ export class MarketService {
     const avgTimePerItem = itemCount > 0 ? duration / itemCount : 0;
 
     // 获取性能阈值配置
-    const performanceConfig = this.config.market?.performance || {};
-    const maxTotalDuration = performanceConfig.max_total_duration || 60000; // 默认60秒
-    const maxAvgTimePerItem = performanceConfig.max_avg_time_per_item || 100; // 默认100ms
+    const performanceConfig = this.config.market?.performance;
+    const maxTotalDuration = performanceConfig.max_total_duration; // 默认60秒
+    const maxAvgTimePerItem = performanceConfig.max_avg_time_per_item; // 默认100ms
 
     // 总耗时告警
     if (duration > maxTotalDuration) {
@@ -669,9 +669,9 @@ export class MarketService {
       const sensitivity = marketConfig.pricing.sensitivity;
       
       // 获取极端比率配置，提供默认值
-      const pricingConfig = marketConfig.pricing || {};
-      const maxRatio = pricingConfig.extreme_ratio_max || 10; // 极端比率上限
-      const minRatio = pricingConfig.extreme_ratio_min || 0.1; // 极端比率下限
+      const pricingConfig = marketConfig.pricing;
+      const maxRatio = pricingConfig.extreme_ratio_max; // 极端比率上限
+      const minRatio = pricingConfig.extreme_ratio_min; // 极端比率下限
 
       let ratio;
 
@@ -781,7 +781,7 @@ export class MarketService {
       const changePercent = ((newPrice - oldPrice) / oldPrice) * 100;
       
       // 获取稳定性阈值配置，默认为2%
-      const stabilityThreshold = this.config.market?.pricing?.stability_threshold || 2;
+      const stabilityThreshold = this.config.market?.pricing?.stability_threshold;
 
       let trend;
       if (Math.abs(changePercent) < stabilityThreshold) {
@@ -821,7 +821,7 @@ export class MarketService {
 
       // 解析现有历史数据
       try {
-        const parsed = JSON.parse(historyString || '[]');
+        const parsed = JSON.parse(historyString);
         if (Array.isArray(parsed)) {
           // 过滤有效的数值价格
           history = parsed.filter(price => 
@@ -906,7 +906,7 @@ export class MarketService {
           updated: false,
           itemId,
           error: '价格计算失败',
-          oldPrice: parseFloat(stats.current_price) || 0,
+          oldPrice: parseFloat(stats.current_price),
           newPrice: 0,
           priceChange: null
         };
@@ -925,7 +925,7 @@ export class MarketService {
       return {
         updated: true,
         itemId,
-        oldPrice: parseFloat(stats.current_price) || 0,
+        oldPrice: parseFloat(stats.current_price),
         newPrice: parseFloat(updateData.redis.current_price),
         priceChange: updateData.priceChange,
         error: null
@@ -1187,10 +1187,10 @@ export class MarketService {
         }
 
         try {
-          const basePrice = parseFloat(stats.base_price) || 0;
-          const currentPrice = parseFloat(stats.current_price) || 0;
-          const demand = parseInt(stats.demand_24h) || 0;
-          const supply = parseInt(stats.supply_24h) || 0;
+          const basePrice = parseFloat(stats.base_price);
+          const currentPrice = parseFloat(stats.current_price);
+          const demand = parseInt(stats.demand_24h);
+          const supply = parseInt(stats.supply_24h);
 
           let itemStatus = 'healthy';
 
@@ -1264,9 +1264,9 @@ export class MarketService {
       // 获取性能指标
       const globalStats = await this.redis.hGetAll('market:global:stats');
       const performance = {
-        avgUpdateTime: parseFloat(globalStats.avg_update_time) || 0,
+        avgUpdateTime: parseFloat(globalStats.avg_update_time),
         errorRate: summary.totalItems > 0 ? (summary.errorItems / summary.totalItems * 100) : 0,
-        lastUpdate: parseInt(globalStats.last_update) || 0
+        lastUpdate: parseInt(globalStats.last_update)
       };
 
       // 确定整体状态
