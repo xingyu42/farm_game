@@ -11,8 +11,8 @@
  * 
  * @version 2.0.0 - 增强版，解决代码重复和质量问题
  */
-import ItemResolver from '../utils/ItemResolver.js';
-import { CommonUtils } from '../utils/CommonUtils.js';
+import ItemResolver from '../../utils/ItemResolver.js';
+import { CommonUtils } from '../../utils/CommonUtils.js';
 
 export class ShopService {
   constructor(redisClient, config, inventoryService, playerService, serviceContainer = null, logger = null) {

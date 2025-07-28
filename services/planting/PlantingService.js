@@ -4,10 +4,10 @@
  * 重构为门面模式，委托给专门的服务处理，保持接口兼容性
  */
 
-import CropPlantingService from './planting/CropPlantingService.js';
-import CropHarvestService from './planting/CropHarvestService.js';
-import CropCareService from './planting/CropCareService.js';
-import CropMonitorService from './planting/CropMonitorService.js';
+import CropPlantingService from './CropPlantingService.js';
+import CropHarvestService from './CropHarvestService.js';
+import CropCareService from './CropCareService.js';
+import CropMonitorService from './CropMonitorService.js';
 
 class PlantingService {
   constructor(redisClient, config, plantingDataService, inventoryService, landService, playerService, logger = null) {

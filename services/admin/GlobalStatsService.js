@@ -3,7 +3,7 @@
 const CACHE_KEY = 'farm:stats:cache';
 const CACHE_TTL = 3600; // 1 hour in seconds
 
-class StatisticsService {
+class GlobalStatsService {
   constructor(redisClient, logger = null) {
     this.redis = redisClient;
     this.logger = logger || console;
@@ -114,4 +114,4 @@ class StatisticsService {
   }
 }
 
-export default StatisticsService;
+export default GlobalStatsService;

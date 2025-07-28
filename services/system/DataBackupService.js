@@ -4,7 +4,7 @@
  * 支持自动清理旧备份文件，确保存储空间可控
  */
 
-import { FileStorage } from '../utils/fileStorage.js';
+import { FileStorage } from '../../utils/fileStorage.js';
 
 class DataBackupService {
     constructor(redisClient, config, playerService = null, logger = null) {

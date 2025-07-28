@@ -8,7 +8,7 @@ import LevelCalculator from './LevelCalculator.js';
 import EconomyService from './EconomyService.js';
 import SignInService from './SignInService.js';
 // ProtectionService 将由 ServiceContainer 注入，避免循环依赖
-import StatisticsService from './StatisticsService.js';
+import PlayerStatsService from './PlayerStatsService.js';
 import LandManagerService from './LandManagerService.js';
 
 class PlayerService {
@@ -31,7 +31,7 @@ class PlayerService {
         this.economyService = new EconomyService(redisClient, config, logger);
         this.signInService = new SignInService(redisClient, config, logger);
         this.protectionService = null; // 延迟注入
-        this.statisticsService = new StatisticsService(redisClient, config, logger);
+        this.statisticsService = new PlayerStatsService(redisClient, config, logger);
         this.landManagerService = new LandManagerService(redisClient, config, logger);
     }
 

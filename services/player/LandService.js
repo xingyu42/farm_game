@@ -7,7 +7,7 @@
 // Action: Created; Timestamp: 2025-06-30T12:30:00+08:00; Reason: Shrimp Task ID: #b7430efe, implementing land management service for T6;
 // }}
 
-import ItemResolver from '../utils/ItemResolver.js';
+import ItemResolver from '../../utils/ItemResolver.js';
 
 class LandService {
   constructor(redisClient, config, playerService, logger = null) {

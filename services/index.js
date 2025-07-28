@@ -17,18 +17,19 @@ import { CommonUtils } from '../utils/CommonUtils.js';
 
 // 导入业务服务
 import PlayerService from './player/PlayerService.js';
-import AdminService from './AdminService.js';
-import StatisticsService from './StatisticsService.js';
-import PlantingService from './PlantingService.js';
-import InventoryService from './InventoryService.js';
-import ShopService from './ShopService.js';
-import LandService from './LandService.js';
-import ProtectionService from './ProtectionService.js';
-import StealService from './StealService.js';
+import AdminService from './admin/AdminService.js';
+import GlobalStatsService from './admin/GlobalStatsService.js'; // 全局统计服务
+import PlayerStatsService from './player/PlayerStatsService.js'; // 玩家个人统计服务
+import PlantingService from './planting/PlantingService.js';
+import InventoryService from './player/InventoryService.js';
+import ShopService from './player/ShopService.js';
+import LandService from './player/LandService.js';
+import ProtectionService from './player/ProtectionService.js';
+import StealService from './player/StealService.js';
 import PlantingDataService from './planting/PlantingDataService.js';
-import DataBackupService from './DataBackupService.js';
-import { MarketService } from './MarketService.js';
-import { MarketScheduler } from './MarketScheduler.js';
+import DataBackupService from './system/DataBackupService.js';
+import { MarketService } from './market/MarketService.js';
+import { MarketScheduler } from './market/MarketScheduler.js';
 import ItemResolver from '../utils/ItemResolver.js';
 
 class ServiceContainer {
@@ -75,9 +76,16 @@ class ServiceContainer {
         null // logger使用默认值
       );
 
-      // 实例化StatisticsService（独立服务，无特殊依赖）
-      this.services.statisticsService = new StatisticsService(
+      // 实例化GlobalStatsService（独立服务，无特殊依赖）
+      this.services.globalStatsService = new GlobalStatsService(
         redisClient,
+        null // logger使用默认值
+      );
+
+      // 实例化PlayerStatsService
+      this.services.playerStatsService = new PlayerStatsService(
+        redisClient,
+        config,
         null // logger使用默认值
       );
 

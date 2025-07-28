@@ -3,7 +3,7 @@
  * 包含成功率计算、双重锁机制、防重复偷取等功能
  */
 
-import { RedisLock } from '../utils/RedisLock.js';
+import { RedisLock } from '../../utils/RedisLock.js';
 
 // {{RIPER-5:
 // Action: Added

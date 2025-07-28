@@ -27,7 +27,7 @@ export class adminApp extends plugin {
     // 确保服务已初始化并获取服务实例
     await serviceContainer.init();
     const adminService = serviceContainer.getService('adminService');
-    const statisticsService = serviceContainer.getService('statisticsService');
+    const globalStatsService = serviceContainer.getService('globalStatsService');
 
     const command = e.msg.replace(/#nc管理\\s*/, '').trim();
     const [action, ...args] = command.split(/\s+/);
@@ -45,7 +45,7 @@ export class adminApp extends plugin {
         break;
       case '统计':
       case '经济分析':
-        await this.getStats(e, statisticsService);
+        await this.getStats(e, globalStatsService);
         break;
       case '重载配置':
         await this.reloadConfig(e, adminService);
@@ -97,9 +97,9 @@ export class adminApp extends plugin {
     await e.reply(result.message);
   }
 
-  async getStats(e, statisticsService) {
+  async getStats(e, globalStatsService) {
     await e.reply('正在生成经济分析报告，请稍候...');
-    const stats = await statisticsService.getEconomyStatus();
+    const stats = await globalStatsService.getEconomyStatus();
 
     let message = `--- 农场经济分析报告 ---\n`;
     message += `数据来源: ${stats.fromCache ? '缓存' : '实时计算'}\n`;

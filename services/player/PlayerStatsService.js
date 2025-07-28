@@ -5,7 +5,7 @@
 
 import PlayerDataService from './PlayerDataService.js';
 
-class StatisticsService {
+class PlayerStatsService {
     constructor(redisClient, config, logger = null) {
         this.redis = redisClient;
         this.config = config;
@@ -344,4 +344,4 @@ class StatisticsService {
     }
 }
 
-export default StatisticsService; 
+export default PlayerStatsService;
