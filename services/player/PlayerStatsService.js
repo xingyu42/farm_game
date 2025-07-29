@@ -21,7 +21,7 @@ class PlayerStatsService {
     async updateStatistics(userId, stats) {
         try {
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -56,7 +56,7 @@ class PlayerStatsService {
      */
     async getStatistics(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -162,7 +162,7 @@ class PlayerStatsService {
      */
     async getRankingData(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -192,7 +192,7 @@ class PlayerStatsService {
      */
     async getDetailedReport(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -266,7 +266,7 @@ class PlayerStatsService {
      */
     async resetStatistics(userId, statsToReset = []) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');

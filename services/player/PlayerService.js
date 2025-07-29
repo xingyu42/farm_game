@@ -51,12 +51,12 @@ class PlayerService {
     async getPlayer(userId) {
         try {
             // 尝试从Redis Hash获取玩家数据
-            let playerData = await this.dataService.getPlayerFromHash(userId);
+            let playerData = await this.dataService.getPlayer(userId);
 
             // 如果玩家不存在，创建新玩家
             if (!playerData) {
                 playerData = this.dataService.createNewPlayerData();
-                await this.dataService.savePlayerToHash(userId, playerData);
+                await this.dataService.savePlayer(userId, playerData);
                 logger.info(`[PlayerService] 创建新玩家: ${userId}`);
 
                 // 发放初始礼包
@@ -111,16 +111,15 @@ class PlayerService {
     async createPlayer(userId, userName) {
         try {
             // 检查玩家是否已存在
-            const existingPlayer = await this.dataService.getPlayerFromHash(userId);
+            const existingPlayer = await this.dataService.getPlayer(userId);
             if (existingPlayer) {
                 return existingPlayer;
             }
 
             // 创建新玩家
-            const playerData = this.dataService.createNewPlayerData();
-            playerData.name = userName;
-
-            await this.dataService.savePlayerToHash(userId, playerData);
+            const playerData = this.dataService.createNewPlayerData(userName
+            );
+            await this.dataService.savePlayer(userId, playerData);
 
             logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
 
@@ -583,10 +582,10 @@ class PlayerService {
      * @param {string} playerKey Redis Key
      * @returns {Player|null} Player实例或null
      */
-    async _getPlayerFromHash(playerKey) {
+    async _getPlayer(playerKey) {
         // 从playerKey提取userId
         const userId = playerKey.split(':').pop();
-        return await this.dataService.getPlayerFromHash(userId);
+        return await this.dataService.getPlayer(userId);
     }
 
     /**
@@ -594,10 +593,10 @@ class PlayerService {
      * @param {string} playerKey Redis Key
      * @param {Object|Player} playerData 玩家数据或Player实例
      */
-    async _savePlayerToHash(playerKey, playerData) {
+    async _savePlayer(playerKey, playerData) {
         // 从playerKey提取userId
         const userId = playerKey.split(':').pop();
-        return await this.dataService.savePlayerToHash(userId, playerData);
+        return await this.dataService.savePlayer(userId, playerData);
     }
 
     /**

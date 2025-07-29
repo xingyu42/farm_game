@@ -40,7 +40,7 @@ class AdminService {
 
     try {
       // 检查玩家是否存在（不自动创建）
-      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
+      const player = await this.playerService.getDataService().getPlayer(targetId);
       if (!player) {
         return { success: false, message: '未找到该玩家。' };
       }
@@ -72,7 +72,7 @@ class AdminService {
 
     try {
       // 检查玩家是否存在（不自动创建）
-      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
+      const player = await this.playerService.getDataService().getPlayer(targetId);
       if (!player) {
         return { success: false, message: '未找到该玩家。' };
       }
@@ -114,13 +114,13 @@ class AdminService {
         return { success: false, message: validation.message };
       }
 
-      const player = await this.playerService.getDataService().getPlayerFromHash(targetId);
+      const player = await this.playerService.getDataService().getPlayer(targetId);
       if (!player) {
         return { success: false, message: '未找到该玩家。' };
       }
 
       player.lands[landId - 1].quality = quality;
-      await this.playerService.getDataService().savePlayerToHash(targetId, player);
+      await this.playerService.getDataService().savePlayer(targetId, player);
 
       logger.info(`[AdminService] 将玩家 [${targetId}] 的土地 ${landId} 品质设置为 ${quality}`);
       return { success: true, message: `已将玩家 ${targetId} 的土地 ${landId} 品质设置为 ${quality}。` };

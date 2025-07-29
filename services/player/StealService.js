@@ -284,7 +284,7 @@ export class StealService {
   async getStealableStatus(targetId) {
     try {
       // 检查目标是否存在
-      const targetData = await this.playerService.getDataService().getPlayerFromHash(targetId);
+      const targetData = await this.playerService.getDataService().getPlayer(targetId);
       if (!targetData) {
         return {
           canBeStolen: false,
@@ -386,8 +386,8 @@ export class StealService {
 
       // 获取玩家数据
       const [attackerData, targetData] = await Promise.all([
-        this.playerService.getDataService().getPlayerFromHash(attackerId),
-        this.playerService.getDataService().getPlayerFromHash(targetId)
+        this.playerService.getDataService().getPlayer(attackerId),
+        this.playerService.getDataService().getPlayer(targetId)
       ]);
 
       // 等级差异影响
@@ -461,7 +461,7 @@ export class StealService {
       const minPenalty = penaltyConfig.minPenalty;
 
       // 获取玩家金币
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(attackerId);
+      const playerData = await this.playerService.getDataService().getPlayer(attackerId);
       const currentCoins = playerData.economy.coins;
 
       // 计算惩罚金额

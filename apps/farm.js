@@ -118,7 +118,7 @@ export class farm extends plugin {
       const playerService = serviceContainer.getService('playerService')
 
       // 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await playerService.getDataService().getPlayerFromHash(targetUserId)
+      const targetPlayerData = await playerService.getDataService().getPlayer(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true

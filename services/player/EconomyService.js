@@ -26,7 +26,7 @@ class EconomyService {
     async addCoins(userId, amount) {
         try {
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -68,7 +68,7 @@ class EconomyService {
     async addExp(userId, amount) {
         try {
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -147,7 +147,7 @@ class EconomyService {
      */
     async getPlayerLevelInfo(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -176,7 +176,7 @@ class EconomyService {
      */
     async hasEnoughCoins(userId, amount) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 return {
@@ -219,7 +219,7 @@ class EconomyService {
      *
      * // 新方式（推荐）
      * return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
-     *   const playerData = await this.playerDataService.getPlayerFromHash(userId);
+     *   const playerData = await this.playerDataService.getPlayer(userId);
      *
      *   // 检查金币是否足够
      *   if (playerData.coins < amount) {
@@ -288,7 +288,7 @@ class EconomyService {
      */
     async getExpToLevel(userId, targetLevel) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -308,7 +308,7 @@ class EconomyService {
      */
     async getFinancialStats(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');

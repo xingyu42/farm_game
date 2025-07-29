@@ -56,7 +56,7 @@ export class ProtectionService {
       }
 
       // 获取玩家数据
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayer(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -109,7 +109,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayer(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -145,7 +145,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayer(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -207,7 +207,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayer(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -254,7 +254,7 @@ export class ProtectionService {
         throw new Error('用户ID不能为空');
       }
 
-      const playerData = await this.playerService.getDataService().getPlayerFromHash(userId);
+      const playerData = await this.playerService.getDataService().getPlayer(userId);
       if (!playerData) {
         throw new Error('玩家不存在');
       }
@@ -399,7 +399,7 @@ export class ProtectionService {
       }
 
       const dataService = this.playerService.getDataService();
-      const playerData = await dataService.getPlayerFromHash(userId);
+      const playerData = await dataService.getPlayer(userId);
 
       if (!playerData) {
         throw new Error('玩家不存在');

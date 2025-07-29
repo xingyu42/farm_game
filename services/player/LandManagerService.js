@@ -23,7 +23,7 @@ class LandManagerService {
             // 执行扩张 - 所有检查和操作都在事务内进行，确保原子性
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
                 // 在事务内获取最新的玩家数据
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -132,7 +132,7 @@ class LandManagerService {
      */
     async getLandByIndex(userId, index) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
@@ -165,7 +165,7 @@ class LandManagerService {
      */
     async getLandById(userId, landId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
@@ -200,7 +200,7 @@ class LandManagerService {
     async updateLand(userId, landId, updates) {
         try {
             return await this.dataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     return {
@@ -269,7 +269,7 @@ class LandManagerService {
      */
     async getAllLands(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
@@ -296,7 +296,7 @@ class LandManagerService {
      */
     async validateLandId(userId, landId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 return {
@@ -341,7 +341,7 @@ class LandManagerService {
      */
     async getLandExpansionInfo(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');

@@ -55,7 +55,7 @@ export class steal extends plugin {
       await playerService.ensurePlayer(thiefUserId)
 
       // 4. 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await playerService.getDataService().getPlayerFromHash(targetUserId)
+      const targetPlayerData = await playerService.getDataService().getPlayer(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true

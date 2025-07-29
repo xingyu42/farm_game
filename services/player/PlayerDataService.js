@@ -159,24 +159,6 @@ class PlayerDataService {
   }
 
   /**
-   * 从Redis Hash读取玩家数据（兼容性方法）
-   * @param {string} userId 用户ID
-   * @returns {Player|null} Player实例或null
-   */
-  async getPlayerFromHash(userId) {
-    return await this.getPlayer(userId);
-  }
-
-  /**
-   * 将玩家数据保存到Redis Hash（兼容性方法）
-   * @param {string} userId 用户ID
-   * @param {Object|Player} playerData 玩家数据或Player实例
-   */
-  async savePlayerToHash(userId, playerData) {
-    return await this.savePlayer(userId, playerData);
-  }
-
-  /**
    * 高效更新单个简单字段
    * @param {string} userId 用户ID
    * @param {string} field 字段名

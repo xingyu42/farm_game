@@ -21,7 +21,7 @@ class SignInService {
     async signIn(userId) {
         try {
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayerFromHash(userId);
+                const playerData = await this.dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -139,7 +139,7 @@ class SignInService {
      */
     async getSignInStatus(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -175,7 +175,7 @@ class SignInService {
      */
     async getSignInStats(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
@@ -255,7 +255,7 @@ class SignInService {
      */
     async resetConsecutiveDays(userId) {
         try {
-            const playerData = await this.dataService.getPlayerFromHash(userId);
+            const playerData = await this.dataService.getPlayer(userId);
 
             if (!playerData) {
                 throw new Error('玩家不存在');
