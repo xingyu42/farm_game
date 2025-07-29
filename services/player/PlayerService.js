@@ -167,6 +167,15 @@ class PlayerService {
     }
 
     /**
+     * 获取等级信息
+     * @param {number} level 等级
+     * @returns {Object|null} 等级信息
+     */
+    getLevelInfo(level) {
+        return this.levelCalculator.getLevelInfo(level);
+    }
+
+    /**
      * 检查是否有足够的金币
      * @param {string} userId 用户ID
      * @param {number} amount 需要的金币数量
