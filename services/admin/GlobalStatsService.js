@@ -4,9 +4,8 @@ const CACHE_KEY = 'farm:stats:cache';
 const CACHE_TTL = 3600; // 1 hour in seconds
 
 class GlobalStatsService {
-  constructor(redisClient, logger = null) {
+  constructor(redisClient) {
     this.redis = redisClient;
-    this.logger = logger || console;
   }
 
   /**
@@ -17,14 +16,14 @@ class GlobalStatsService {
     try {
       const cachedData = await this.redis.get(CACHE_KEY);
       if (cachedData) {
-        this.logger.info('[StatisticsService] 从缓存中获取经济数据。');
+        logger.info('[StatisticsService] 从缓存中获取经济数据。');
         return { ...JSON.parse(cachedData), fromCache: true };
       }
       
-      this.logger.info('[StatisticsService] 缓存未命中，正在重新计算经济数据。');
+      logger.info('[StatisticsService] 缓存未命中，正在重新计算经济数据。');
       return this.rebuildAndCacheStats();
     } catch (error) {
-      this.logger.error(`[StatisticsService] 获取经济数据失败: ${error.message}`);
+      logger.error(`[StatisticsService] 获取经济数据失败: ${error.message}`);
       throw error;
     }
   }
@@ -37,10 +36,10 @@ class GlobalStatsService {
     try {
       const stats = await this._calculateEconomyStats();
       await this.redis.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(stats));
-      this.logger.info('[StatisticsService] 经济数据已成功计算并缓存。');
+      logger.info('[StatisticsService] 经济数据已成功计算并缓存。');
       return { ...stats, fromCache: false };
     } catch (error) {
-      this.logger.error(`[StatisticsService] 重建统计缓存失败: ${error.message}`);
+      logger.error(`[StatisticsService] 重建统计缓存失败: ${error.message}`);
       throw error;
     }
   }

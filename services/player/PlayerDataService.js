@@ -8,10 +8,9 @@ import PlayerSerializer from './PlayerSerializer.js';
 import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';
 
 class PlayerDataService {
-  constructor(redisClient, config, logger = null) {
+  constructor(redisClient, config) {
     this.redis = redisClient;
     this.config = config;
-    this.logger = logger;
     this.serializer = new PlayerSerializer(config);
     this.yamlStorage = new PlayerYamlStorage();
 
@@ -70,7 +69,7 @@ class PlayerDataService {
       // 使用序列化器创建Player实例
       return this.serializer.deserializeFromHash(mergedData);
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 获取玩家数据失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 获取玩家数据失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -116,7 +115,7 @@ class PlayerDataService {
       await Promise.all(promises);
 
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 保存玩家数据失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 保存玩家数据失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -154,7 +153,7 @@ class PlayerDataService {
       await Promise.all(promises);
 
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 更新字段失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 更新字段失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -188,7 +187,7 @@ class PlayerDataService {
       const playerKey = this.redis.generateKey('player', userId);
       await this.redis.client.hSet(playerKey, field, value.toString());
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 更新简单字段失败 [${userId}][${field}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 更新简单字段失败 [${userId}][${field}]: ${error.message}`);
       throw error;
     }
   }
@@ -213,7 +212,7 @@ class PlayerDataService {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 批量更新简单字段失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 批量更新简单字段失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -230,7 +229,7 @@ class PlayerDataService {
       const serializedValue = JSON.stringify(value);
       await this.redis.client.hSet(playerKey, field, serializedValue);
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 更新复杂字段失败 [${userId}][${field}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 更新复杂字段失败 [${userId}][${field}]: ${error.message}`);
       throw error;
     }
   }
@@ -255,7 +254,7 @@ class PlayerDataService {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 批量更新复杂字段失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 批量更新复杂字段失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -289,7 +288,7 @@ class PlayerDataService {
         await this.redis.client.hSet(playerKey, hashUpdates);
       }
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 混合更新字段失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 混合更新字段失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -304,7 +303,7 @@ class PlayerDataService {
       const playerKey = this.redis.generateKey('player', userId);
       return await this.redis.exists(playerKey);
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 检查玩家存在失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 检查玩家存在失败 [${userId}]: ${error.message}`);
       return false;
     }
   }
@@ -317,9 +316,9 @@ class PlayerDataService {
     try {
       const playerKey = this.redis.generateKey('player', userId);
       await this.redis.client.del(playerKey);
-      this.logger.info(`[PlayerDataService] 删除玩家数据: ${userId}`);
+      logger.info(`[PlayerDataService] 删除玩家数据: ${userId}`);
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 删除玩家数据失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 删除玩家数据失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -356,7 +355,7 @@ class PlayerDataService {
         return await operation(multi, playerKey);
       });
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 事务执行失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 事务执行失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -387,7 +386,7 @@ class PlayerDataService {
       const hashData = await this.redis.client.hGetAll(playerKey);
       return Object.keys(hashData).length > 0 ? hashData : null;
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 从Redis读取数据失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 从Redis读取数据失败 [${userId}]: ${error.message}`);
       return null;
     }
   }
@@ -413,7 +412,7 @@ class PlayerDataService {
 
       return hashData;
     } catch (error) {
-      this.logger.error(`[PlayerDataService] 从YAML读取数据失败 [${userId}]: ${error.message}`);
+      logger.error(`[PlayerDataService] 从YAML读取数据失败 [${userId}]: ${error.message}`);
       return null;
     }
   }

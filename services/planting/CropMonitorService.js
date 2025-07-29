@@ -7,13 +7,11 @@
 import { PlantingUtils } from './PlantingUtils.js';
 
 class CropMonitorService {
-    constructor(plantingDataService, landService, redis, config, logger = null) {
+    constructor(plantingDataService, landService, redis, config) {
         this.plantingDataService = plantingDataService;
         this.landService = landService;
         this.redis = redis;
         this.config = config;
-        this.logger = logger || console;
-
         // 初始化验证器
         this.validator = new PlantingUtils(config, logger);
 
@@ -37,7 +35,7 @@ class CropMonitorService {
             const dueSchedules = await this.getDueHarvestSchedules(now);
 
             if (!dueSchedules || dueSchedules.length === 0) {
-                this.logger.info('[CropMonitorService] 没有需要更新的作物状态');
+                logger.info('[CropMonitorService] 没有需要更新的作物状态');
                 return { success: true, updatedPlayers: 0, updatedLands: 0 };
             }
 
@@ -57,7 +55,7 @@ class CropMonitorService {
                     }, 'updateCrops');
 
                 } catch (error) {
-                    this.logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
+                    logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
                     // 继续处理其他玩家，不因单个玩家失败而中断整个批量更新
                 }
             }
@@ -68,7 +66,7 @@ class CropMonitorService {
                 await this.batchRemoveHarvestSchedules(dueMembers);
             }
 
-            this.logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态`);
+            logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态`);
 
             return {
                 success: true,
@@ -78,7 +76,7 @@ class CropMonitorService {
             };
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 更新作物状态失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 更新作物状态失败: ${error.message}`);
             throw error;
         }
     }
@@ -124,7 +122,7 @@ class CropMonitorService {
                     updatedLandsCount++;
 
                 } catch (error) {
-                    this.logger.error(`[CropMonitorService] 更新土地${landId}状态失败: ${error.message}`);
+                    logger.error(`[CropMonitorService] 更新土地${landId}状态失败: ${error.message}`);
                 }
             }
 
@@ -139,7 +137,7 @@ class CropMonitorService {
             };
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
             throw error;
         }
     }
@@ -204,7 +202,7 @@ class CropMonitorService {
             };
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 更新单个作物状态失败 [${userId}][${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 更新单个作物状态失败 [${userId}][${landId}]: ${error.message}`);
             return { success: false, message: error.message };
         }
     }
@@ -276,7 +274,7 @@ class CropMonitorService {
             };
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 获取玩家作物状态失败 [${userId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 获取玩家作物状态失败 [${userId}]: ${error.message}`);
             return { success: false, message: error.message };
         }
     }
@@ -323,7 +321,7 @@ class CropMonitorService {
             };
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 清理枯萎作物失败 [${userId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 清理枯萎作物失败 [${userId}]: ${error.message}`);
             return { success: false, message: error.message };
         }
     }
@@ -345,11 +343,11 @@ class CropMonitorService {
                 value: scheduleMember
             });
 
-            this.logger.debug(`[CropMonitorService] 添加收获计划: ${scheduleMember} at ${harvestTime}`);
+            logger.debug(`[CropMonitorService] 添加收获计划: ${scheduleMember} at ${harvestTime}`);
             return result > 0;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 添加收获计划失败 [${userId}:${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 添加收获计划失败 [${userId}:${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -365,11 +363,11 @@ class CropMonitorService {
             const scheduleMember = `${userId}:${landId}`;
             const result = await this.redis.client.zRem(this.scheduleKey, scheduleMember);
 
-            this.logger.debug(`[CropMonitorService] 移除收获计划: ${scheduleMember}`);
+            logger.debug(`[CropMonitorService] 移除收获计划: ${scheduleMember}`);
             return result > 0;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 移除收获计划失败 [${userId}:${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 移除收获计划失败 [${userId}:${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -391,11 +389,11 @@ class CropMonitorService {
                 value: scheduleMember
             });
 
-            this.logger.debug(`[CropMonitorService] 更新收获计划: ${scheduleMember} to ${newHarvestTime}`);
+            logger.debug(`[CropMonitorService] 更新收获计划: ${scheduleMember} to ${newHarvestTime}`);
             return result > 0;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 更新收获计划失败 [${userId}:${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 更新收获计划失败 [${userId}:${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -425,11 +423,11 @@ class CropMonitorService {
                 };
             });
 
-            this.logger.debug(`[CropMonitorService] 获取到期收获计划: ${schedules.length} 个`);
+            logger.debug(`[CropMonitorService] 获取到期收获计划: ${schedules.length} 个`);
             return schedules;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 获取到期收获计划失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 获取到期收获计划失败: ${error.message}`);
             throw error;
         }
     }
@@ -447,11 +445,11 @@ class CropMonitorService {
 
             const result = await this.redis.client.zRem(this.scheduleKey, members);
 
-            this.logger.debug(`[CropMonitorService] 批量移除收获计划: ${members.length} 个，实际移除: ${result} 个`);
+            logger.debug(`[CropMonitorService] 批量移除收获计划: ${members.length} 个，实际移除: ${result} 个`);
             return result;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 批量移除收获计划失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 批量移除收获计划失败: ${error.message}`);
             throw error;
         }
     }
@@ -486,11 +484,11 @@ class CropMonitorService {
                 }
             }
 
-            this.logger.debug(`[CropMonitorService] 获取用户收获计划 [${userId}]: ${userSchedules.length} 个`);
+            logger.debug(`[CropMonitorService] 获取用户收获计划 [${userId}]: ${userSchedules.length} 个`);
             return userSchedules;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 获取用户收获计划失败 [${userId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 获取用户收获计划失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -518,11 +516,11 @@ class CropMonitorService {
                 pendingSchedules: totalCount - dueCount
             };
 
-            this.logger.debug(`[CropMonitorService] 收获计划统计: ${JSON.stringify(statistics)}`);
+            logger.debug(`[CropMonitorService] 收获计划统计: ${JSON.stringify(statistics)}`);
             return statistics;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 获取收获计划统计失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 获取收获计划统计失败: ${error.message}`);
             throw error;
         }
     }
@@ -536,11 +534,11 @@ class CropMonitorService {
         try {
             const result = await this.redis.client.zRemRangeByScore(this.scheduleKey, 0, expireTime);
 
-            this.logger.info(`[CropMonitorService] 清理过期收获计划: ${result} 个`);
+            logger.info(`[CropMonitorService] 清理过期收获计划: ${result} 个`);
             return result;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 清理过期收获计划失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 清理过期收获计划失败: ${error.message}`);
             throw error;
         }
     }
@@ -559,7 +557,7 @@ class CropMonitorService {
             return score !== null;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 检查收获计划失败 [${userId}:${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 检查收获计划失败 [${userId}:${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -578,7 +576,7 @@ class CropMonitorService {
             return score ? parseInt(score, 10) : null;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 获取收获时间失败 [${userId}:${landId}]: ${error.message}`);
+            logger.error(`[CropMonitorService] 获取收获时间失败 [${userId}:${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -603,7 +601,7 @@ class CropMonitorService {
             return schedulesByUser;
 
         } catch (error) {
-            this.logger.error(`[CropMonitorService] 按用户分组获取到期计划失败: ${error.message}`);
+            logger.error(`[CropMonitorService] 按用户分组获取到期计划失败: ${error.message}`);
             throw error;
         }
     }

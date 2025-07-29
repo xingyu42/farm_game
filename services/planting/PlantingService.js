@@ -10,15 +10,13 @@ import CropCareService from './CropCareService.js';
 import CropMonitorService from './CropMonitorService.js';
 
 class PlantingService {
-  constructor(redisClient, config, plantingDataService, inventoryService, landService, playerService, logger = null) {
+  constructor(redisClient, config, plantingDataService, inventoryService, landService, playerService) {
     this.redis = redisClient;
     this.config = config;
     this._plantingDataService = plantingDataService;
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.playerService = playerService;
-    this.logger = logger || console;
-
     // 初始化专门服务
     this._initializeServices();
   }
@@ -34,7 +32,6 @@ class PlantingService {
       this.landService,
       this.redis,
       this.config,
-      this.logger
     );
 
     // 初始化专门服务，注入新的依赖
@@ -44,7 +41,6 @@ class PlantingService {
       this.landService,
       this._cropMonitorService,
       this.config,
-      this.logger
     );
 
     this._cropHarvestService = new CropHarvestService(
@@ -54,7 +50,6 @@ class PlantingService {
       this.playerService,
       this._cropMonitorService,
       this.config,
-      this.logger
     );
 
     this._cropCareService = new CropCareService(
@@ -63,7 +58,6 @@ class PlantingService {
       this.landService,
       this._cropMonitorService,
       this.config,
-      this.logger
     );
   }
 

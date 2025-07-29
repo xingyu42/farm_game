@@ -17,22 +17,20 @@ import { RedisLock } from '../../utils/RedisLock.js';
 
 // {{START_MODIFICATIONS}}
 export class StealService {
-  constructor(redisClient, config, playerService, inventoryService, protectionService, landService, logger = null) {
+  constructor(redisClient, config, playerService, inventoryService, protectionService, landService) {
     this.redisClient = redisClient;
     this.config = config;
     this.playerService = playerService;
     this.inventoryService = inventoryService;
     this.protectionService = protectionService;
     this.landService = landService;
-    this.logger = logger;
-
     // 初始化Redis锁
-    this.redisLock = new RedisLock(redisClient, logger);
+    this.redisLock = new RedisLock(redisClient);
 
     // 获取偷窃配置
     this.stealConfig = this.config.steal;
 
-    this.logger.info('[StealService] 偷窃服务已初始化');
+    logger.info('[StealService] 偷窃服务已初始化');
   }
 
   /**
@@ -51,7 +49,7 @@ export class StealService {
       throw new Error('不能偷窃自己的农场');
     }
 
-    this.logger.info(`[StealService] 玩家 ${attackerId} 尝试偷窃 ${targetId}`);
+    logger.info(`[StealService] 玩家 ${attackerId} 尝试偷窃 ${targetId}`);
 
     // 双重分布式锁：确保操作原子性
     const lockKeys = [attackerId, targetId].sort(); // 按字母序排序防止死锁
@@ -78,7 +76,7 @@ export class StealService {
       return await this._executeStealCore(attackerId, targetId);
 
     } catch (error) {
-      this.logger.error(`[StealService] 偷窃操作失败 [${attackerId} -> ${targetId}]: ${error.message}`);
+      logger.error(`[StealService] 偷窃操作失败 [${attackerId} -> ${targetId}]: ${error.message}`);
       throw error;
     } finally {
       // 释放所有锁
@@ -86,7 +84,7 @@ export class StealService {
         try {
           await this.redisLock.release(lock);
         } catch (releaseError) {
-          this.logger.error(`[StealService] 释放锁失败: ${releaseError.message}`);
+          logger.error(`[StealService] 释放锁失败: ${releaseError.message}`);
         }
       }
     }
@@ -180,7 +178,7 @@ export class StealService {
           fromLand: land.landId
         });
 
-        this.logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${land.crop.cropName}`);
+        logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${land.crop.cropName}`);
       }
     }
 
@@ -226,7 +224,7 @@ export class StealService {
       // 扣除偷窃者金币
       await this.playerService.updateEconomyField(attackerId, 'coins', -penalty);
 
-      this.logger.info(`[StealService] 偷窃失败：${attackerId} 被罚款 ${penalty} 金币`);
+      logger.info(`[StealService] 偷窃失败：${attackerId} 被罚款 ${penalty} 金币`);
     }
 
     // 设置偷窃冷却（失败也有冷却）
@@ -273,7 +271,7 @@ export class StealService {
         remainingTime
       };
     } catch (error) {
-      this.logger.error(`[StealService] 检查偷窃冷却失败 [${userId}]: ${error.message}`);
+      logger.error(`[StealService] 检查偷窃冷却失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -319,7 +317,7 @@ export class StealService {
         reason: null
       };
     } catch (error) {
-      this.logger.error(`[StealService] 检查目标可偷状态失败 [${targetId}]: ${error.message}`);
+      logger.error(`[StealService] 检查目标可偷状态失败 [${targetId}]: ${error.message}`);
       throw error;
     }
   }
@@ -367,7 +365,7 @@ export class StealService {
 
       return stealableLands;
     } catch (error) {
-      this.logger.error(`[StealService] 获取可偷取土地失败 [${targetId}]: ${error.message}`);
+      logger.error(`[StealService] 获取可偷取土地失败 [${targetId}]: ${error.message}`);
       throw error;
     }
   }
@@ -411,7 +409,7 @@ export class StealService {
 
       return Math.round(finalRate);
     } catch (error) {
-      this.logger.error(`[StealService] 计算成功率失败: ${error.message}`);
+      logger.error(`[StealService] 计算成功率失败: ${error.message}`);
       return this.stealConfig.basic.baseSuccessRate;
     }
   }
@@ -444,7 +442,7 @@ export class StealService {
 
       return Math.min(stealAmount, land.crop.quantity);
     } catch (error) {
-      this.logger.error(`[StealService] 计算偷取数量失败: ${error.message}`);
+      logger.error(`[StealService] 计算偷取数量失败: ${error.message}`);
       return 1; // 默认偷取1个
     }
   }
@@ -475,7 +473,7 @@ export class StealService {
 
       return penalty;
     } catch (error) {
-      this.logger.error(`[StealService] 计算失败惩罚失败: ${error.message}`);
+      logger.error(`[StealService] 计算失败惩罚失败: ${error.message}`);
       return this.stealConfig.penalties.minPenalty;
     }
   }
@@ -494,9 +492,9 @@ export class StealService {
       const key = `steal_cooldown:${userId}`;
       await this.redisClient.setex(key, Math.ceil(cooldownMs / 1000), cooldownEnd.toString());
 
-      this.logger.debug(`[StealService] 设置偷窃冷却 [${userId}]: ${cooldownMinutes} 分钟`);
+      logger.debug(`[StealService] 设置偷窃冷却 [${userId}]: ${cooldownMinutes} 分钟`);
     } catch (error) {
-      this.logger.error(`[StealService] 设置偷窃冷却失败 [${userId}]: ${error.message}`);
+      logger.error(`[StealService] 设置偷窃冷却失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -547,7 +545,7 @@ export class StealService {
 
       return { allowed: true };
     } catch (error) {
-      this.logger.error(`[StealService] 检查防重复偷取失败: ${error.message}`);
+      logger.error(`[StealService] 检查防重复偷取失败: ${error.message}`);
       return { allowed: true }; // 出错时允许继续，避免阻塞正常游戏
     }
   }
@@ -587,9 +585,9 @@ export class StealService {
         penalty
       };
 
-      this.logger.info(`[StealService] 偷窃记录: ${JSON.stringify(logData)}`);
+      logger.info(`[StealService] 偷窃记录: ${JSON.stringify(logData)}`);
     } catch (error) {
-      this.logger.error(`[StealService] 记录偷窃尝试失败: ${error.message}`);
+      logger.error(`[StealService] 记录偷窃尝试失败: ${error.message}`);
       // 记录失败不应影响主流程
     }
   }
@@ -697,7 +695,7 @@ export class StealService {
         }
       };
     } catch (error) {
-      this.logger.error(`[StealService] 获取偷窃统计失败 [${userId}]: ${error.message}`);
+      logger.error(`[StealService] 获取偷窃统计失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -727,14 +725,14 @@ export class StealService {
         }
       }
 
-      this.logger.info(`[StealService] 清理过期数据完成，清理 ${totalCleaned} 个键`);
+      logger.info(`[StealService] 清理过期数据完成，清理 ${totalCleaned} 个键`);
 
       return {
         success: true,
         cleanedKeys: totalCleaned
       };
     } catch (error) {
-      this.logger.error(`[StealService] 清理过期数据失败: ${error.message}`);
+      logger.error(`[StealService] 清理过期数据失败: ${error.message}`);
       throw error;
     }
   }

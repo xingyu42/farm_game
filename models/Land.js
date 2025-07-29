@@ -9,7 +9,7 @@
 // {{START MODIFICATIONS}}
 
 class Land {
-  constructor(data = {}, config = null) {
+  constructor(data = {}, config) {
     this.config = config;
 
     // 基础属性
@@ -58,7 +58,7 @@ class Land {
    * @param {Object} config 配置对象
    * @returns {Land} 土地实例
    */
-  static fromRawData(rawData, config = null) {
+  static fromRawData(rawData, config) {
     return new Land(rawData, config);
   }
 

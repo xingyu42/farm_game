@@ -9,15 +9,13 @@ import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 import LevelCalculator from '../player/LevelCalculator.js';
 
 class CropHarvestService {
-  constructor(plantingDataService, inventoryService, landService, playerService, cropMonitorService, config, logger = null) {
+  constructor(plantingDataService, inventoryService, landService, playerService, cropMonitorService, config) {
     this.plantingDataService = plantingDataService;
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.playerService = playerService;
     this.cropMonitorService = cropMonitorService;
     this.config = config;
-    this.logger = logger || console;
-
     // 初始化依赖组件
     this.calculator = new Calculator(config);
     this.validator = new PlantingUtils(config, logger);
@@ -79,7 +77,7 @@ class CropHarvestService {
 
             const cropConfig = cropsConfig[landData.crop];
             if (!cropConfig) {
-              this.logger.warn(`[CropHarvestService] 未找到作物配置: ${landData.crop}`);
+              logger.warn(`[CropHarvestService] 未找到作物配置: ${landData.crop}`);
               continue;
             }
 
@@ -115,7 +113,7 @@ class CropHarvestService {
             });
 
           } catch (error) {
-            this.logger.error(`[CropHarvestService] 收获土地${currentLandId}失败: ${error.message}`);
+            logger.error(`[CropHarvestService] 收获土地${currentLandId}失败: ${error.message}`);
             if (landId) {
               throw error; // 单个土地收获失败时抛出异常
             }
@@ -145,14 +143,14 @@ class CropHarvestService {
         const harvestedLandIds = harvestedCrops.map(crop => crop.landId);
         await this.cropScheduleService.batchRemoveHarvestSchedules(harvestedLandIds);
 
-        this.logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}块土地的作物`);
+        logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}块土地的作物`);
 
         // 6. 构建返回消息
         return this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp);
       });
 
     } catch (error) {
-      this.logger.error(`[CropHarvestService] 收获失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropHarvestService] 收获失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('收获', error.message);
     }
   }
@@ -199,7 +197,7 @@ class CropHarvestService {
       };
 
     } catch (error) {
-      this.logger.error(`[CropHarvestService] 检查收获条件失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropHarvestService] 检查收获条件失败 [${userId}]: ${error.message}`);
       return { success: false, message: error.message };
     }
   }
@@ -223,7 +221,7 @@ class CropHarvestService {
         .map(land => land.id);
 
     } catch (error) {
-      this.logger.error(`[CropHarvestService] 获取成熟土地失败: ${error.message}`);
+      logger.error(`[CropHarvestService] 获取成熟土地失败: ${error.message}`);
       return [];
     }
   }

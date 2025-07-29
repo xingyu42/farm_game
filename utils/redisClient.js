@@ -408,6 +408,90 @@ class RedisClient {
   }
 
   /**
+   * 设置Hash字段
+   * @param {string} key Redis Key
+   * @param {string|Object} fieldOrObject 字段名或字段对象
+   * @param {any} value 字段值（当第二个参数为字段名时使用）
+   * @returns {Promise<number>} 新增字段数量
+   */
+  async hSet(key, fieldOrObject, value) {
+    try {
+      if (!this.isConnected()) {
+        throw new Error('Redis client not connected');
+      }
+
+      return await this.client.hSet(key, fieldOrObject, value);
+    } catch (error) {
+      throw new Error(`Hash set failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取Hash字段值
+   * @param {string} key Redis Key
+   * @param {string} field 字段名
+   * @returns {Promise<string|null>} 字段值
+   */
+  async hGet(key, field) {
+    try {
+      if (!this.isConnected()) {
+        throw new Error('Redis client not connected');
+      }
+
+      return await this.client.hGet(key, field);
+    } catch (error) {
+      throw new Error(`Hash get failed for key ${key}, field ${field}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取Hash所有字段
+   * @param {string} key Redis Key
+   * @returns {Promise<Object>} 所有字段和值
+   */
+  async hGetAll(key) {
+    try {
+      if (!this.isConnected()) {
+        throw new Error('Redis client not connected');
+      }
+
+      return await this.client.hGetAll(key);
+    } catch (error) {
+      throw new Error(`Hash get all failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 删除Hash字段
+   * @param {string} key Redis Key
+   * @param {...string} fields 要删除的字段名
+   * @returns {Promise<number>} 删除的字段数量
+   */
+  async hDel(key, ...fields) {
+    try {
+      if (!this.isConnected()) {
+        throw new Error('Redis client not connected');
+      }
+
+      return await this.client.hDel(key, ...fields);
+    } catch (error) {
+      throw new Error(`Hash delete failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取Redis Pipeline对象
+   * @returns {Object} Pipeline对象
+   */
+  pipeline() {
+    if (!this.isConnected()) {
+      throw new Error('Redis client not connected');
+    }
+
+    return this.client.multi();
+  }
+
+  /**
    * 私有方法：睡眠等待
    * @param {number} ms 毫秒数
    * @returns {Promise<void>}

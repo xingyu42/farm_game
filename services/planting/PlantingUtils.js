@@ -4,13 +4,11 @@
  * 合并了 PlantingValidator 和 PlantingSerializer 的功能
  */
 
-import Land from '../../../models/Land.js';
+import Land from '../../models/Land.js';
 
 class PlantingUtils {
-    constructor(config = null, logger = null) {
+    constructor(config) {
         this.config = config;
-        this.logger = logger || console;
-
         // 定义作物相关的简单字段（存储为Hash字段）
         this.simpleFields = [
             'lastUpdated'

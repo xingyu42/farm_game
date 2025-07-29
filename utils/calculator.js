@@ -11,7 +11,7 @@ import ItemResolver from './ItemResolver.js';
 // {{START MODIFICATIONS}}
 
 class Calculator {
-  constructor(config = null) {
+  constructor(config) {
     this.config = config;
     this.itemResolver = config ? new ItemResolver(config) : null;
   }

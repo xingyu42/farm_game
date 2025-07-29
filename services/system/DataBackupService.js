@@ -7,12 +7,10 @@
 import { FileStorage } from '../../utils/fileStorage.js';
 
 class DataBackupService {
-    constructor(redisClient, config, playerService = null, logger = null) {
+    constructor(redisClient, config, playerService = null) {
         this.redis = redisClient;
         this.config = config;
         this.playerService = playerService;
-        this.logger = logger || console;
-
         // 创建专门用于备份的 FileStorage 实例
         this.backupStorage = new FileStorage('data/backups');
 
@@ -40,16 +38,16 @@ class DataBackupService {
      */
     async start() {
         if (this.isRunning) {
-            this.logger.warn('[DataBackupService] 备份服务已在运行中');
+            logger.warn('[DataBackupService] 备份服务已在运行中');
             return;
         }
 
         if (!this.backupConfig.enabled) {
-            this.logger.info('[DataBackupService] 备份服务已禁用');
+            logger.info('[DataBackupService] 备份服务已禁用');
             return;
         }
 
-        this.logger.info(`[DataBackupService] 启动备份服务，间隔: ${this.backupConfig.interval}ms`);
+        logger.info(`[DataBackupService] 启动备份服务，间隔: ${this.backupConfig.interval}ms`);
 
         this.isRunning = true;
 
@@ -69,7 +67,7 @@ class DataBackupService {
             return;
         }
 
-        this.logger.info('[DataBackupService] 停止备份服务');
+        logger.info('[DataBackupService] 停止备份服务');
 
         if (this.backupTimer) {
             clearTimeout(this.backupTimer);
@@ -89,13 +87,13 @@ class DataBackupService {
 
         while (retryCount <= this.backupConfig.retryCount) {
             try {
-                this.logger.info(`[DataBackupService] 开始执行备份 (尝试 ${retryCount + 1}/${this.backupConfig.retryCount + 1})`);
+                logger.info(`[DataBackupService] 开始执行备份 (尝试 ${retryCount + 1}/${this.backupConfig.retryCount + 1})`);
 
                 // 1. 获取所有玩家数据
                 const playerData = await this._getAllPlayerData();
 
                 if (Object.keys(playerData).length === 0) {
-                    this.logger.warn('[DataBackupService] 没有找到玩家数据，跳过备份');
+                    logger.warn('[DataBackupService] 没有找到玩家数据，跳过备份');
                     return { success: true, playerCount: 0, message: '无数据需要备份' };
                 }
 
@@ -118,7 +116,7 @@ class DataBackupService {
                 await this._cleanupOldBackups();
 
                 const duration = Date.now() - startTime;
-                this.logger.info(`[DataBackupService] 备份完成: ${filename}, 玩家数: ${Object.keys(playerData).length}, 耗时: ${duration}ms`);
+                logger.info(`[DataBackupService] 备份完成: ${filename}, 玩家数: ${Object.keys(playerData).length}, 耗时: ${duration}ms`);
 
                 return {
                     success: true,
@@ -129,7 +127,7 @@ class DataBackupService {
 
             } catch (error) {
                 retryCount++;
-                this.logger.error(`[DataBackupService] 备份失败 (尝试 ${retryCount}/${this.backupConfig.retryCount + 1}): ${error.message}`);
+                logger.error(`[DataBackupService] 备份失败 (尝试 ${retryCount}/${this.backupConfig.retryCount + 1}): ${error.message}`);
 
                 if (retryCount > this.backupConfig.retryCount) {
                     throw error;
@@ -166,7 +164,7 @@ class DataBackupService {
 
             return backupFiles;
         } catch (error) {
-            this.logger.error(`[DataBackupService] 获取备份历史失败: ${error.message}`);
+            logger.error(`[DataBackupService] 获取备份历史失败: ${error.message}`);
             return [];
         }
     }
@@ -184,11 +182,11 @@ class DataBackupService {
                 throw new Error('备份文件格式无效');
             }
 
-            this.logger.info(`[DataBackupService] 读取备份文件: ${filename}, 玩家数: ${backupData.playerCount}`);
+            logger.info(`[DataBackupService] 读取备份文件: ${filename}, 玩家数: ${backupData.playerCount}`);
 
             return backupData;
         } catch (error) {
-            this.logger.error(`[DataBackupService] 恢复备份失败: ${error.message}`);
+            logger.error(`[DataBackupService] 恢复备份失败: ${error.message}`);
             throw error;
         }
     }
@@ -206,7 +204,7 @@ class DataBackupService {
             try {
                 await this.executeBackup();
             } catch (error) {
-                this.logger.error(`[DataBackupService] 定时备份执行失败: ${error.message}`);
+                logger.error(`[DataBackupService] 定时备份执行失败: ${error.message}`);
             }
 
             // 调度下次备份
@@ -242,13 +240,13 @@ class DataBackupService {
                         playerData[userId] = hashData;
                     }
                 } catch (error) {
-                    this.logger.warn(`[DataBackupService] 获取玩家数据失败 [${userId}]: ${error.message}`);
+                    logger.warn(`[DataBackupService] 获取玩家数据失败 [${userId}]: ${error.message}`);
                 }
             }
 
             return playerData;
         } catch (error) {
-            this.logger.error(`[DataBackupService] 获取所有玩家数据失败: ${error.message}`);
+            logger.error(`[DataBackupService] 获取所有玩家数据失败: ${error.message}`);
             throw error;
         }
     }
@@ -271,15 +269,15 @@ class DataBackupService {
             for (const backup of filesToDelete) {
                 try {
                     await this.backupStorage.deleteFile(backup.filename);
-                    this.logger.info(`[DataBackupService] 删除旧备份: ${backup.filename}`);
+                    logger.info(`[DataBackupService] 删除旧备份: ${backup.filename}`);
                 } catch (error) {
-                    this.logger.warn(`[DataBackupService] 删除旧备份失败 [${backup.filename}]: ${error.message}`);
+                    logger.warn(`[DataBackupService] 删除旧备份失败 [${backup.filename}]: ${error.message}`);
                 }
             }
 
-            this.logger.info(`[DataBackupService] 清理完成，删除了 ${filesToDelete.length} 个旧备份文件`);
+            logger.info(`[DataBackupService] 清理完成，删除了 ${filesToDelete.length} 个旧备份文件`);
         } catch (error) {
-            this.logger.error(`[DataBackupService] 清理旧备份失败: ${error.message}`);
+            logger.error(`[DataBackupService] 清理旧备份失败: ${error.message}`);
         }
     }
 

@@ -6,11 +6,9 @@
 import PlayerDataService from './PlayerDataService.js';
 
 class LandManagerService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
-
         // 初始化数据服务
         this.dataService = new PlayerDataService(redisClient, config, logger);
     }
@@ -82,7 +80,7 @@ class LandManagerService {
                 const serializer = this.dataService.getSerializer();
                 multi.hSet(playerKey, serializer.serializeForHash(playerData));
 
-                this.logger.info(`[LandManagerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
+                logger.info(`[LandManagerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
 
                 return {
                     success: true,
@@ -95,7 +93,7 @@ class LandManagerService {
                 };
             });
         } catch (error) {
-            this.logger.error(`[LandManagerService] 扩张土地失败 [${userId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 扩张土地失败 [${userId}]: ${error.message}`);
 
             // 将内部错误转换为用户友好的返回格式
             if (error.message === '土地数量已达到上限！') {
@@ -137,24 +135,24 @@ class LandManagerService {
             const playerData = await this.dataService.getPlayerFromHash(userId);
 
             if (!playerData) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
                 return null;
             }
 
             // 边界检查
             if (!Array.isArray(playerData.lands)) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
                 return null;
             }
 
             if (index < 0 || index >= playerData.lands.length) {
-                this.logger.warn(`[LandManagerService] 土地索引越界 [${userId}]: index=${index}, length=${playerData.lands.length}`);
+                logger.warn(`[LandManagerService] 土地索引越界 [${userId}]: index=${index}, length=${playerData.lands.length}`);
                 return null;
             }
 
             return playerData.lands[index];
         } catch (error) {
-            this.logger.error(`[LandManagerService] 获取土地失败 [${userId}, index=${index}]: ${error.message}`);
+            logger.error(`[LandManagerService] 获取土地失败 [${userId}, index=${index}]: ${error.message}`);
             return null;
         }
     }
@@ -170,24 +168,24 @@ class LandManagerService {
             const playerData = await this.dataService.getPlayerFromHash(userId);
 
             if (!playerData) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
                 return null;
             }
 
             // 边界检查
             if (!Array.isArray(playerData.lands)) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
                 return null;
             }
 
             if (landId < 1 || landId > playerData.lands.length) {
-                this.logger.warn(`[LandManagerService] 土地ID越界 [${userId}]: landId=${landId}, length=${playerData.lands.length}`);
+                logger.warn(`[LandManagerService] 土地ID越界 [${userId}]: landId=${landId}, length=${playerData.lands.length}`);
                 return null;
             }
 
             return playerData.lands[landId - 1];
         } catch (error) {
-            this.logger.error(`[LandManagerService] 获取土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 获取土地失败 [${userId}, landId=${landId}]: ${error.message}`);
             return null;
         }
     }
@@ -248,7 +246,7 @@ class LandManagerService {
                     { lands: playerData.lands }
                 );
 
-                this.logger.info(`[LandManagerService] 玩家 ${userId} 土地 ${landId} 更新成功`);
+                logger.info(`[LandManagerService] 玩家 ${userId} 土地 ${landId} 更新成功`);
 
                 return {
                     success: true,
@@ -259,7 +257,7 @@ class LandManagerService {
                 };
             });
         } catch (error) {
-            this.logger.error(`[LandManagerService] 更新土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 更新土地失败 [${userId}, landId=${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -274,18 +272,18 @@ class LandManagerService {
             const playerData = await this.dataService.getPlayerFromHash(userId);
 
             if (!playerData) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 不存在`);
                 return [];
             }
 
             if (!Array.isArray(playerData.lands)) {
-                this.logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
+                logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
                 return [];
             }
 
             return playerData.lands;
         } catch (error) {
-            this.logger.error(`[LandManagerService] 获取所有土地失败 [${userId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 获取所有土地失败 [${userId}]: ${error.message}`);
             return [];
         }
     }
@@ -328,7 +326,7 @@ class LandManagerService {
                 totalLands: playerData.lands.length
             };
         } catch (error) {
-            this.logger.error(`[LandManagerService] 验证土地ID失败 [${userId}, landId=${landId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 验证土地ID失败 [${userId}, landId=${landId}]: ${error.message}`);
             return {
                 valid: false,
                 message: '验证失败'
@@ -391,7 +389,7 @@ class LandManagerService {
                 currentCoins: playerData.coins
             };
         } catch (error) {
-            this.logger.error(`[LandManagerService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
+            logger.error(`[LandManagerService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -409,7 +407,7 @@ class LandManagerService {
                 qualityConfig: this.config.land.quality
             };
         } catch (error) {
-            this.logger.error(`[LandManagerService] 获取土地系统配置失败: ${error.message}`);
+            logger.error(`[LandManagerService] 获取土地系统配置失败: ${error.message}`);
             return null;
         }
     }

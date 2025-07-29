@@ -5,7 +5,6 @@
 export class RedisLock {
   constructor(redisClient, logger = console) {
     this.redis = redisClient;
-    this.logger = logger;
     this.defaultTimeout = 30 * 1000; // 30秒默认超时
     this.lockPrefix = `${this.redis.keyPrefix}:lock:`;
   }
@@ -38,7 +37,7 @@ export class RedisLock {
             timeout
           };
 
-          this.logger.debug(`[RedisLock] 成功获取锁: ${key}`);
+          logger.debug(`[RedisLock] 成功获取锁: ${key}`);
           return lock;
         }
 
@@ -49,12 +48,12 @@ export class RedisLock {
         retries++;
 
       } catch (error) {
-        this.logger.error(`[RedisLock] 获取锁失败 [${key}]: ${error.message}`);
+        logger.error(`[RedisLock] 获取锁失败 [${key}]: ${error.message}`);
         throw error;
       }
     }
 
-    this.logger.warn(`[RedisLock] 获取锁超时 [${key}]，已重试 ${maxRetries} 次`);
+    logger.warn(`[RedisLock] 获取锁超时 [${key}]，已重试 ${maxRetries} 次`);
     return null;
   }
 
@@ -65,7 +64,7 @@ export class RedisLock {
    */
   async release(lock) {
     if (!lock || !lock.key || !lock.value) {
-      this.logger.warn('[RedisLock] 无效的锁对象');
+      logger.warn('[RedisLock] 无效的锁对象');
       return false;
     }
 
@@ -82,15 +81,15 @@ export class RedisLock {
       const result = await this.redis.client.eval(luaScript, 1, lock.key, lock.value);
 
       if (result === 1) {
-        this.logger.debug(`[RedisLock] 成功释放锁: ${lock.key}`);
+        logger.debug(`[RedisLock] 成功释放锁: ${lock.key}`);
         return true;
       } else {
-        this.logger.warn(`[RedisLock] 锁已过期或被其他进程释放: ${lock.key}`);
+        logger.warn(`[RedisLock] 锁已过期或被其他进程释放: ${lock.key}`);
         return false;
       }
 
     } catch (error) {
-      this.logger.error(`[RedisLock] 释放锁失败 [${lock.key}]: ${error.message}`);
+      logger.error(`[RedisLock] 释放锁失败 [${lock.key}]: ${error.message}`);
       throw error;
     }
   }
@@ -106,7 +105,7 @@ export class RedisLock {
       const result = await this.redis.client.exists(lockKey);
       return result === 1;
     } catch (error) {
-      this.logger.error(`[RedisLock] 检查锁存在性失败 [${key}]: ${error.message}`);
+      logger.error(`[RedisLock] 检查锁存在性失败 [${key}]: ${error.message}`);
       throw error;
     }
   }
@@ -121,7 +120,7 @@ export class RedisLock {
       const lockKey = this.lockPrefix + key;
       return await this.redis.client.ttl(lockKey);
     } catch (error) {
-      this.logger.error(`[RedisLock] 获取锁TTL失败 [${key}]: ${error.message}`);
+      logger.error(`[RedisLock] 获取锁TTL失败 [${key}]: ${error.message}`);
       throw error;
     }
   }
@@ -137,13 +136,13 @@ export class RedisLock {
       const result = await this.redis.client.del(lockKey);
 
       if (result === 1) {
-        this.logger.warn(`[RedisLock] 强制释放锁: ${key}`);
+        logger.warn(`[RedisLock] 强制释放锁: ${key}`);
         return true;
       }
       return false;
 
     } catch (error) {
-      this.logger.error(`[RedisLock] 强制释放锁失败 [${key}]: ${error.message}`);
+      logger.error(`[RedisLock] 强制释放锁失败 [${key}]: ${error.message}`);
       throw error;
     }
   }

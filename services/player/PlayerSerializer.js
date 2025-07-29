@@ -6,7 +6,7 @@
 import Player from '../../models/Player.js';
 
 class PlayerSerializer {
-    constructor(config = null) {
+    constructor(config) {
         this.config = config;
 
         // 定义简单字段（存储为Hash字段）

@@ -12,11 +12,9 @@ import PlayerStatsService from './PlayerStatsService.js';
 import LandManagerService from './LandManagerService.js';
 
 class PlayerService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger;
-
         // 初始化数据服务
         this.dataService = new PlayerDataService(redisClient, config, logger);
 
@@ -59,7 +57,7 @@ class PlayerService {
             if (!playerData) {
                 playerData = this.dataService.createNewPlayerData();
                 await this.dataService.savePlayerToHash(userId, playerData);
-                this.logger.info(`[PlayerService] 创建新玩家: ${userId}`);
+                logger.info(`[PlayerService] 创建新玩家: ${userId}`);
 
                 // 发放初始礼包
                 await this._giveInitialGift(userId, playerData);
@@ -67,7 +65,7 @@ class PlayerService {
 
             return playerData;
         } catch (error) {
-            this.logger.error(`[PlayerService] 获取玩家数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlayerService] 获取玩家数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -99,7 +97,7 @@ class PlayerService {
 
             return playerData;
         } catch (error) {
-            this.logger.error(`[PlayerService] 确保玩家存在失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlayerService] 确保玩家存在失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -124,7 +122,7 @@ class PlayerService {
 
             await this.dataService.savePlayerToHash(userId, playerData);
 
-            this.logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
+            logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
 
             // 发放初始礼包
             await this._giveInitialGift(userId, playerData);
@@ -132,7 +130,7 @@ class PlayerService {
             // 重新获取玩家数据以确保返回Player实例
             return await this.getPlayer(userId);
         } catch (error) {
-            this.logger.error(`[PlayerService] 创建玩家失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlayerService] 创建玩家失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -553,12 +551,12 @@ class PlayerService {
             const initialGift = this.config.items.initial_gift;
 
             if (initialGift && initialGift.length > 0) {
-                this.logger.info(`[PlayerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);
+                logger.info(`[PlayerService] 为新玩家 ${userId} 准备初始礼包: ${JSON.stringify(initialGift)}`);
                 // 注意：这里不能直接调用InventoryService，因为会造成循环依赖
                 // 初始礼包将由外部服务在玩家创建后调用
             }
         } catch (error) {
-            this.logger.error(`[PlayerService] 发放初始礼包失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlayerService] 发放初始礼包失败 [${userId}]: ${error.message}`);
         }
     }
 

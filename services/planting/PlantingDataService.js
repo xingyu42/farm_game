@@ -7,10 +7,9 @@
 import { PlantingUtils } from './PlantingUtils.js';
 
 class PlantingDataService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
         this.serializer = new PlantingUtils(config);
     }
 
@@ -45,7 +44,7 @@ class PlantingDataService {
                         try {
                             cropData[field] = JSON.parse(hashData[index]);
                         } catch (error) {
-                            this.logger.warn(`[PlantingDataService] 解析${field}字段失败: ${error.message}`);
+                            logger.warn(`[PlantingDataService] 解析${field}字段失败: ${error.message}`);
                             cropData[field] = [];
                         }
                     } else {
@@ -56,7 +55,7 @@ class PlantingDataService {
 
             return cropData;
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 获取作物数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 获取作物数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -81,7 +80,7 @@ class PlantingDataService {
 
             return cropData.lands[landIndex];
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 获取土地作物数据失败 [${userId}][${landId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 获取土地作物数据失败 [${userId}][${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -104,7 +103,7 @@ class PlantingDataService {
                 try {
                     lands = JSON.parse(currentLandsData);
                 } catch (error) {
-                    this.logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
+                    logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
                     lands = [];
                 }
             }
@@ -133,7 +132,7 @@ class PlantingDataService {
 
             await this.redis.client.hSet(playerKey, updates);
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 更新土地作物数据失败 [${userId}][${landId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 更新土地作物数据失败 [${userId}][${landId}]: ${error.message}`);
             throw error;
         }
     }
@@ -155,7 +154,7 @@ class PlantingDataService {
                 try {
                     lands = JSON.parse(currentLandsData);
                 } catch (error) {
-                    this.logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
+                    logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
                     lands = [];
                 }
             }
@@ -187,7 +186,7 @@ class PlantingDataService {
 
             await this.redis.client.hSet(playerKey, updates);
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 批量更新土地数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 批量更新土地数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -206,7 +205,7 @@ class PlantingDataService {
                 return await operation(multi, playerKey);
             });
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 事务执行失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 事务执行失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -221,7 +220,7 @@ class PlantingDataService {
             const playerKey = this.redis.generateKey('player', userId);
             return await this.redis.exists(playerKey);
         } catch (error) {
-            this.logger.error(`[PlantingDataService] 检查玩家存在失败 [${userId}]: ${error.message}`);
+            logger.error(`[PlantingDataService] 检查玩家存在失败 [${userId}]: ${error.message}`);
             return false;
         }
     }

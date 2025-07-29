@@ -7,7 +7,7 @@
 
 
 class Item {
-  constructor(data = {}, config = null) {
+  constructor(data = {}, config) {
     this.config = config;
 
     // 基础属性
@@ -47,7 +47,7 @@ class Item {
    * @param {ItemResolver} itemResolver 可选的ItemResolver实例，避免重复创建
    * @returns {Item} 物品实例
    */
-  static fromConfig(itemId, quantity = 1, config = null, itemResolver = null) {
+  static fromConfig(itemId, quantity = 1, config, itemResolver = null) {
     if (!config) {
       throw new Error('配置数据不存在');
     }
@@ -88,7 +88,7 @@ class Item {
    * @param {Object} config 配置对象
    * @returns {Item} 物品实例
    */
-  static createStack(itemId, quantity, config = null) {
+  static createStack(itemId, quantity, config) {
     const item = Item.fromConfig(itemId, quantity, config);
 
     if (!item.stackable && quantity > 1) {

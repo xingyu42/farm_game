@@ -7,14 +7,12 @@ import { PlantingUtils } from './PlantingUtils.js';
 import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 
 class CropCareService {
-  constructor(plantingDataService, inventoryService, landService, cropMonitorService, config, logger = null) {
+  constructor(plantingDataService, inventoryService, landService, cropMonitorService, config) {
     this.plantingDataService = plantingDataService;
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.cropMonitorService = cropMonitorService;
     this.config = config;
-    this.logger = logger || console;
-
     // 初始化依赖组件
     this.validator = new PlantingUtils(config, logger);
     this.messageBuilder = new PlantingMessageBuilder();
@@ -53,7 +51,7 @@ class CropCareService {
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
 
-        this.logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}浇水`);
+        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}浇水`);
 
         // 5. 构建返回消息
         return this.messageBuilder.buildCareMessage('water', cropName, landId, {
@@ -63,7 +61,7 @@ class CropCareService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropCareService] 浇水失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropCareService] 浇水失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('浇水', error.message);
     }
   }
@@ -131,7 +129,7 @@ class CropCareService {
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
 
-        this.logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}施肥`);
+        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}施肥`);
 
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('fertilize', cropName, landId, {
@@ -142,7 +140,7 @@ class CropCareService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropCareService] 施肥失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropCareService] 施肥失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('施肥', error.message);
     }
   }
@@ -198,7 +196,7 @@ class CropCareService {
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
 
-        this.logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}除虫`);
+        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}除虫`);
 
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('pesticide', cropName, landId, {
@@ -209,7 +207,7 @@ class CropCareService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropCareService] 除虫失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropCareService] 除虫失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('除虫', error.message);
     }
   }
@@ -328,7 +326,7 @@ class CropCareService {
           }
         }
 
-        this.logger.info(`[CropCareService] 用户${userId}批量护理了${results.length}块土地`);
+        logger.info(`[CropCareService] 用户${userId}批量护理了${results.length}块土地`);
 
         return {
           success: true,
@@ -338,7 +336,7 @@ class CropCareService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropCareService] 批量护理失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropCareService] 批量护理失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('批量护理', error.message);
     }
   }
@@ -387,7 +385,7 @@ class CropCareService {
       };
 
     } catch (error) {
-      this.logger.error(`[CropCareService] 检查护理条件失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropCareService] 检查护理条件失败 [${userId}]: ${error.message}`);
       return { success: false, message: error.message };
     }
   }

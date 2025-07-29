@@ -10,9 +10,8 @@ const _path = process.cwd();
 const PLUGIN_PATH = path.join(_path, 'plugins', PLUGIN_NAME);
 
 class Config {
-  constructor(redis = null, logger = null) {
+  constructor(redis) {
     this.redis = redis || global.redis;
-    this.logger = logger || console;
     this._configCache = {};
 
     /** 监听文件 */
@@ -156,7 +155,7 @@ class Config {
 
       return this._configCache[key];
     } catch (e) {
-      this.logger.error(`[${PLUGIN_NAME}][读取配置文件失败][${type}][${name}]：${e}`);
+      logger.error(`[${PLUGIN_NAME}][读取配置文件失败][${type}][${name}]：${e}`);
       return {};
     }
   }
@@ -175,7 +174,7 @@ class Config {
     const watcher = chokidar.watch(file);
     watcher.on('change', _path => {
       delete this._configCache[key];
-      this.logger.info(`[${PLUGIN_NAME}][修改配置文件][${type}][${name}]`);
+      logger.info(`[${PLUGIN_NAME}][修改配置文件][${type}][${name}]`);
       if (this[`change_${name}`]) {
         this[`change_${name}`]();
       }
@@ -216,7 +215,7 @@ class Config {
 
       fs.writeFileSync(filePath, doc.toString(), 'utf8');
     } catch (e) {
-      this.logger.error(`[${PLUGIN_NAME}][修改配置文件失败][${name}]：${e}`);
+      logger.error(`[${PLUGIN_NAME}][修改配置文件失败][${name}]：${e}`);
       return false;
     }
 
@@ -243,7 +242,7 @@ class Config {
 
       fs.writeFileSync(filePath, doc.toString(), 'utf8');
     } catch (e) {
-      this.logger.error(`[${PLUGIN_NAME}][删除配置文件键失败][${name}]：${e}`);
+      logger.error(`[${PLUGIN_NAME}][删除配置文件键失败][${name}]：${e}`);
       return false;
     }
 

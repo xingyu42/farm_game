@@ -17,12 +17,10 @@ import ItemResolver from '../../utils/ItemResolver.js';
 
 // {{START_MODIFICATIONS}}
 export class ProtectionService {
-  constructor(redisClient, config, playerService = null, logger = null) {
+  constructor(redisClient, config, playerService = null) {
     this.redisClient = redisClient;
     this.config = config;
     this.playerService = playerService;
-    this.logger = logger || console;
-
     // 创建 ItemResolver 实例并复用
     this.itemResolver = new ItemResolver(this.config);
   }
@@ -83,7 +81,7 @@ export class ProtectionService {
         { protection: newProtection }
       );
 
-      this.logger.info(`[ProtectionService] 玩家 ${userId} 使用 ${itemId} 狗粮，防御 ${dogFoodConfig.defenseBonus}%，持续 ${dogFoodConfig.duration} 分钟`);
+      logger.info(`[ProtectionService] 玩家 ${userId} 使用 ${itemId} 狗粮，防御 ${dogFoodConfig.defenseBonus}%，持续 ${dogFoodConfig.duration} 分钟`);
 
       return {
         success: true,
@@ -95,7 +93,7 @@ export class ProtectionService {
         message: `成功使用${dogFoodConfig.name}，获得${dogFoodConfig.defenseBonus}%防御加成，持续${dogFoodConfig.duration}分钟`
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 应用狗粮失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 应用狗粮失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -131,7 +129,7 @@ export class ProtectionService {
 
       return totalBonus;
     } catch (error) {
-      this.logger.error(`[ProtectionService] 获取防御加成失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 获取防御加成失败 [${userId}]: ${error.message}`);
       throw error; // 重新抛出错误而不是返回默认值
     }
   }
@@ -192,7 +190,7 @@ export class ProtectionService {
         isProtected: dogFoodActive || farmProtectionActive
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 获取防护状态失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 获取防护状态失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -231,7 +229,7 @@ export class ProtectionService {
         { protection: newProtection }
       );
 
-      this.logger.info(`[ProtectionService] 玩家 ${userId} 设置农场防护 ${protectionMinutes} 分钟`);
+      logger.info(`[ProtectionService] 玩家 ${userId} 设置农场防护 ${protectionMinutes} 分钟`);
 
       return {
         success: true,
@@ -240,7 +238,7 @@ export class ProtectionService {
         message: `农场防护已激活，持续${protectionMinutes}分钟`
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 设置农场防护失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 设置农场防护失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -300,7 +298,7 @@ export class ProtectionService {
           { protection: newProtection, stealing: newStealing }
         );
 
-        this.logger.info(`[ProtectionService] 清除玩家 ${userId} 过期防御效果: ${clearedEffects.join(', ')}`);
+        logger.info(`[ProtectionService] 清除玩家 ${userId} 过期防御效果: ${clearedEffects.join(', ')}`);
       }
 
       return {
@@ -308,7 +306,7 @@ export class ProtectionService {
         clearedEffects
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 清除过期防护失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 清除过期防护失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -335,7 +333,7 @@ export class ProtectionService {
         )
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 检查保护状态失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 检查保护状态失败 [${userId}]: ${error.message}`);
       throw error; // 重新抛出错误而不是返回默认值
     }
   }
@@ -357,7 +355,7 @@ export class ProtectionService {
         description: dogFoodConfig[type].description
       }));
     } catch (error) {
-      this.logger.error(`[ProtectionService] 获取狗粮类型失败: ${error.message}`);
+      logger.error(`[ProtectionService] 获取狗粮类型失败: ${error.message}`);
       throw error; // 重新抛出错误而不是返回默认值
     }
   }
@@ -384,7 +382,7 @@ export class ProtectionService {
 
       return Math.round(finalRate);
     } catch (error) {
-      this.logger.error(`[ProtectionService] 计算防御成功率失败: ${error.message}`);
+      logger.error(`[ProtectionService] 计算防御成功率失败: ${error.message}`);
       return 50; // 出错时返回默认值
     }
   }
@@ -420,14 +418,14 @@ export class ProtectionService {
         { stealing: newStealing }
       );
 
-      this.logger.info(`[ProtectionService] 玩家 ${userId} 偷菜冷却 ${cooldownMinutes} 分钟`);
+      logger.info(`[ProtectionService] 玩家 ${userId} 偷菜冷却 ${cooldownMinutes} 分钟`);
       return {
         success: true,
         endTime: newStealing.cooldownEndTime,
         cooldownMinutes
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 设置偷菜冷却失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 设置偷菜冷却失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -447,10 +445,10 @@ export class ProtectionService {
         cooldownRemaining: status.stealCooldown.remainingTime
       };
     } catch (error) {
-      this.logger.error(`[ProtectionService] 检查偷菜状态失败 [${userId}]: ${error.message}`);
+      logger.error(`[ProtectionService] 检查偷菜状态失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
 }
 
-// {{END_MODIFICATIONS}}
+export default ProtectionService;

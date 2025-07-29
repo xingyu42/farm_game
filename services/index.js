@@ -36,14 +36,13 @@ class ServiceContainer {
   constructor() {
     this.services = {};
     this.initialized = false;
-    this.logger = null;
   }
 
   /**
    * 初始化所有服务（增强版本）
    * @param {Object} config 配置对象
    */
-  async init(config = null) {
+  async init(config) {
     if (this.initialized) {
       return;
     }
@@ -54,10 +53,8 @@ class ServiceContainer {
         config = Config;
       }
 
-      // 创建日志器（使用默认console或现有全局logger）
-      this.logger = console;
 
-      this.logger.info('开始初始化服务容器...');
+      logger.info('开始初始化服务容器...');
 
       // 注册工具类服务
       this.services.commonUtils = CommonUtils;
@@ -156,7 +153,6 @@ class ServiceContainer {
         redisClient,
         config,
         this.services.playerService,
-        this.logger
       );
 
       // 实例化MarketService（增强版本，市场动态定价服务）
@@ -164,7 +160,6 @@ class ServiceContainer {
         redisClient,
         config,
         this.services.playerService,
-        this.logger
       );
 
       // 实例化MarketScheduler（增强版本，带Redis分布式锁保护）
@@ -172,19 +167,18 @@ class ServiceContainer {
         this.services.marketService,
         redisClient,
         config,
-        this.logger
       );
 
       this.initialized = true;
-      this.logger.info('服务容器初始化完成');
+      logger.info('服务容器初始化完成');
 
       // 初始化市场数据
       if (this.services.marketService) {
         try {
           await this.services.marketService.initializeMarketData();
-          this.logger.info('市场数据初始化完成');
+          logger.info('市场数据初始化完成');
         } catch (error) {
-          this.logger.error('市场数据初始化失败', { error: error.message });
+          logger.error('市场数据初始化失败', { error: error.message });
         }
       }
 
@@ -192,9 +186,9 @@ class ServiceContainer {
       if (this.services.dataBackupService) {
         try {
           await this.services.dataBackupService.start();
-          this.logger.info('数据备份服务已启动');
+          logger.info('数据备份服务已启动');
         } catch (error) {
-          this.logger.error('数据备份服务启动失败', { error: error.message });
+          logger.error('数据备份服务启动失败', { error: error.message });
         }
       }
 
@@ -202,20 +196,16 @@ class ServiceContainer {
       if (this.services.marketScheduler) {
         try {
           this.services.marketScheduler.start();
-          this.logger.info('市场任务调度器已启动');
+          logger.info('市场任务调度器已启动');
         } catch (error) {
-          this.logger.error('市场任务调度器启动失败', { error: error.message });
+          logger.error('市场任务调度器启动失败', { error: error.message });
         }
       }
 
-      this.logger.info('所有服务和任务已启动完毕');
+      logger.info('所有服务和任务已启动完毕');
 
     } catch (error) {
-      if (this.logger) {
-        this.logger.error('服务容器初始化失败', { error: error.message, stack: error.stack });
-      } else {
-        console.error('服务容器初始化失败:', error);
-      }
+      logger.error('服务容器初始化失败', { error: error.message, stack: error.stack });
       throw error;
     }
   }

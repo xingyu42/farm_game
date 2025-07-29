@@ -7,13 +7,11 @@ import PlayerDataService from './PlayerDataService.js';
 import LevelCalculator from './LevelCalculator.js';
 
 class EconomyService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
-
         // 初始化数据服务
-        this.dataService = new PlayerDataService(redisClient, config, logger);
+        this.dataService = new PlayerDataService(redisClient, config);
 
         // 初始化等级计算器
         this.levelCalculator = new LevelCalculator(config);
@@ -52,11 +50,11 @@ class EconomyService {
                 const serializer = this.dataService.getSerializer();
                 multi.hSet(playerKey, serializer.serializeForHash(playerData));
 
-                this.logger.info(`[EconomyService] 玩家 ${userId} 金币变化: ${amount > 0 ? '+' : ''}${actualChange}, 当前: ${newCoins}`);
+                logger.info(`[EconomyService] 玩家 ${userId} 金币变化: ${amount > 0 ? '+' : ''}${actualChange}, 当前: ${newCoins}`);
                 return playerData;
             });
         } catch (error) {
-            this.logger.error(`[EconomyService] 添加金币失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 添加金币失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -99,10 +97,10 @@ class EconomyService {
                 const serializer = this.dataService.getSerializer();
                 multi.hSet(playerKey, serializer.serializeForHash(playerData));
 
-                this.logger.info(`[EconomyService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
+                logger.info(`[EconomyService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
 
                 if (levelUpInfo) {
-                    this.logger.info(`[EconomyService] 玩家 ${userId} 升级: ${oldLevel} -> ${newLevel}`);
+                    logger.info(`[EconomyService] 玩家 ${userId} 升级: ${oldLevel} -> ${newLevel}`);
                 }
 
                 return {
@@ -111,7 +109,7 @@ class EconomyService {
                 };
             });
         } catch (error) {
-            this.logger.error(`[EconomyService] 添加经验失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 添加经验失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -165,7 +163,7 @@ class EconomyService {
                 maxInventoryCapacity: playerData.maxInventoryCapacity
             };
         } catch (error) {
-            this.logger.error(`[EconomyService] 获取等级信息失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 获取等级信息失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -198,7 +196,7 @@ class EconomyService {
                 shortage: hasEnough ? 0 : amount - playerData.coins
             };
         } catch (error) {
-            this.logger.error(`[EconomyService] 检查金币失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 检查金币失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -269,7 +267,7 @@ class EconomyService {
                 deductedAmount: amount
             };
         } catch (error) {
-            this.logger.error(`[EconomyService] 扣除金币失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 扣除金币失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -298,7 +296,7 @@ class EconomyService {
 
             return this.levelCalculator.getExpToLevel(playerData.experience, targetLevel);
         } catch (error) {
-            this.logger.error(`[EconomyService] 计算升级经验失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 计算升级经验失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -325,7 +323,7 @@ class EconomyService {
                 currentExp: playerData.experience
             };
         } catch (error) {
-            this.logger.error(`[EconomyService] 获取财务统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[EconomyService] 获取财务统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }

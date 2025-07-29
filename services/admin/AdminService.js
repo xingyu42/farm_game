@@ -1,11 +1,10 @@
 // services/AdminService.js
 
 class AdminService {
-  constructor(redisClient, config, playerService, logger = null) {
+  constructor(redisClient, config, playerService) {
     this.redis = redisClient;
     this.config = config;
     this.playerService = playerService;
-    this.logger = logger || console;
   }
 
   /**
@@ -17,13 +16,13 @@ class AdminService {
     try {
       const success = await this.playerService.deletePlayer(targetId);
       if (success) {
-        this.logger.info(`[AdminService] 成功重置玩家 [${targetId}]`);
+        logger.info(`[AdminService] 成功重置玩家 [${targetId}]`);
         return { success: true, message: `玩家 ${targetId} 的数据已重置。` };
       } else {
         return { success: false, message: '重置失败，可能玩家数据已不存在。' };
       }
     } catch (error) {
-      this.logger.error(`[AdminService] 重置玩家失败 [${targetId}]: ${error.message}`);
+      logger.error(`[AdminService] 重置玩家失败 [${targetId}]: ${error.message}`);
       return { success: false, message: `重置玩家失败: ${error.message}` };
     }
   }
@@ -49,13 +48,13 @@ class AdminService {
       // 使用PlayerManagerService的安全接口（内置事务保护）
       const updatedPlayer = await this.playerService.addCoins(targetId, amount);
 
-      this.logger.info(`[AdminService] 为玩家 [${targetId}] 添加了 ${amount} 金币`);
+      logger.info(`[AdminService] 为玩家 [${targetId}] 添加了 ${amount} 金币`);
       return {
         success: true,
         message: `成功为玩家 ${targetId} 添加了 ${amount} 金币，当前总计: ${updatedPlayer.coins}`
       };
     } catch (error) {
-      this.logger.error(`[AdminService] 添加金币失败 [${targetId}]: ${error.message}`);
+      logger.error(`[AdminService] 添加金币失败 [${targetId}]: ${error.message}`);
       return { success: false, message: `添加金币失败: ${error.message}` };
     }
   }
@@ -83,7 +82,7 @@ class AdminService {
       const updatedPlayer = result.player;
       const levelUpInfo = result.levelUp;
 
-      this.logger.info(`[AdminService] 为玩家 [${targetId}] 添加了 ${amount} 经验`);
+      logger.info(`[AdminService] 为玩家 [${targetId}] 添加了 ${amount} 经验`);
 
       let message = `成功为玩家 ${targetId} 添加了 ${amount} 经验，当前总计: ${updatedPlayer.experience}。`;
       if (levelUpInfo && levelUpInfo.didLevelUp) {
@@ -92,7 +91,7 @@ class AdminService {
 
       return { success: true, message };
     } catch (error) {
-      this.logger.error(`[AdminService] 添加经验失败 [${targetId}]: ${error.message}`);
+      logger.error(`[AdminService] 添加经验失败 [${targetId}]: ${error.message}`);
       return { success: false, message: `添加经验失败: ${error.message}` };
     }
   }
@@ -123,10 +122,10 @@ class AdminService {
       player.lands[landId - 1].quality = quality;
       await this.playerService.getDataService().savePlayerToHash(targetId, player);
 
-      this.logger.info(`[AdminService] 将玩家 [${targetId}] 的土地 ${landId} 品质设置为 ${quality}`);
+      logger.info(`[AdminService] 将玩家 [${targetId}] 的土地 ${landId} 品质设置为 ${quality}`);
       return { success: true, message: `已将玩家 ${targetId} 的土地 ${landId} 品质设置为 ${quality}。` };
     } catch (error) {
-      this.logger.error(`[AdminService] 设置土地品质失败 [${targetId}, ${landId}]: ${error.message}`);
+      logger.error(`[AdminService] 设置土地品质失败 [${targetId}, ${landId}]: ${error.message}`);
       return { success: false, message: `设置土地品质失败: ${error.message}` };
     }
   }
@@ -139,7 +138,7 @@ class AdminService {
     // This typically needs to be handled at a higher level, 
     // where the config object is initially loaded and passed to services.
     // For now, we simulate this by logging.
-    this.logger.info('[AdminService] 请求重载配置文件。实际操作需在主插件逻辑中实现。');
+    logger.info('[AdminService] 请求重载配置文件。实际操作需在主插件逻辑中实现。');
     return { success: true, message: '已发送重载配置请求。' };
   }
 }

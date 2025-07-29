@@ -6,11 +6,9 @@
 import PlayerDataService from './PlayerDataService.js';
 
 class PlayerStatsService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
-
         // 初始化数据服务
         this.dataService = new PlayerDataService(redisClient, config, logger);
     }
@@ -46,7 +44,7 @@ class PlayerStatsService {
                 return playerData;
             });
         } catch (error) {
-            this.logger.error(`[StatisticsService] 更新统计数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 更新统计数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -74,7 +72,7 @@ class PlayerStatsService {
                 lastActiveTime: playerData.lastActiveTime
             };
         } catch (error) {
-            this.logger.error(`[StatisticsService] 获取统计数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 获取统计数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -92,9 +90,9 @@ class PlayerStatsService {
                 moneyEarned: value
             });
 
-            this.logger.info(`[StatisticsService] 玩家 ${userId} 收获统计: +${amount} 作物, +${value} 金币`);
+            logger.info(`[StatisticsService] 玩家 ${userId} 收获统计: +${amount} 作物, +${value} 金币`);
         } catch (error) {
-            this.logger.error(`[StatisticsService] 更新收获统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 更新收获统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -111,9 +109,9 @@ class PlayerStatsService {
                 stolenFrom: amount
             });
 
-            this.logger.info(`[StatisticsService] 玩家 ${userId} 被偷统计: +${amount} 作物`);
+            logger.info(`[StatisticsService] 玩家 ${userId} 被偷统计: +${amount} 作物`);
         } catch (error) {
-            this.logger.error(`[StatisticsService] 更新被偷统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 更新被偷统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -131,9 +129,9 @@ class PlayerStatsService {
                 moneyEarned: value
             });
 
-            this.logger.info(`[StatisticsService] 玩家 ${userId} 偷取统计: +${amount} 作物, +${value} 金币`);
+            logger.info(`[StatisticsService] 玩家 ${userId} 偷取统计: +${amount} 作物, +${value} 金币`);
         } catch (error) {
-            this.logger.error(`[StatisticsService] 更新偷取统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 更新偷取统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -150,9 +148,9 @@ class PlayerStatsService {
                 moneySpent: amount
             });
 
-            this.logger.info(`[StatisticsService] 玩家 ${userId} 消费统计: +${amount} 金币 (${category})`);
+            logger.info(`[StatisticsService] 玩家 ${userId} 消费统计: +${amount} 金币 (${category})`);
         } catch (error) {
-            this.logger.error(`[StatisticsService] 更新消费统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 更新消费统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -182,7 +180,7 @@ class PlayerStatsService {
                 landCount: playerData.landCount
             };
         } catch (error) {
-            this.logger.error(`[StatisticsService] 获取排行榜数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 获取排行榜数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -256,7 +254,7 @@ class PlayerStatsService {
                 }
             };
         } catch (error) {
-            this.logger.error(`[StatisticsService] 获取详细报告失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 获取详细报告失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -297,7 +295,7 @@ class PlayerStatsService {
 
             await this.dataService.updateComplexField(userId, 'statistics', resetStats.statistics);
 
-            this.logger.info(`[StatisticsService] 重置玩家 ${userId} 统计数据: ${statsToReset.join(', ') || '全部'}`);
+            logger.info(`[StatisticsService] 重置玩家 ${userId} 统计数据: ${statsToReset.join(', ') || '全部'}`);
 
             return {
                 success: true,
@@ -305,7 +303,7 @@ class PlayerStatsService {
                 resetStats: statsToReset.length === 0 ? '全部' : statsToReset
             };
         } catch (error) {
-            this.logger.error(`[StatisticsService] 重置统计数据失败 [${userId}]: ${error.message}`);
+            logger.error(`[StatisticsService] 重置统计数据失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }

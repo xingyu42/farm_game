@@ -8,7 +8,7 @@ seeds:
     price: 5
     sellPrice: 2
     category: "seeds"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     description: "常见的蔬菜种子"
 
   tomato_seed:
@@ -16,7 +16,7 @@ seeds:
     price: 8
     sellPrice: 3
     category: "seeds"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     description: "营养丰富的蔬菜种子"
 
   wheat_seed:
@@ -24,7 +24,7 @@ seeds:
     price: 3
     sellPrice: 1
     category: "seeds"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     description: "基础的谷物种子"
 
 # 肥料配置
@@ -145,21 +145,24 @@ landMaterials:
 crops:
   carrot:
     name: "胡萝卜"
+    price: 16 # 市场基准买价（通常是sellPrice的2倍）
     sellPrice: 8
     category: "crops"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     baseExp: 5
   tomato:
     name: "西红柿"
+    price: 24 # 市场基准买价（通常是sellPrice的2倍）
     sellPrice: 12
     category: "crops"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     baseExp: 8
   wheat:
     name: "小麦"
+    price: 10 # 市场基准买价（通常是sellPrice的2倍）
     sellPrice: 5
     category: "crops"
-    is_dynamic_price: true    # 启用动态定价
+    is_dynamic_price: true # 启用动态定价
     baseExp: 3
 # 商店分类显示
 shop:
@@ -212,10 +215,9 @@ inventory:
     common: 1
   # 稀有度图标配置
   rarityIcons:
-    mythic: '💎'
-    legendary: '🟡'
-    epic: '🟣'
-    rare: '🔵'
-    uncommon: '🟢'
-    common: '⚪'
-
+    mythic: "💎"
+    legendary: "🟡"
+    epic: "🟣"
+    rare: "🔵"
+    uncommon: "🟢"
+    common: "⚪"

@@ -8,17 +8,15 @@ import { PlantingUtils } from './PlantingUtils.js';
 import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 
 class CropPlantingService {
-  constructor(plantingDataService, inventoryService, landService, cropMonitorService, config, logger = null) {
+  constructor(plantingDataService, inventoryService, landService, cropMonitorService, config) {
     this.plantingDataService = plantingDataService;
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.cropMonitorService = cropMonitorService;
     this.config = config;
-    this.logger = logger || console;
-
     // 初始化依赖组件
     this.calculator = new Calculator(config);
-    this.validator = new PlantingUtils(config, logger);
+    this.validator = new PlantingUtils(config);
     this.messageBuilder = new PlantingMessageBuilder();
   }
 
@@ -85,7 +83,7 @@ class CropPlantingService {
         // 8. 添加到收获计划
         await this.cropScheduleService.addHarvestSchedule(userId, landId, harvestTime);
 
-        this.logger.info(`[CropPlantingService] 用户${userId}在第${landId}块土地种植了${cropConfig.name}`);
+        logger.info(`[CropPlantingService] 用户${userId}在第${landId}块土地种植了${cropConfig.name}`);
 
         // 9. 构建返回消息
         return this.messageBuilder.buildPlantingMessage(
@@ -100,7 +98,7 @@ class CropPlantingService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropPlantingService] 种植失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropPlantingService] 种植失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('种植', error.message);
     }
   }
@@ -197,7 +195,7 @@ class CropPlantingService {
         // 5. 批量更新土地
         await this.plantingDataService.updateMultipleLands(userId, landUpdates);
 
-        this.logger.info(`[CropPlantingService] 用户${userId}批量种植了${results.length}块土地`);
+        logger.info(`[CropPlantingService] 用户${userId}批量种植了${results.length}块土地`);
 
         return {
           success: true,
@@ -207,7 +205,7 @@ class CropPlantingService {
       });
 
     } catch (error) {
-      this.logger.error(`[CropPlantingService] 批量种植失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropPlantingService] 批量种植失败 [${userId}]: ${error.message}`);
       return this.messageBuilder.buildErrorMessage('批量种植', error.message);
     }
   }
@@ -254,7 +252,7 @@ class CropPlantingService {
       };
 
     } catch (error) {
-      this.logger.error(`[CropPlantingService] 检查种植条件失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropPlantingService] 检查种植条件失败 [${userId}]: ${error.message}`);
       return { success: false, message: error.message };
     }
   }
@@ -291,7 +289,7 @@ class CropPlantingService {
       };
 
     } catch (error) {
-      this.logger.error(`[CropPlantingService] 获取可种植作物失败 [${userId}]: ${error.message}`);
+      logger.error(`[CropPlantingService] 获取可种植作物失败 [${userId}]: ${error.message}`);
       return { success: false, message: error.message };
     }
   }

@@ -6,11 +6,9 @@
 import PlayerDataService from './PlayerDataService.js';
 
 class SignInService {
-    constructor(redisClient, config, logger = null) {
+    constructor(redisClient, config) {
         this.redis = redisClient;
         this.config = config;
-        this.logger = logger || console;
-
         // 初始化数据服务
         this.dataService = new PlayerDataService(redisClient, config, logger);
     }
@@ -66,7 +64,7 @@ class SignInService {
                 const serializer = this.dataService.getSerializer();
                 multi.hSet(playerKey, serializer.serializeForHash(playerData));
 
-                this.logger.info(`[SignInService] 玩家 ${userId} 签到成功，连续 ${playerData.signIn.consecutiveDays} 天`);
+                logger.info(`[SignInService] 玩家 ${userId} 签到成功，连续 ${playerData.signIn.consecutiveDays} 天`);
 
                 return {
                     success: true,
@@ -78,7 +76,7 @@ class SignInService {
                 };
             });
         } catch (error) {
-            this.logger.error(`[SignInService] 签到失败 [${userId}]: ${error.message}`);
+            logger.error(`[SignInService] 签到失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -165,7 +163,7 @@ class SignInService {
                 canSignIn: !hasSignedToday
             };
         } catch (error) {
-            this.logger.error(`[SignInService] 获取签到状态失败 [${userId}]: ${error.message}`);
+            logger.error(`[SignInService] 获取签到状态失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -205,7 +203,7 @@ class SignInService {
                 lastSignDate: playerData.signIn.lastSignDate
             };
         } catch (error) {
-            this.logger.error(`[SignInService] 获取签到统计失败 [${userId}]: ${error.message}`);
+            logger.error(`[SignInService] 获取签到统计失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }
@@ -242,7 +240,7 @@ class SignInService {
                 reason: status.canSignIn ? '可以签到' : '今日已签到'
             };
         } catch (error) {
-            this.logger.error(`[SignInService] 检查签到状态失败 [${userId}]: ${error.message}`);
+            logger.error(`[SignInService] 检查签到状态失败 [${userId}]: ${error.message}`);
             return {
                 canSignIn: false,
                 reason: '检查失败'
@@ -270,7 +268,7 @@ class SignInService {
             await this.dataService.updateComplexField(userId, 'signIn', playerData.signIn);
             await this.dataService.updateSimpleField(userId, 'lastUpdated', playerData.lastUpdated);
 
-            this.logger.info(`[SignInService] 重置玩家 ${userId} 连续签到天数: ${oldConsecutiveDays} -> 0`);
+            logger.info(`[SignInService] 重置玩家 ${userId} 连续签到天数: ${oldConsecutiveDays} -> 0`);
 
             return {
                 success: true,
@@ -279,7 +277,7 @@ class SignInService {
                 newConsecutiveDays: 0
             };
         } catch (error) {
-            this.logger.error(`[SignInService] 重置连续签到失败 [${userId}]: ${error.message}`);
+            logger.error(`[SignInService] 重置连续签到失败 [${userId}]: ${error.message}`);
             throw error;
         }
     }

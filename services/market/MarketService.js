@@ -11,18 +11,15 @@
  * 
  * @version 2.0.0 - 增强版，解决代码重复和性能问题
  */
-import ItemResolver from '../utils/ItemResolver.js';
-import { CommonUtils } from '../utils/CommonUtils.js';
+import ItemResolver from '../../utils/ItemResolver.js';
+import { CommonUtils } from '../../utils/CommonUtils.js';
 
 export class MarketService {
-  constructor(redisClient, config, playerService, logger = null) {
+  constructor(redisClient, config, playerService) {
     this.redis = redisClient;
     this.config = config;
     this.playerService = playerService;
     this.itemResolver = new ItemResolver(config);
-
-    // 创建标准化日志器
-    this.logger = logger;
 
     // 获取批量处理配置
     const marketConfig = this.config.market;
@@ -46,7 +43,7 @@ export class MarketService {
   async initializeMarketData() {
     try {
       const floatingItems = this._getFloatingPriceItems();
-      this.logger.info(`[MarketService] 开始初始化 ${floatingItems.length} 个浮动价格物品的市场数据`);
+      logger.info(`[MarketService] 开始初始化 ${floatingItems.length} 个浮动价格物品的市场数据`);
 
       for (const itemId of floatingItems) {
         const statsKey = `market:stats:${itemId}`;
@@ -59,8 +56,20 @@ export class MarketService {
             const basePrice = itemInfo.price;
             const baseSellPrice = itemInfo.sellPrice;
 
+            // 验证价格数据完整性
+            if (basePrice === undefined || baseSellPrice === undefined) {
+              logger.warn(`[MarketService] 物品 ${itemId} 价格数据不完整: price=${basePrice}, sellPrice=${baseSellPrice}`);
+              continue;
+            }
+
+            // 验证价格数据有效性
+            if (typeof basePrice !== 'number' || typeof baseSellPrice !== 'number' || basePrice <= 0 || baseSellPrice <= 0) {
+              logger.warn(`[MarketService] 物品 ${itemId} 价格数据无效: price=${basePrice}, sellPrice=${baseSellPrice}`);
+              continue;
+            }
+
             // 初始化市场统计数据
-            await this.redis.hMSet(statsKey, {
+            await this.redis.hSet(statsKey, {
               base_price: basePrice.toString(),
               current_price: basePrice.toString(),
               current_sell_price: baseSellPrice.toString(),
@@ -71,7 +80,9 @@ export class MarketService {
               price_history: JSON.stringify([basePrice])
             });
 
-            this.logger.info(`[MarketService] 初始化物品 ${itemId} 市场数据: 基准价=${basePrice}, 出售价=${baseSellPrice}`);
+            logger.info(`[MarketService] 初始化物品 ${itemId} 市场数据: 基准价=${basePrice}, 出售价=${baseSellPrice}`);
+          } else {
+            logger.warn(`[MarketService] 物品 ${itemId} 配置信息不存在，跳过初始化`);
           }
         }
       }
@@ -79,9 +90,9 @@ export class MarketService {
       // 初始化市场配置
       await this._initializeMarketConfig();
 
-      this.logger.info('[MarketService] 市场数据初始化完成');
+      logger.info('[MarketService] 市场数据初始化完成');
     } catch (error) {
-      this.logger.error(`[MarketService] 市场数据初始化失败: ${error.message}`);
+      logger.error(`[MarketService] 市场数据初始化失败: ${error.message}`);
       throw error;
     }
   }
@@ -116,7 +127,7 @@ export class MarketService {
       const floatingItems = marketConfig.floating_items.items;
       return floatingItems.includes(itemId);
     } catch (error) {
-      this.logger.warn(`[MarketService] 检查浮动价格物品失败 [${itemId}]: ${error.message}`);
+      logger.warn(`[MarketService] 检查浮动价格物品失败 [${itemId}]: ${error.message}`);
       return false;
     }
   }
@@ -147,10 +158,10 @@ export class MarketService {
       }
 
       // 降级到静态价格
-      this.logger.warn(`[MarketService] 获取动态价格失败，使用静态价格 [${itemId}]`);
+      logger.warn(`[MarketService] 获取动态价格失败，使用静态价格 [${itemId}]`);
       return this._getStaticPrice(itemId, priceType);
     } catch (error) {
-      this.logger.error(`[MarketService] 获取物品价格失败 [${itemId}]: ${error.message}`);
+      logger.error(`[MarketService] 获取物品价格失败 [${itemId}]: ${error.message}`);
       // 降级到静态价格
       return this._getStaticPrice(itemId, priceType);
     }
@@ -207,7 +218,7 @@ export class MarketService {
             isDynamic: true
           });
         } catch (error) {
-          this.logger.error(`获取物品 ${itemId} 市场数据失败: ${error.message}`);
+          logger.error(`获取物品 ${itemId} 市场数据失败: ${error.message}`);
           // 继续处理其他物品
         }
       }
@@ -224,7 +235,7 @@ export class MarketService {
 
       return marketData.sort((a, b) => a.category.localeCompare(b.category));
     } catch (error) {
-      this.logger.error(`获取市场显示数据失败: ${error.message}`);
+      logger.error(`获取市场显示数据失败: ${error.message}`);
       return [];
     }
   }
@@ -253,9 +264,9 @@ export class MarketService {
 
       await multi.exec();
 
-      this.logger.info(`[MarketService] 记录交易统计: ${itemId} ${transactionType} ${quantity}`);
+      logger.info(`[MarketService] 记录交易统计: ${itemId} ${transactionType} ${quantity}`);
     } catch (error) {
-      this.logger.error(`[MarketService] 记录交易统计失败 [${itemId}]: ${error.message}`);
+      logger.error(`[MarketService] 记录交易统计失败 [${itemId}]: ${error.message}`);
       // 不抛出错误，避免影响主要交易流程
     }
   }
@@ -303,7 +314,7 @@ export class MarketService {
 
       return Array.from(floatingItems);
     } catch (error) {
-      this.logger.error(`[MarketService] 获取浮动价格物品列表失败: ${error.message}`);
+      logger.error(`[MarketService] 获取浮动价格物品列表失败: ${error.message}`);
       return [];
     }
   }
@@ -319,13 +330,26 @@ export class MarketService {
     try {
       const itemInfo = this.itemResolver.getItemInfo(itemId);
       if (!itemInfo) {
-        this.logger.warn(`[MarketService] 物品 ${itemId} 不存在`);
+        logger.warn(`[MarketService] 物品 ${itemId} 不存在`);
         return 0;
       }
 
-      return priceType === 'buy' ? itemInfo.price : itemInfo.sellPrice;
+      const price = priceType === 'buy' ? itemInfo.price : itemInfo.sellPrice;
+
+      // 检查价格是否存在且有效
+      if (price === undefined || price === null) {
+        logger.warn(`[MarketService] 物品 ${itemId} 缺少 ${priceType} 价格配置`);
+        return 0;
+      }
+
+      if (typeof price !== 'number' || price <= 0) {
+        logger.warn(`[MarketService] 物品 ${itemId} 的 ${priceType} 价格配置无效: ${price}`);
+        return 0;
+      }
+
+      return price;
     } catch (error) {
-      this.logger.error(`[MarketService] 获取静态价格失败 [${itemId}]: ${error.message}`);
+      logger.error(`[MarketService] 获取静态价格失败 [${itemId}]: ${error.message}`);
       return 0;
     }
   }
@@ -340,7 +364,7 @@ export class MarketService {
       const marketConfig = this.config.market;
       return marketConfig.enabled !== false; // 默认启用
     } catch (error) {
-      this.logger.warn(`[MarketService] 检查动态定价开关失败: ${error.message}`);
+      logger.warn(`[MarketService] 检查动态定价开关失败: ${error.message}`);
       return false;
     }
   }
@@ -360,26 +384,26 @@ export class MarketService {
 
     try {
       if (!this._isDynamicPricingEnabled()) {
-        this.logger.info('动态定价功能已禁用，跳过价格更新');
+        logger.info('动态定价功能已禁用，跳过价格更新');
         return { success: true, reason: 'disabled', updatedCount: 0 };
       }
 
       const floatingItems = this._getFloatingPriceItems();
-      this.logger.info(`开始更新 ${floatingItems.length} 个浮动价格物品的价格`);
+      logger.info(`开始更新 ${floatingItems.length} 个浮动价格物品的价格`);
 
       let result;
 
       // 根据物品数量选择处理策略
       if (floatingItems.length > this.batchSize) {
-        this.logger.info(`物品数量 ${floatingItems.length} 超过批次大小 ${this.batchSize}，使用批量处理`);
+        logger.info(`物品数量 ${floatingItems.length} 超过批次大小 ${this.batchSize}，使用批量处理`);
         result = await this._batchUpdatePrices(floatingItems);
       } else {
-        this.logger.info(`物品数量 ${floatingItems.length} 未超过批次大小，使用直接处理`);
+        logger.info(`物品数量 ${floatingItems.length} 未超过批次大小，使用直接处理`);
         result = await this._directUpdatePrices(floatingItems);
       }
 
       const duration = Date.now() - startTime;
-      this.logger.info(`价格更新完成，耗时: ${duration}ms, 总计物品: ${floatingItems.length}, 更新数量: ${result.updatedCount}`);
+      logger.info(`价格更新完成，耗时: ${duration}ms, 总计物品: ${floatingItems.length}, 更新数量: ${result.updatedCount}`);
 
       // 更新性能统计
       this._updatePerformanceStats(result.updatedCount, duration);
@@ -399,7 +423,7 @@ export class MarketService {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error('价格更新失败', {
+      logger.error('价格更新失败', {
         error: error.message,
         duration: `${duration}ms`,
         stack: error.stack
@@ -429,13 +453,13 @@ export class MarketService {
             return await this._updateSingleItemPrice(itemId);
           } catch (error) {
             errors.push({ itemId, error: error.message });
-            this.logger.error(`批量处理中物品 ${itemId} 价格更新失败`, { error: error.message });
+            logger.error(`批量处理中物品 ${itemId} 价格更新失败`, { error: error.message });
             return { updated: false, itemId, error: error.message };
           }
         },
         this.batchSize,
         (progress) => {
-          this.logger.info(`价格更新进度: ${progress.progress.toFixed(1)}% (${progress.completed}/${progress.total} 批次)`);
+          logger.info(`价格更新进度: ${progress.progress.toFixed(1)}% (${progress.completed}/${progress.total} 批次)`);
         }
       );
 
@@ -452,7 +476,7 @@ export class MarketService {
       return { updatedCount, priceChanges, errors };
 
     } catch (error) {
-      this.logger.error('批量价格更新失败', { error: error.message });
+      logger.error('批量价格更新失败', { error: error.message });
       throw error;
     }
   }
@@ -495,7 +519,7 @@ export class MarketService {
           if (stats && Object.keys(stats).length > 0) {
             const updateData = this._calculateAndValidatePrice(stats, itemId);
             if (updateData) {
-              updatePipeline.hMSet(`market:stats:${itemId}`, updateData.redis);
+              updatePipeline.hSet(`market:stats:${itemId}`, updateData.redis);
               updateOperations.push({ itemId, ...updateData });
               updatedCount++;
 
@@ -504,22 +528,22 @@ export class MarketService {
               }
             }
           } else {
-            this.logger.warn(`物品 ${itemId} 缺少统计数据，跳过更新`);
+            logger.warn(`物品 ${itemId} 缺少统计数据，跳过更新`);
           }
         } catch (error) {
           errors.push({ itemId, error: error.message });
-          this.logger.error(`物品 ${itemId} 价格计算失败`, { error: error.message });
+          logger.error(`物品 ${itemId} 价格计算失败`, { error: error.message });
         }
       }
 
       // 执行批量更新
       if (updateOperations.length > 0) {
         await updatePipeline.exec();
-        this.logger.debug(`批量更新了 ${updateOperations.length} 个物品的价格`);
+        logger.debug(`批量更新了 ${updateOperations.length} 个物品的价格`);
       }
 
     } catch (error) {
-      this.logger.error('直接价格更新失败', { error: error.message });
+      logger.error('直接价格更新失败', { error: error.message });
       throw error;
     }
 
@@ -547,7 +571,7 @@ export class MarketService {
       // 计算新价格
       const calculatedPrice = this._calculatePriceFromSupplyDemand(basePrice, demand, supply);
       const clampedBuyPrice = this._clampPrice(calculatedPrice, basePrice);
-      
+
       // 获取售价比例配置，默认为0.5
       const sellPriceRatio = this.config.market?.pricing?.sell_price_ratio;
       const newSellPrice = clampedBuyPrice * sellPriceRatio;
@@ -603,7 +627,7 @@ export class MarketService {
     this.stats.lastUpdateTime = Date.now();
 
     // 记录性能指标
-    this.logger.logMetric('priceUpdateDuration', duration, {
+    logger.logMetric('priceUpdateDuration', duration, {
       updatedCount,
       averageTime: this.stats.averageUpdateTime.toFixed(2)
     });
@@ -626,7 +650,7 @@ export class MarketService {
 
     // 总耗时告警
     if (duration > maxTotalDuration) {
-      this.logger.warn('价格更新耗时过长', {
+      logger.warn('价格更新耗时过长', {
         duration: `${duration}ms`,
         threshold: `${maxTotalDuration}ms`,
         itemCount,
@@ -636,7 +660,7 @@ export class MarketService {
 
     // 单项平均耗时告警
     if (avgTimePerItem > maxAvgTimePerItem) {
-      this.logger.warn('单项价格更新平均耗时过长', {
+      logger.warn('单项价格更新平均耗时过长', {
         avgTimePerItem: `${avgTimePerItem.toFixed(2)}ms`,
         threshold: `${maxAvgTimePerItem}ms`,
         itemCount,
@@ -667,7 +691,7 @@ export class MarketService {
       // 获取市场配置
       const marketConfig = this.config.market;
       const sensitivity = marketConfig.pricing.sensitivity;
-      
+
       // 获取极端比率配置，提供默认值
       const pricingConfig = marketConfig.pricing;
       const maxRatio = pricingConfig.extreme_ratio_max; // 极端比率上限
@@ -679,15 +703,15 @@ export class MarketService {
       if (supply === 0) {
         // 零供应量：高需求系数或平衡状态
         ratio = demand > 0 ? maxRatio : 1;
-        this.logger.debug(`零供应情况: demand=${demand}, 使用比率=${ratio}`);
+        logger.debug(`零供应情况: demand=${demand}, 使用比率=${ratio}`);
       } else if (demand === 0) {
         // 零需求量：低需求系数
         ratio = minRatio;
-        this.logger.debug(`零需求情况: supply=${supply}, 使用比率=${ratio}`);
+        logger.debug(`零需求情况: supply=${supply}, 使用比率=${ratio}`);
       } else {
         // 正常情况：计算供需比率
         ratio = demand / supply;
-        this.logger.debug(`正常供需情况: demand=${demand}, supply=${supply}, ratio=${ratio}`);
+        logger.debug(`正常供需情况: demand=${demand}, supply=${supply}, ratio=${ratio}`);
       }
 
       // 限制比率在合理范围内
@@ -699,7 +723,7 @@ export class MarketService {
       // 计算新价格
       const newPrice = basePrice * (1 + adjustment);
 
-      this.logger.debug(`价格计算详情`, {
+      logger.debug(`价格计算详情`, {
         basePrice,
         demand,
         supply,
@@ -745,7 +769,7 @@ export class MarketService {
       // 验证最终价格
       CommonUtils.validatePrice(finalPrice, 'final clamped price');
 
-      this.logger.debug(`价格限制详情`, {
+      logger.debug(`价格限制详情`, {
         calculatedPrice: calculatedPrice.toFixed(2),
         basePrice: basePrice.toFixed(2),
         minPrice: minPrice.toFixed(2),
@@ -779,7 +803,7 @@ export class MarketService {
 
       // 计算价格变化百分比
       const changePercent = ((newPrice - oldPrice) / oldPrice) * 100;
-      
+
       // 获取稳定性阈值配置，默认为2%
       const stabilityThreshold = this.config.market?.pricing?.stability_threshold;
 
@@ -792,7 +816,7 @@ export class MarketService {
         trend = 'falling';
       }
 
-      this.logger.debug(`趋势计算详情`, {
+      logger.debug(`趋势计算详情`, {
         oldPrice: oldPrice.toFixed(2),
         newPrice: newPrice.toFixed(2),
         changePercent: changePercent.toFixed(2),
@@ -824,19 +848,19 @@ export class MarketService {
         const parsed = JSON.parse(historyString);
         if (Array.isArray(parsed)) {
           // 过滤有效的数值价格
-          history = parsed.filter(price => 
-            typeof price === 'number' && 
-            isFinite(price) && 
+          history = parsed.filter(price =>
+            typeof price === 'number' &&
+            isFinite(price) &&
             price >= 0
           );
         } else {
-          this.logger.warn('价格历史数据格式错误，重新创建历史数组', { parsed });
+          logger.warn('价格历史数据格式错误，重新创建历史数组', { parsed });
           history = [];
         }
       } catch (error) {
-        this.logger.warn('解析价格历史数据失败，重新创建历史数组', { 
-          error: error.message, 
-          historyString 
+        logger.warn('解析价格历史数据失败，重新创建历史数组', {
+          error: error.message,
+          historyString
         });
         history = [];
       }
@@ -850,14 +874,14 @@ export class MarketService {
       // 清理过期记录（FIFO）
       if (history.length > maxRecords) {
         history = history.slice(-maxRecords);
-        this.logger.debug(`价格历史记录清理`, {
+        logger.debug(`价格历史记录清理`, {
           beforeLength: history.length + (history.length - maxRecords),
           afterLength: history.length,
           maxRecords
         });
       }
 
-      this.logger.debug(`价格历史更新`, {
+      logger.debug(`价格历史更新`, {
         newPrice: newPrice.toFixed(2),
         historyLength: history.length,
         maxRecords
@@ -883,10 +907,10 @@ export class MarketService {
   async _updateSingleItemPrice(itemId) {
     try {
       const statsKey = `market:stats:${itemId}`;
-      
+
       // 获取物品统计数据
       const stats = await this.redis.hGetAll(statsKey);
-      
+
       if (!stats || Object.keys(stats).length === 0) {
         return {
           updated: false,
@@ -900,7 +924,7 @@ export class MarketService {
 
       // 使用现有的计算和验证逻辑
       const updateData = this._calculateAndValidatePrice(stats, itemId);
-      
+
       if (!updateData) {
         return {
           updated: false,
@@ -913,9 +937,9 @@ export class MarketService {
       }
 
       // 更新Redis数据
-      await this.redis.hMSet(statsKey, updateData.redis);
+      await this.redis.hSet(statsKey, updateData.redis);
 
-      this.logger.info(`单个物品价格更新成功`, {
+      logger.info(`单个物品价格更新成功`, {
         itemId,
         oldPrice: parseFloat(stats.current_price),
         newPrice: parseFloat(updateData.redis.current_price),
@@ -932,7 +956,7 @@ export class MarketService {
       };
 
     } catch (error) {
-      this.logger.error(`单个物品价格更新失败`, {
+      logger.error(`单个物品价格更新失败`, {
         itemId,
         error: error.message,
         stack: error.stack
@@ -964,7 +988,7 @@ export class MarketService {
   async _initializeMarketConfig() {
     try {
       const floatingItems = this._getFloatingPriceItems();
-      
+
       // 配置验证
       const configSchema = {
         sensitivity: { type: 'number', min: 0.01, max: 1, required: true },
@@ -973,14 +997,14 @@ export class MarketService {
       };
 
       const validation = CommonUtils.validateConfig(
-        this.config.market.pricing, 
+        this.config.market.pricing,
         configSchema
       );
 
       if (!validation.valid) {
-        this.logger.warn('市场配置验证警告', { errors: validation.errors });
+        logger.warn('市场配置验证警告', { errors: validation.errors });
       } else {
-        this.logger.info('市场配置验证通过');
+        logger.info('市场配置验证通过');
       }
 
       // 初始化全局市场统计
@@ -994,7 +1018,7 @@ export class MarketService {
         config_version: '2.0.0'
       };
 
-      await this.redis.hMSet('market:global:stats', globalStats);
+      await this.redis.hSet('market:global:stats', globalStats);
 
       // 初始化性能监控指标
       const performanceStats = {
@@ -1004,9 +1028,9 @@ export class MarketService {
         last_performance_check: Date.now().toString()
       };
 
-      await this.redis.hMSet('market:performance:stats', performanceStats);
+      await this.redis.hSet('market:performance:stats', performanceStats);
 
-      this.logger.info('市场配置初始化完成', {
+      logger.info('市场配置初始化完成', {
         totalItems: floatingItems.length,
         configValidation: validation.valid ? 'passed' : 'warning',
         globalStatsKey: 'market:global:stats',
@@ -1014,7 +1038,7 @@ export class MarketService {
       });
 
     } catch (error) {
-      this.logger.error('市场配置初始化失败', {
+      logger.error('市场配置初始化失败', {
         error: error.message,
         stack: error.stack
       });
@@ -1051,7 +1075,7 @@ export class MarketService {
       }
 
       const floatingItems = this._getFloatingPriceItems();
-      this.logger.info(`开始重置 ${floatingItems.length} 个物品的日统计数据`);
+      logger.info(`开始重置 ${floatingItems.length} 个物品的日统计数据`);
 
       // 使用Redis Pipeline进行批量重置
       const pipeline = this.redis.pipeline();
@@ -1059,7 +1083,7 @@ export class MarketService {
 
       for (const itemId of floatingItems) {
         try {
-          pipeline.hMSet(`market:stats:${itemId}`, {
+          pipeline.hSet(`market:stats:${itemId}`, {
             demand_24h: '0',
             supply_24h: '0',
             last_reset: resetTime
@@ -1067,7 +1091,7 @@ export class MarketService {
           resetCount++;
         } catch (error) {
           errors.push(`物品 ${itemId} 重置失败: ${error.message}`);
-          this.logger.warn(`物品 ${itemId} 重置准备失败`, { error: error.message });
+          logger.warn(`物品 ${itemId} 重置准备失败`, { error: error.message });
         }
       }
 
@@ -1075,14 +1099,14 @@ export class MarketService {
       await pipeline.exec();
 
       // 更新全局统计
-      await this.redis.hMSet('market:global:stats', {
+      await this.redis.hSet('market:global:stats', {
         last_reset: resetTime,
         last_reset_count: resetCount.toString()
       });
 
       const duration = Date.now() - startTime;
 
-      this.logger.info('日统计数据重置完成', {
+      logger.info('日统计数据重置完成', {
         resetCount,
         totalItems: floatingItems.length,
         duration: `${duration}ms`,
@@ -1100,7 +1124,7 @@ export class MarketService {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error('日统计数据重置失败', {
+      logger.error('日统计数据重置失败', {
         error: error.message,
         duration: `${duration}ms`,
         resetCount,
@@ -1279,7 +1303,7 @@ export class MarketService {
 
       const duration = Date.now() - startTime;
 
-      this.logger.info('市场监控完成', {
+      logger.info('市场监控完成', {
         duration: `${duration}ms`,
         status: overallStatus,
         totalItems: summary.totalItems,
@@ -1298,7 +1322,7 @@ export class MarketService {
       };
 
     } catch (error) {
-      this.logger.error('市场监控失败', {
+      logger.error('市场监控失败', {
         error: error.message,
         stack: error.stack,
         duration: `${Date.now() - startTime}ms`

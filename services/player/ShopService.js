@@ -15,16 +15,13 @@ import ItemResolver from '../../utils/ItemResolver.js';
 import { CommonUtils } from '../../utils/CommonUtils.js';
 
 export class ShopService {
-  constructor(redisClient, config, inventoryService, playerService, serviceContainer = null, logger = null) {
+  constructor(redisClient, config, inventoryService, playerService, serviceContainer = null) {
     this.redis = redisClient;
     this.config = config;
     this.inventoryService = inventoryService;
     this.playerService = playerService;
     this.serviceContainer = serviceContainer;
     this.itemResolver = new ItemResolver(config);
-
-    // 创建标准化日志器
-    this.logger = logger;
 
     // 性能统计
     this.stats = {
@@ -58,7 +55,7 @@ export class ShopService {
               CommonUtils.validatePrice(dynamicPrice, `dynamic ${priceType} price for ${itemId}`);
               return dynamicPrice;
             } catch (error) {
-              this.logger.warn('获取动态价格失败，使用静态价格', {
+              logger.warn('获取动态价格失败，使用静态价格', {
                 itemId,
                 priceType,
                 error: error.message
@@ -80,7 +77,7 @@ export class ShopService {
 
       return price;
     } catch (error) {
-      this.logger.error('获取物品价格失败', {
+      logger.error('获取物品价格失败', {
         itemId,
         priceType,
         error: error.message
@@ -105,7 +102,7 @@ export class ShopService {
           await marketService.recordTransaction(itemId, quantity, transactionType);
 
           // 记录审计日志
-          this.logger.logAudit('transaction', transactionType, 'system', {
+          logger.logAudit('transaction', transactionType, 'system', {
             itemId,
             quantity,
             transactionType,
@@ -115,7 +112,7 @@ export class ShopService {
       }
     } catch (error) {
       // 记录错误但不抛出，避免影响主要交易流程
-      this.logger.error('记录交易统计失败', {
+      logger.error('记录交易统计失败', {
         itemId,
         quantity,
         transactionType,
@@ -216,7 +213,7 @@ export class ShopService {
 
       return items;
     } catch (error) {
-      this.logger.error(`[ShopService] 获取商店商品失败: ${error.message}`);
+      logger.error(`[ShopService] 获取商店商品失败: ${error.message}`);
       throw error;
     }
   }
@@ -299,12 +296,12 @@ export class ShopService {
         await this._recordTransactionSafely(itemId, quantity, 'buy');
 
         const duration = Date.now() - startTime;
-        this.logger.info(`购买商品完成: ${itemName} x${quantity}, 耗时: ${duration}ms`);
+        logger.info(`购买商品完成: ${itemName} x${quantity}, 耗时: ${duration}ms`);
 
         // 更新交易统计
         this._updateTransactionStats(totalCost, duration);
 
-        this.logger.info('购买交易成功', {
+        logger.info('购买交易成功', {
           userId,
           itemName,
           itemId,
@@ -333,7 +330,7 @@ export class ShopService {
     } catch (error) {
       const duration = Date.now() - startTime;
 
-      this.logger.error('购买交易失败', {
+      logger.error('购买交易失败', {
         userId,
         itemName,
         quantity,

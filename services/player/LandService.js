@@ -10,11 +10,10 @@
 import ItemResolver from '../../utils/ItemResolver.js';
 
 class LandService {
-  constructor(redisClient, config, playerService, logger = null) {
+  constructor(redisClient, config, playerService) {
     this.redis = redisClient;
     this.config = config;
     this.playerService = playerService;
-    this.logger = logger || console;
     this.itemResolver = new ItemResolver(config);
   }
 
@@ -28,11 +27,11 @@ class LandService {
       // 直接调用PlayerService的扩张方法
       const result = await this.playerService.expandLand(userId);
 
-      this.logger.info(`[LandService] 玩家 ${userId} 土地扩张结果: ${result.success ? '成功' : '失败'}`);
+      logger.info(`[LandService] 玩家 ${userId} 土地扩张结果: ${result.success ? '成功' : '失败'}`);
 
       return result;
     } catch (error) {
-      this.logger.error(`[LandService] 土地扩张失败 [${userId}]: ${error.message}`);
+      logger.error(`[LandService] 土地扩张失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -62,7 +61,7 @@ class LandService {
       const landConfig = this.config.land.expansion[nextLandNumber];
 
       if (!landConfig) {
-        this.logger.warn(`[LandService] 找不到第 ${nextLandNumber} 块土地的配置`);
+        logger.warn(`[LandService] 找不到第 ${nextLandNumber} 块土地的配置`);
         return {
           canExpand: false,
           error: '无法获取土地扩张配置'
@@ -88,7 +87,7 @@ class LandService {
         currentCoins: playerData.coins
       };
     } catch (error) {
-      this.logger.error(`[LandService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
+      logger.error(`[LandService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -102,7 +101,7 @@ class LandService {
     try {
       return this.config.land.expansion[landNumber];
     } catch (error) {
-      this.logger.error(`[LandService] 获取土地配置失败 [${landNumber}]: ${error.message}`);
+      logger.error(`[LandService] 获取土地配置失败 [${landNumber}]: ${error.message}`);
       return null;
     }
   }
@@ -140,7 +139,7 @@ class LandService {
 
       return expansionPlan;
     } catch (error) {
-      this.logger.error(`[LandService] 获取土地扩张计划失败 [${userId}]: ${error.message}`);
+      logger.error(`[LandService] 获取土地扩张计划失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -158,7 +157,7 @@ class LandService {
         qualityConfig: this.config.land.quality
       };
     } catch (error) {
-      this.logger.error(`[LandService] 获取土地系统配置失败: ${error.message}`);
+      logger.error(`[LandService] 获取土地系统配置失败: ${error.message}`);
       return null;
     }
   }
@@ -198,7 +197,7 @@ class LandService {
         details: expansionInfo
       };
     } catch (error) {
-      this.logger.error(`[LandService] 验证土地扩张条件失败 [${userId}]: ${error.message}`);
+      logger.error(`[LandService] 验证土地扩张条件失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }
@@ -321,7 +320,7 @@ class LandService {
         }
       };
     } catch (error) {
-      this.logger.error(`[LandService] 获取土地品质进阶信息失败 [${userId}, ${landId}]: ${error.message}`);
+      logger.error(`[LandService] 获取土地品质进阶信息失败 [${userId}, ${landId}]: ${error.message}`);
       throw error;
     }
   }
@@ -426,7 +425,7 @@ class LandService {
         };
       }
 
-      this.logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
+      logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
 
       return {
         success: true,
@@ -441,7 +440,7 @@ class LandService {
         remainingCoins: playerData.coins
       };
     } catch (error) {
-      this.logger.error(`[LandService] 土地品质进阶失败 [${userId}, ${landId}]: ${error.message}`);
+      logger.error(`[LandService] 土地品质进阶失败 [${userId}, ${landId}]: ${error.message}`);
       throw error;
     }
   }
@@ -455,7 +454,7 @@ class LandService {
     try {
       return this.itemResolver.getItemName(itemId);
     } catch (error) {
-      this.logger.warn(`[LandService] 获取物品名称失败 [${itemId}]: ${error.message}`);
+      logger.warn(`[LandService] 获取物品名称失败 [${itemId}]: ${error.message}`);
       return itemId;
     }
   }
@@ -519,7 +518,7 @@ class LandService {
         remainingCoins: player.coins
       };
     } catch (error) {
-      this.logger.error(`[LandService] 土地强化失败 [${userId}, ${landId}]: ${error.message}`);
+      logger.error(`[LandService] 土地强化失败 [${userId}, ${landId}]: ${error.message}`);
       throw error;
     } finally {
       await this.redis.unlock(lock);
@@ -527,5 +526,4 @@ class LandService {
   }
 }
 
-// {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 02:32:22 +08:00; Reason: Shrimp Task ID: #45b71863, converting CommonJS module.exports to ES Modules export; Principle_Applied: ModuleSystem-Standardization;}}
-export { LandService };
+export default LandService;

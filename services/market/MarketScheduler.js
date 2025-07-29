@@ -13,16 +13,13 @@
  */
 
 export class MarketScheduler {
-  constructor(marketService, redisClient, config = null, logger = null) {
+  constructor(marketService, redisClient, config) {
     this.marketService = marketService;
     this.redis = redisClient;
     this.config = config;
     this.jobs = new Map();
     this.taskStates = new Map();
     this.isRunning = false;
-
-    // 创建标准化日志器
-    this.logger = logger;
 
     // 获取调度器配置
     const schedulerConfig = this.config.market.scheduler;
@@ -46,12 +43,12 @@ export class MarketScheduler {
    */
   start() {
     if (this.isRunning) {
-      this.logger.warn('调度器已在运行中，忽略启动请求');
+      logger.warn('调度器已在运行中，忽略启动请求');
       return;
     }
 
     try {
-      this.logger.info('正在启动市场任务调度器...');
+      logger.info('正在启动市场任务调度器...');
 
       // 获取更新间隔配置
       const updateInterval = this.config.market.update.interval * 1000;
@@ -96,10 +93,10 @@ export class MarketScheduler {
       this.jobs.set('cleanup', cleanupJob);
 
       this.isRunning = true;
-      this.logger.info(`任务调度器启动成功，活跃任务: ${Array.from(this.jobs.keys()).join(', ')}`);
+      logger.info(`任务调度器启动成功，活跃任务: ${Array.from(this.jobs.keys()).join(', ')}`);
 
       // 记录配置信息
-      this.logger.info('调度器配置', {
+      logger.info('调度器配置', {
         updateInterval: updateInterval / 1000,
         defaultTimeout: this.defaultTimeout / 1000,
         maxConcurrentTasks: this.maxConcurrentTasks,
@@ -111,12 +108,12 @@ export class MarketScheduler {
         this.executeWithProtection('initialPriceUpdate', async () => {
           return await this.marketService.updateDynamicPrices();
         }, this.defaultTimeout).catch(error => {
-          this.logger.warn('初始价格更新失败', { error: error.message });
+          logger.warn('初始价格更新失败', { error: error.message });
         });
       }, 5000);
 
     } catch (error) {
-      this.logger.error('启动定时任务失败', { error: error.message, stack: error.stack });
+      logger.error('启动定时任务失败', { error: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -126,22 +123,22 @@ export class MarketScheduler {
    */
   stop() {
     try {
-      this.logger.info('正在停止市场任务调度器...');
+      logger.info('正在停止市场任务调度器...');
 
       // 清除所有定时器
       for (const [taskName, interval] of this.jobs) {
         clearInterval(interval);
-        this.logger.debug(`停止定时任务: ${taskName}`);
+        logger.debug(`停止定时任务: ${taskName}`);
       }
 
       this.jobs.clear();
       this.taskStates.clear();
       this.isRunning = false;
 
-      this.logger.info('任务调度器已停止');
+      logger.info('任务调度器已停止');
 
       // 记录统计信息
-      this.logger.info('调度器运行统计', {
+      logger.info('调度器运行统计', {
         tasksExecuted: this.stats.tasksExecuted,
         tasksSucceeded: this.stats.tasksSucceeded,
         tasksFailed: this.stats.tasksFailed,
@@ -151,7 +148,7 @@ export class MarketScheduler {
       });
 
     } catch (error) {
-      this.logger.error('停止定时任务失败', { error: error.message, stack: error.stack });
+      logger.error('停止定时任务失败', { error: error.message, stack: error.stack });
     }
   }
 
@@ -178,14 +175,14 @@ export class MarketScheduler {
         .filter(state => state.status === 'running').length;
 
       if (runningTasks >= this.maxConcurrentTasks) {
-        this.logger.warn(`任务 ${taskName} 跳过：已达到最大并发数 ${this.maxConcurrentTasks}`);
+        logger.warn(`任务 ${taskName} 跳过：已达到最大并发数 ${this.maxConcurrentTasks}`);
         return { success: false, reason: 'max_concurrent_reached' };
       }
 
       // 尝试获取分布式锁
       lockAcquired = await this.acquireTaskLock(lockKey, timeout);
       if (!lockAcquired) {
-        this.logger.warn(`任务 ${taskName} 跳过：获取锁失败，可能正在执行中`);
+        logger.warn(`任务 ${taskName} 跳过：获取锁失败，可能正在执行中`);
         return { success: false, reason: 'lock_acquisition_failed' };
       }
 
@@ -199,7 +196,7 @@ export class MarketScheduler {
 
       this.taskStates.set(taskName, { status: 'running', startTime: Date.now() });
 
-      this.logger.info(`任务开始执行: ${taskName}`);
+      logger.info(`任务开始执行: ${taskName}`);
 
       // 创建超时Promise
       const timeoutPromise = new Promise((_, reject) => {
@@ -213,7 +210,7 @@ export class MarketScheduler {
       ]);
 
       const duration = Date.now() - startTime;
-      this.logger.info(`任务 ${taskName} 执行完成，耗时: ${duration}ms`);
+      logger.info(`任务 ${taskName} 执行完成，耗时: ${duration}ms`);
 
       // 更新成功状态
       await this.setTaskState(stateKey, {
@@ -229,7 +226,7 @@ export class MarketScheduler {
       // 更新统计信息
       this._updateStats(true, duration);
 
-      this.logger.info(`任务完成: ${taskName}`, {
+      logger.info(`任务完成: ${taskName}`, {
         duration: `${duration}ms`,
         result: result
       });
@@ -239,7 +236,7 @@ export class MarketScheduler {
     } catch (error) {
       const duration = Date.now() - startTime;
 
-      this.logger.error(`任务执行失败: ${taskName}`, {
+      logger.error(`任务执行失败: ${taskName}`, {
         error: error.message,
         duration: `${duration}ms`,
         stack: error.stack
@@ -297,16 +294,16 @@ export class MarketScheduler {
       const acquired = result === 'OK';
 
       if (acquired) {
-        this.logger.debug(`获取任务锁成功: ${lockKey}`, { lockValue, lockTTL });
+        logger.debug(`获取任务锁成功: ${lockKey}`, { lockValue, lockTTL });
       } else {
         // 检查现有锁的信息
         const existingLock = await this.redis.get(lockKey);
-        this.logger.debug(`获取任务锁失败: ${lockKey}`, { existingLock });
+        logger.debug(`获取任务锁失败: ${lockKey}`, { existingLock });
       }
 
       return acquired;
     } catch (error) {
-      this.logger.error('获取任务锁异常', { lockKey, error: error.message });
+      logger.error('获取任务锁异常', { lockKey, error: error.message });
       return false;
     }
   }
@@ -319,9 +316,9 @@ export class MarketScheduler {
   async releaseTaskLock(lockKey) {
     try {
       await this.redis.del(lockKey);
-      this.logger.debug(`释放任务锁: ${lockKey}`);
+      logger.debug(`释放任务锁: ${lockKey}`);
     } catch (error) {
-      this.logger.error('释放任务锁失败', { lockKey, error: error.message });
+      logger.error('释放任务锁失败', { lockKey, error: error.message });
     }
   }
 
@@ -343,7 +340,7 @@ export class MarketScheduler {
       await this.redis.expire(stateKey, 24 * 60 * 60); // 24小时过期
 
     } catch (error) {
-      this.logger.error('设置任务状态失败', { stateKey, error: error.message });
+      logger.error('设置任务状态失败', { stateKey, error: error.message });
     }
   }
 
@@ -359,7 +356,7 @@ export class MarketScheduler {
       const state = await this.redis.hGetAll(stateKey);
       return Object.keys(state).length > 0 ? state : null;
     } catch (error) {
-      this.logger.error('获取任务状态失败', { taskName, error: error.message });
+      logger.error('获取任务状态失败', { taskName, error: error.message });
       return null;
     }
   }
@@ -380,7 +377,7 @@ export class MarketScheduler {
         const result = await taskFunction();
 
         if (attempt > 1) {
-          this.logger.info(`任务 ${taskName} 重试第 ${attempt - 1} 次成功`);
+          logger.info(`任务 ${taskName} 重试第 ${attempt - 1} 次成功`);
         }
 
         return result;
@@ -390,7 +387,7 @@ export class MarketScheduler {
 
         if (attempt <= this.retryAttempts) {
           const retryDelay = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // 指数退避，最大30秒
-          this.logger.warn(`任务 ${taskName} 第 ${attempt} 次尝试失败，${retryDelay}ms后重试`, {
+          logger.warn(`任务 ${taskName} 第 ${attempt} 次尝试失败，${retryDelay}ms后重试`, {
             error: error.message,
             attempt,
             maxAttempts: this.retryAttempts + 1
@@ -414,7 +411,7 @@ export class MarketScheduler {
     const errorType = this._categorizeError(error);
 
     // 记录详细的错误信息
-    this.logger.logError(error, {
+    logger.error(error, {
       taskName,
       errorType,
       timestamp: Date.now()
@@ -422,11 +419,11 @@ export class MarketScheduler {
 
     // 根据错误类型和任务重要性决定处理策略
     if (errorType === 'timeout') {
-      this.logger.warn(`任务 ${taskName} 超时，建议检查系统性能或调整超时配置`);
+      logger.warn(`任务 ${taskName} 超时，建议检查系统性能或调整超时配置`);
     } else if (errorType === 'network') {
-      this.logger.warn(`任务 ${taskName} 网络连接失败，系统将在下次调度时重试`);
+      logger.warn(`任务 ${taskName} 网络连接失败，系统将在下次调度时重试`);
     } else if (errorType === 'critical') {
-      this.logger.error(`任务 ${taskName} 发生严重错误，需要人工介入`, {
+      logger.error(`任务 ${taskName} 发生严重错误，需要人工介入`, {
         error: error.message,
         stack: error.stack
       });
@@ -460,12 +457,12 @@ export class MarketScheduler {
       }
 
       if (cleanedCount > 0) {
-        this.logger.info(`清理了 ${cleanedCount} 个过期任务状态`);
+        logger.info(`清理了 ${cleanedCount} 个过期任务状态`);
       }
 
       return { success: true, cleanedCount };
     } catch (error) {
-      this.logger.error('清理过期任务状态失败', { error: error.message });
+      logger.error('清理过期任务状态失败', { error: error.message });
       return { success: false, error: error.message };
     }
   }
@@ -535,7 +532,7 @@ export class MarketScheduler {
       await this.redis.lTrim(failureKey, 0, 9); // 只保留最近10次失败记录
       await this.redis.expire(failureKey, 7 * 24 * 60 * 60); // 7天过期
     } catch (err) {
-      this.logger.error('记录任务失败信息异常', { error: err.message });
+      logger.error('记录任务失败信息异常', { error: err.message });
     }
   }
 
@@ -543,7 +540,7 @@ export class MarketScheduler {
    * 重启定时任务（增强版本）
    */
   restart() {
-    this.logger.info('正在重启任务调度器...');
+    logger.info('正在重启任务调度器...');
     this.stop();
 
     // 等待清理完成后重新启动
@@ -559,7 +556,7 @@ export class MarketScheduler {
    * @returns {Promise<any>} 执行结果
    */
   async executeTask(taskName) {
-    this.logger.info(`手动触发任务: ${taskName}`);
+    logger.info(`手动触发任务: ${taskName}`);
 
     const taskMapping = {
       'priceUpdate': () => this.marketService.updateDynamicPrices(),
@@ -599,7 +596,7 @@ export class MarketScheduler {
       try {
         status.taskStates[taskName] = await this.getTaskState(taskName);
       } catch (error) {
-        this.logger.error(`获取任务 ${taskName} 状态失败`, { error: error.message });
+        logger.error(`获取任务 ${taskName} 状态失败`, { error: error.message });
       }
     }
 
@@ -625,7 +622,7 @@ export class MarketScheduler {
         }
       });
     } catch (error) {
-      this.logger.error(`获取任务 ${taskName} 失败历史异常`, { error: error.message });
+      logger.error(`获取任务 ${taskName} 失败历史异常`, { error: error.message });
       return [];
     }
   }

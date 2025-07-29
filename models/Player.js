@@ -9,7 +9,7 @@ import Calculator from '../utils/calculator.js';
 // {{START MODIFICATIONS}}
 
 class Player {
-  constructor(data = {}, config = null) {
+  constructor(data = {}, config) {
     this.config = config;
 
     // 基础信息
@@ -64,7 +64,7 @@ class Player {
    * @param {Object} config 配置对象
    * @returns {Player} 玩家实例
    */
-  static createEmpty(name = '', config = null) {
+  static createEmpty(name = '', config) {
     const defaultConfig = config?.levels?.default
     const landConfig = config?.land?.default
     const inventoryConfig = config?.items?.inventory
@@ -151,7 +151,7 @@ class Player {
    * @param {Object} config 配置对象
    * @returns {Player} 玩家实例
    */
-  static fromRawData(hashData, config = null) {
+  static fromRawData(hashData, config) {
     // 验证输入数据
     const validation = Player.validateHashData(hashData);
     if (!validation.isValid) {
@@ -228,7 +228,7 @@ class Player {
    * @param {Object} config 配置对象
    * @returns {Player} 玩家实例
    */
-  static fromObjectData(rawData, config = null) {
+  static fromObjectData(rawData, config) {
     return new Player(rawData, config);
   }
 
@@ -255,7 +255,7 @@ class Player {
    * @param {Object} config 配置对象
    * @returns {any} 默认值
    */
-  static _getDefaultComplexField(field, config = null) {
+  static _getDefaultComplexField(field, config) {
     const landConfig = config?.land?.default
 
     switch (field) {
