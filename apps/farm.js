@@ -58,13 +58,18 @@ export class farm extends plugin {
 
     // 初始化配置
     this.config = Config
+    
+    // 初始化服务
+    this._initServices();
   }
 
   /**
-   * 确保服务容器已初始化
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
    */
-  async _ensureServicesInitialized() {
-    await serviceContainer.init()
+  _initServices() {
+    this.playerService = serviceContainer.getService('playerService');
+    this.plantingService = serviceContainer.getService('plantingService');
   }
 
   /**
@@ -74,14 +79,8 @@ export class farm extends plugin {
     try {
       const userId = e.user_id
 
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
-      const playerData = await playerService.getPlayerData(userId)
+      const playerData = await this.playerService.getPlayer(userId)
 
       if (!playerData) {
         e.reply('获取农场信息失败，请稍后重试')
@@ -112,13 +111,8 @@ export class farm extends plugin {
         return true
       }
 
-      // 确保服务已初始化
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-
       // 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await playerService.getDataService().getPlayer(targetUserId)
+      const targetPlayerData = await this.playerService.getDataService().getPlayer(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true
@@ -284,12 +278,8 @@ export class farm extends plugin {
       }
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
@@ -299,8 +289,7 @@ export class farm extends plugin {
       }
 
       // 调用种植服务
-      const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.plantCrop(userId, landIdNum, cropType)
+      const result = await this.plantingService.plantCrop(userId, landIdNum, cropType)
 
       e.reply(result.message)
       return true
@@ -310,8 +299,6 @@ export class farm extends plugin {
       return true
     }
   }
-
-
 
   /**
    * 浇水
@@ -335,15 +322,11 @@ export class farm extends plugin {
       }
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      const plantingService = serviceContainer.getService('plantingService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 执行浇水
-      const result = await plantingService.waterCrop(userId, landIdNum)
+      const result = await this.plantingService.waterCrop(userId, landIdNum)
 
       if (result.success) {
         await e.reply(result.message)
@@ -385,12 +368,8 @@ export class farm extends plugin {
 
       const userId = e.user_id;
 
-      await this._ensureServicesInitialized();
-      const playerService = serviceContainer.getService('playerService');
-      const plantingService = serviceContainer.getService('plantingService');
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId);
+      await this.playerService.getPlayer(userId);
 
       // 解析肥料类型（如果指定了）
       let fertilizerType = null;
@@ -403,7 +382,7 @@ export class farm extends plugin {
       }
 
       // 执行施肥
-      const result = await plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
+      const result = await this.plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
 
       if (result.success) {
         await e.reply(result.message);
@@ -441,15 +420,11 @@ export class farm extends plugin {
       }
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      const plantingService = serviceContainer.getService('plantingService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 执行除虫
-      const result = await plantingService.pesticideCrop(userId, landIdNum)
+      const result = await this.plantingService.pesticideCrop(userId, landIdNum)
 
       if (result.success) {
         await e.reply(result.message)
@@ -487,16 +462,11 @@ export class farm extends plugin {
       }
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 调用收获服务
-      const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.harvestCrop(userId, landIdNum)
+      const result = await this.plantingService.harvestCrop(userId, landIdNum)
 
       e.reply(result.message)
       return true
@@ -514,16 +484,11 @@ export class farm extends plugin {
     try {
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 调用收获服务（不指定landId表示收获全部）
-      const plantingService = serviceContainer.getService('plantingService')
-      const result = await plantingService.harvestCrop(userId)
+      const result = await this.plantingService.harvestCrop(userId)
 
       e.reply(result.message)
       return true
@@ -539,9 +504,7 @@ export class farm extends plugin {
    */
   async updateCropsStatus() {
     try {
-      await this._ensureServicesInitialized()
-      const plantingService = serviceContainer.getService('plantingService')
-      await plantingService.updateAllCropsStatus()
+      await this.plantingService.updateAllCropsStatus()
     } catch (error) {
       logger.error('[农场游戏] 更新作物状态失败:', error)
     }
@@ -604,4 +567,4 @@ export class farm extends plugin {
   }
 }
 
-// {{END MODIFICATIONS}} 
+// {{END MODIFICATIONS}}

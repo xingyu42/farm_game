@@ -38,6 +38,19 @@ export class InventoryCommands extends plugin {
         }
       ]
     });
+    
+    // 初始化服务
+    this._initServices();
+  }
+
+  /**
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
+   */
+  _initServices() {
+    this.inventoryService = serviceContainer.getService('inventoryService');
+    this.playerService = serviceContainer.getService('playerService');
+    this.itemResolver = serviceContainer.getService('itemResolver');
   }
 
   /**
@@ -48,17 +61,11 @@ export class InventoryCommands extends plugin {
     try {
       const userId = e.user_id.toString();
       
-      // 确保服务已初始化
-      await serviceContainer.init();
-      
-      const inventoryService = serviceContainer.getService('inventoryService');
-      const playerService = serviceContainer.getService('playerService');
-      
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
       
       // 获取格式化的仓库信息
-      const inventoryData = await inventoryService.getFormattedInventory(userId);
+      const inventoryData = await this.inventoryService.getFormattedInventory(userId);
       
       if (inventoryData.isEmpty) {
         await e.reply('🎒 你的仓库是空的，快去种植作物或购买物品吧！');
@@ -118,18 +125,11 @@ export class InventoryCommands extends plugin {
         return true;
       }
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const inventoryService = serviceContainer.getService('inventoryService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 查找物品ID
-      const itemResolver = serviceContainer.getService('itemResolver');
-      const itemId = itemResolver.findItemByName(itemName);
+      const itemId = this.itemResolver.findItemByName(itemName);
 
       if (!itemId) {
         await e.reply(`❌ 未找到物品 "${itemName}"\n💡 请检查物品名称是否正确`);
@@ -137,7 +137,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 执行锁定
-      const result = await inventoryService.lockItem(userId, itemId);
+      const result = await this.inventoryService.lockItem(userId, itemId);
 
       if (result.success) {
         await e.reply(`🔒 ${result.message}`);
@@ -175,18 +175,11 @@ export class InventoryCommands extends plugin {
         return true;
       }
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const inventoryService = serviceContainer.getService('inventoryService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 查找物品ID
-      const itemResolver = serviceContainer.getService('itemResolver');
-      const itemId = itemResolver.findItemByName(itemName);
+      const itemId = this.itemResolver.findItemByName(itemName);
 
       if (!itemId) {
         await e.reply(`❌ 未找到物品 "${itemName}"\n💡 请检查物品名称是否正确`);
@@ -194,7 +187,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 执行解锁
-      const result = await inventoryService.unlockItem(userId, itemId);
+      const result = await this.inventoryService.unlockItem(userId, itemId);
 
       if (result.success) {
         await e.reply(`🔓 ${result.message}`);
@@ -219,17 +212,11 @@ export class InventoryCommands extends plugin {
     try {
       const userId = e.user_id.toString();
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const inventoryService = serviceContainer.getService('inventoryService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 获取锁定物品列表
-      const lockedData = await inventoryService.getLockedItems(userId);
+      const lockedData = await this.inventoryService.getLockedItems(userId);
 
       if (lockedData.isEmpty) {
         await e.reply('🔓 你没有锁定任何物品\n💡 使用 #nc锁定 [物品名] 来锁定物品');

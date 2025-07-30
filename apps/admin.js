@@ -16,6 +16,19 @@ export class adminApp extends plugin {
         }
       ]
     });
+    
+    // 初始化服务
+    this._initServices();
+  }
+
+  /**
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
+   */
+  _initServices() {
+    this.adminService = serviceContainer.getService('adminService');
+    this.globalStatsService = serviceContainer.getService('globalStatsService');
+    this.dataBackupService = serviceContainer.getService('dataBackupService');
   }
 
   async handleAdmin(e) {
@@ -24,31 +37,26 @@ export class adminApp extends plugin {
       return true;
     }
 
-    // 确保服务已初始化并获取服务实例
-    await serviceContainer.init();
-    const adminService = serviceContainer.getService('adminService');
-    const globalStatsService = serviceContainer.getService('globalStatsService');
-
     const command = e.msg.replace(/#nc管理\\s*/, '').trim();
     const [action, ...args] = command.split(/\s+/);
 
     switch (action) {
       case '重置玩家':
-        await this.resetPlayer(e, args, adminService);
+        await this.resetPlayer(e, args);
         break;
       case '添加金币':
       case '添加经验':
-        await this.addResource(e, action, args, adminService);
+        await this.addResource(e, action, args);
         break;
       case '设置土地品质':
-        await this.setLandQuality(e, args, adminService);
+        await this.setLandQuality(e, args);
         break;
       case '统计':
       case '经济分析':
-        await this.getStats(e, globalStatsService);
+        await this.getStats(e);
         break;
       case '重载配置':
-        await this.reloadConfig(e, adminService);
+        await this.reloadConfig(e);
         break;
       case '备份':
         await this.handleBackup(e, args);
@@ -60,17 +68,17 @@ export class adminApp extends plugin {
     return true;
   }
 
-  async resetPlayer(e, args, adminService) {
+  async resetPlayer(e, args) {
     const targetId = e.at;
     if (!targetId) {
       await e.reply('请指定要重置的玩家，例如：#nc管理 重置玩家 @张三');
       return;
     }
-    const result = await adminService.resetPlayer(targetId);
+    const result = await this.adminService.resetPlayer(targetId);
     await e.reply(result.message);
   }
 
-  async addResource(e, action, args, adminService) {
+  async addResource(e, action, args) {
     const targetId = e.at;
     const amount = parseInt(args[0], 10);
 
@@ -80,11 +88,11 @@ export class adminApp extends plugin {
     }
 
     const serviceMethod = action === '添加金币' ? 'addCoins' : 'addExperience';
-    const result = await adminService[serviceMethod](targetId, amount);
+    const result = await this.adminService[serviceMethod](targetId, amount);
     await e.reply(result.message);
   }
 
-  async setLandQuality(e, args, adminService) {
+  async setLandQuality(e, args) {
     const targetId = e.at;
     const [landIdStr, quality] = args;
     const landId = parseInt(landIdStr, 10);
@@ -93,13 +101,13 @@ export class adminApp extends plugin {
       await e.reply('指令格式错误，请使用：#nc管理 设置土地品质 @玩家 <地号> <品质>');
       return;
     }
-    const result = await adminService.setLandQuality(targetId, landId, quality);
+    const result = await this.adminService.setLandQuality(targetId, landId, quality);
     await e.reply(result.message);
   }
 
-  async getStats(e, globalStatsService) {
+  async getStats(e) {
     await e.reply('正在生成经济分析报告，请稍候...');
-    const stats = await globalStatsService.getEconomyStatus();
+    const stats = await this.globalStatsService.getEconomyStatus();
 
     let message = `--- 农场经济分析报告 ---\n`;
     message += `数据来源: ${stats.fromCache ? '缓存' : '实时计算'}\n`;
@@ -119,14 +127,13 @@ export class adminApp extends plugin {
     await e.reply(message);
   }
 
-  async reloadConfig(e, adminService) {
+  async reloadConfig(e) {
     // 使用AdminService的重载配置功能
-    const result = await adminService.reloadConfigs();
+    const result = await this.adminService.reloadConfigs();
     await e.reply(result.message);
   }
 
   async handleBackup(e, args) {
-    const dataBackupService = serviceContainer.getService('dataBackupService');
     const subCommand = args[0] || 'execute';
 
     try {
@@ -135,7 +142,7 @@ export class adminApp extends plugin {
         case '执行':
           await e.reply('开始执行数据备份，请稍候...');
           {
-            const backupResult = await dataBackupService.executeBackup();
+            const backupResult = await this.dataBackupService.executeBackup();
 
             if (backupResult.success) {
               let message = `✅ 备份完成\n`;
@@ -152,7 +159,7 @@ export class adminApp extends plugin {
         case 'status':
         case '状态':
           {
-            const status = dataBackupService.getStatus();
+            const status = this.dataBackupService.getStatus();
             let statusMessage = `📊 备份服务状态\n`;
             statusMessage += `运行状态: ${status.isRunning ? '✅ 运行中' : '❌ 已停止'}\n`;
             statusMessage += `备份间隔: ${Math.round(status.config.interval / 1000 / 60)}分钟\n`;
@@ -169,7 +176,7 @@ export class adminApp extends plugin {
         case 'history':
         case '历史':
           {
-            const history = await dataBackupService.getBackupHistory();
+            const history = await this.dataBackupService.getBackupHistory();
 
             if (history.length === 0) {
               await e.reply('📋 暂无备份历史记录');

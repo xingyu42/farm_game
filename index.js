@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import serviceContainer from './services/index.js';
 
 if (!global.segment) {
   global.segment = (await import("oicq")).segment
@@ -27,5 +28,15 @@ for (let i in files) {
 }
 logger.info(logger.green(`- 农场游戏插件载入成功 -`))
 
+// 初始化服务
+(async () => {
+  try {
+    await serviceContainer.init();
+    logger.info('[农场游戏] 服务初始化完成');
+  } catch (error) {
+    logger.error('[农场游戏] 服务初始化失败', error);
+    process.exit(1);
+  }
+})();
 
 export { apps }

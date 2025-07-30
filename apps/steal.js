@@ -26,13 +26,20 @@ export class steal extends plugin {
 
     // 初始化配置
     this.config = Config
+    
+    // 初始化服务
+    this._initServices();
   }
 
   /**
-   * 确保服务容器已初始化
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
    */
-  async _ensureServicesInitialized() {
-    await serviceContainer.init()
+  _initServices() {
+    this.playerService = serviceContainer.getService('playerService');
+    this.stealService = serviceContainer.getService('stealService');
+    this.protectionService = serviceContainer.getService('protectionService');
+    this.inventoryService = serviceContainer.getService('inventoryService');
   }
 
   /**
@@ -45,24 +52,18 @@ export class steal extends plugin {
       const targetUserId = e.at
       const thiefUserId = e.user_id
 
-      // 2. 确保服务已初始化
-      await this._ensureServicesInitialized()
-
-      const playerService = serviceContainer.getService('playerService')
-      const stealService = serviceContainer.getService('stealService')
-
       // 3. 确保偷菜者已注册
-      await playerService.ensurePlayer(thiefUserId)
+      await this.playerService.getPlayer(thiefUserId)
 
       // 4. 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await playerService.getDataService().getPlayer(targetUserId)
+      const targetPlayerData = await this.playerService.getDataService().getPlayer(targetUserId)
       if (!targetPlayerData) {
         e.reply('该用户还没有开始游戏哦~')
         return true
       }
 
       // 5. 执行偷菜操作
-      const result = await stealService.executeSteal(thiefUserId, targetUserId)
+      const result = await this.stealService.executeSteal(thiefUserId, targetUserId)
 
       // 6. 构建回复消息
       let replyMessage = this._buildStealResultMessage(result)
@@ -104,13 +105,8 @@ export class steal extends plugin {
       const dogFoodType = match[2]
       const userId = e.user_id
 
-      await this._ensureServicesInitialized()
-      const playerService = serviceContainer.getService('playerService')
-      const protectionService = serviceContainer.getService('protectionService')
-      const inventoryService = serviceContainer.getService('inventoryService')
-
       // 确保玩家已注册
-      await playerService.ensurePlayer(userId)
+      await this.playerService.getPlayer(userId)
 
       // 解析狗粮类型（如果未指定，自动选择最好的）
       let dogFoodId = null
@@ -130,17 +126,17 @@ export class steal extends plugin {
       }
 
       // 验证库存
-      const hasItem = await inventoryService.hasItem(userId, dogFoodId, 1)
+      const hasItem = await this.inventoryService.hasItem(userId, dogFoodId, 1)
       if (!hasItem) {
         e.reply('❌ 狗粮数量不足，请先购买')
         return true
       }
 
       // 应用防护效果
-      const result = await protectionService.applyDogFood(userId, dogFoodId)
+      const result = await this.protectionService.applyDogFood(userId, dogFoodId)
 
       // 消费物品
-      await inventoryService.removeItem(userId, dogFoodId, 1)
+      await this.inventoryService.removeItem(userId, dogFoodId, 1)
 
       const message = [
         `🛡️ 防护激活成功！`,
@@ -226,9 +222,7 @@ export class steal extends plugin {
    */
   async _selectBestAvailableDogFood(userId) {
     try {
-      await this._ensureServicesInitialized()
-      const inventoryService = serviceContainer.getService('inventoryService')
-      const inventory = await inventoryService.getInventory(userId)
+      const inventory = await this.inventoryService.getInventory(userId)
 
       // 按防御加成排序的狗粮优先级
       const dogFoodPriority = ['deluxe', 'premium', 'normal']
@@ -245,8 +239,4 @@ export class steal extends plugin {
       return null
     }
   }
-
-
-
-
 }

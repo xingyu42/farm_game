@@ -39,6 +39,19 @@ export class ShopCommands extends plugin {
         }
       ]
     });
+    
+    // 初始化服务
+    this._initServices();
+  }
+
+  /**
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
+   */
+  _initServices() {
+    this.shopService = serviceContainer.getService('shopService');
+    this.playerService = serviceContainer.getService('playerService');
+    this.marketService = serviceContainer.getService('marketService');
   }
 
   /**
@@ -49,17 +62,11 @@ export class ShopCommands extends plugin {
     try {
       const userId = e.user_id.toString();
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const shopService = serviceContainer.getService('shopService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 获取商店商品
-      const shopItems = await shopService.getShopItems();
+      const shopItems = await this.shopService.getShopItems();
 
       if (shopItems.length === 0) {
         await e.reply('🏪 商店暂时没有商品可供购买');
@@ -102,13 +109,8 @@ export class ShopCommands extends plugin {
    */
   async viewMarket(e) {
     try {
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const marketService = serviceContainer.getService('marketService');
-
       // 获取市场显示数据
-      const marketData = await marketService.getMarketDisplayData();
+      const marketData = await this.marketService.getMarketDisplayData();
 
       if (marketData.length === 0) {
         await e.reply('📈 市场暂时没有动态价格商品\n💡 动态价格功能可能未启用或没有配置动态价格商品');
@@ -139,7 +141,7 @@ export class ShopCommands extends plugin {
       }
 
       message += '━━━━━━━━━━━━━━━━━━━━\n';
-      message += '� 价格趋势: 📈上涨 📉下跌 📊稳定\n';
+      message += ' 价格趋势: 📈上涨 📉下跌 📊稳定\n';
       message += '💡 价格根据市场供需实时变化';
 
       await e.reply(message);
@@ -175,17 +177,11 @@ export class ShopCommands extends plugin {
         return true;
       }
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const shopService = serviceContainer.getService('shopService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 执行购买
-      const result = await shopService.buyItem(userId, itemName, quantity);
+      const result = await this.shopService.buyItem(userId, itemName, quantity);
 
       if (result.success) {
         await e.reply(`✅ ${result.message}\n💰 剩余金币: ${result.remainingCoins}\n🎒 仓库使用: ${result.inventoryUsage}`);
@@ -225,17 +221,11 @@ export class ShopCommands extends plugin {
         return true;
       }
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const shopService = serviceContainer.getService('shopService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 执行出售
-      const result = await shopService.sellItem(userId, itemName, quantity);
+      const result = await this.shopService.sellItem(userId, itemName, quantity);
 
       if (result.success) {
         const remainingText = result.remainingQuantity > 0 ? `\n📦 剩余数量: ${result.remainingQuantity}` : '';
@@ -261,17 +251,11 @@ export class ShopCommands extends plugin {
     try {
       const userId = e.user_id.toString();
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-
-      const shopService = serviceContainer.getService('shopService');
-      const playerService = serviceContainer.getService('playerService');
-
       // 确保玩家存在
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       // 执行批量出售
-      const result = await shopService.sellAllCrops(userId);
+      const result = await this.shopService.sellAllCrops(userId);
 
       if (result.success) {
         let message = `✅ ${result.message}\n`;

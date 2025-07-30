@@ -36,15 +36,21 @@ export class LandManagementCommands extends plugin {
       ]
     });
     
-    this.itemResolver = null;
+    // 初始化服务
+    this._initServices();
   }
 
-  async _initializeDependencies() {
-      if (!this.itemResolver) {
-          await serviceContainer.init();
-          const config = serviceContainer.getService('config');
-          this.itemResolver = new ItemResolver(config);
-      }
+  /**
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
+   */
+  _initServices() {
+    this.landService = serviceContainer.getService('landService');
+    this.playerService = serviceContainer.getService('playerService');
+    this.config = serviceContainer.getService('config');
+    
+    // 初始化ItemResolver
+    this.itemResolver = new ItemResolver(this.config);
   }
 
   _getItemName(itemId) {
@@ -58,11 +64,8 @@ export class LandManagementCommands extends plugin {
   async expandLand(e) {
     try {
       const userId = e.user_id.toString();
-      await serviceContainer.init();
-      const landService = serviceContainer.getService('landService');
-      const playerService = serviceContainer.getService('playerService');
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      const result = await landService.expandLand(userId);
+      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      const result = await this.landService.expandLand(userId);
       
       if (result.success) {
         let message = `🎉 ${result.message}\n`;
@@ -85,11 +88,8 @@ export class LandManagementCommands extends plugin {
   async viewLandInfo(e) {
     try {
       const userId = e.user_id.toString();
-      await serviceContainer.init();
-      const landService = serviceContainer.getService('landService');
-      const playerService = serviceContainer.getService('playerService');
-      const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
-      const landInfo = await landService.getLandExpansionInfo(userId);
+      const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      const landInfo = await this.landService.getLandExpansionInfo(userId);
       
       let message = `🏞️ 土地信息\n`;
       message += '━━━━━━━━━━━━━━━━━━━━\n';
@@ -139,11 +139,9 @@ export class LandManagementCommands extends plugin {
 
       const landId = parseInt(match[2]);
       
-      await this._initializeDependencies();
-      const landService = serviceContainer.getService('landService');
-      await landService.playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.landService.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
       
-      const result = await landService.upgradeLandQuality(userId, landId);
+      const result = await this.landService.upgradeLandQuality(userId, landId);
       
       if (result.success) {
         let message = `✨ ${result.message}\n`;
@@ -177,10 +175,7 @@ export class LandManagementCommands extends plugin {
       const userId = e.user_id.toString();
       const match = e.msg.match(/^#(nc)?土地品质\s*(\d+)?$/);
 
-      await this._initializeDependencies();
-      const landService = serviceContainer.getService('landService');
-      const playerService = serviceContainer.getService('playerService');
-      const playerData = await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       if (!match || !match[2]) {
         let message = `🏞️ 土地品质概览\n`;
@@ -198,7 +193,7 @@ export class LandManagementCommands extends plugin {
       }
 
       const landId = parseInt(match[2]);
-      const upgradeInfo = await landService.getLandQualityUpgradeInfo(userId, landId);
+      const upgradeInfo = await this.landService.getLandQualityUpgradeInfo(userId, landId);
       
       if (!upgradeInfo.canUpgrade && upgradeInfo.error) {
         await e.reply(`❌ ${upgradeInfo.error}`);
@@ -264,11 +259,9 @@ export class LandManagementCommands extends plugin {
 
       const landId = parseInt(match[2]);
 
-      await serviceContainer.init();
-      const landService = serviceContainer.getService('landService');
-      await landService.playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.landService.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
-      const result = await landService.enhanceLand(userId, landId);
+      const result = await this.landService.enhanceLand(userId, landId);
 
       await e.reply(result.message);
       

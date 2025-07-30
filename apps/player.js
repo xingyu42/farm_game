@@ -32,6 +32,20 @@ export class player extends plugin {
         }
       ]
     });
+    
+    // 初始化服务
+    this._initServices();
+  }
+
+  /**
+   * 初始化服务容器中的所有服务
+   * 集中管理服务依赖，提高代码可维护性
+   */
+  _initServices() {
+    this.playerService = serviceContainer.getService('playerService');
+    this.protectionService = serviceContainer.getService('protectionService');
+    this.stealService = serviceContainer.getService('stealService');
+    this.itemResolver = serviceContainer.getService('itemResolver');
   }
 
   /**
@@ -43,28 +57,17 @@ export class player extends plugin {
       const userId = e.user_id.toString();
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-      const playerService = serviceContainer.getService('playerService');
-      const protectionService = serviceContainer.getService('protectionService');
-      const stealService = serviceContainer.getService('stealService');
-      const itemResolver = serviceContainer.getService('itemResolver');
+      // 获取玩家数据
+      const playerData = await this.playerService.getPlayer(e, userId, userName);
 
-      const playerData = await playerService.ensurePlayer(userId, userName);
-
-      if (!playerData) {
-        e.reply('获取玩家信息失败，请稍后重试');
-        return true;
-      }
-
-      const levelInfo = await playerService.getLevelInfo(playerData.level);
+      const levelInfo = await this.playerService.getLevelInfo(playerData.level);
       const experienceToNext = levelInfo ? levelInfo.experienceRequired : 'Max';
 
       // 获取当前防护加成
-      const currentBonus = await protectionService.getProtectionBonus(userId);
+      const currentBonus = await this.protectionService.getProtectionBonus(userId);
 
       // 获取偷菜统计信息
-      const stealStats = await stealService.getStealStatistics(userId);
+      const stealStats = await this.stealService.getStealStatistics(userId);
 
       const playerInfo = [
         `🌾 ${playerData.name || userName} 的农场`,
@@ -84,8 +87,8 @@ export class player extends plugin {
         const remainingTime = Math.ceil((playerData.protection.dogFood.effectEndTime - now) / (1000 * 60));
         const dogFoodType = playerData.protection.dogFood.type;
         const defenseBonus = playerData.protection.dogFood.defenseBonus;
-        const dogFoodName = itemResolver.getItemName(dogFoodType);
-
+        const dogFoodName = this.itemResolver.getItemName(dogFoodType);
+  
         playerInfo.push(`🍖 狗粮防护: 激活中`);
         playerInfo.push(`   类型: ${dogFoodName}`);
         playerInfo.push(`   加成: +${defenseBonus}%`);
@@ -135,22 +138,9 @@ export class player extends plugin {
       const userId = e.user_id.toString();
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-      const playerService = serviceContainer.getService('playerService');
-
-      const existingPlayer = await playerService.getPlayer(userId);
-      if (existingPlayer) {
-        e.reply('您已经是注册玩家了！发送 #nc我的信息 查看详情');
-        return true;
-      }
-
-      const playerData = await playerService.createPlayer(userId, userName);
-
-      if (!playerData) {
-        e.reply('注册失败，请稍后重试');
-        return true;
-      }
+      // 创建玩家
+      if (await this.playerService.isPlayer(userId)) return e.reply('您已注册，请勿重复注册')
+      const playerData = await this.playerService.createPlayer(userId, userName);
 
       const welcomeMsg = [
         `🎉 欢迎 ${userName} 加入农场世界！`,
@@ -181,14 +171,10 @@ export class player extends plugin {
     try {
       const userId = e.user_id.toString();
 
-      // 确保服务已初始化
-      await serviceContainer.init();
-      const playerService = serviceContainer.getService('playerService');
-
-      await playerService.ensurePlayer(userId, e.sender?.card || e.sender?.nickname);
+      await this.playerService.getPlayer(e, userId, e.sender?.card || e.sender?.nickname);
 
       // 使用签到服务
-      const signInResult = await playerService.signInService.signIn(userId);
+      const signInResult = await this.playerService.signInService.signIn(userId);
 
       await e.reply(signInResult.message);
       return true;

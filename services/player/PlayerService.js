@@ -44,23 +44,20 @@ class PlayerService {
     // ==================== 核心玩家管理方法 ====================
 
     /**
-     * 获取玩家数据，如果不存在则创建新玩家
+     * 获取玩家数据
      * @param {string} userId 用户ID
-     * @returns {Object} 玩家数据
+     * @param {string|null} userName 用户名（可选）
+     * @returns {Player} Player实例
      */
-    async getPlayer(userId) {
+    async getPlayer(userId, userName = null) {
         try {
-            // 尝试从Redis Hash获取玩家数据
+            // 获取玩家数据
             let playerData = await this.dataService.getPlayer(userId);
 
-            // 如果玩家不存在，创建新玩家
-            if (!playerData) {
-                playerData = this.dataService.createNewPlayerData();
-                await this.dataService.savePlayer(userId, playerData);
-                logger.info(`[PlayerService] 创建新玩家: ${userId}`);
-
-                // 发放初始礼包
-                await this._giveInitialGift(userId, playerData);
+            // 如果提供了用户名且玩家名称为空，更新名称
+            if (playerData && userName && !playerData.name) {
+                playerData.name = userName;
+                await this.dataService.updateSimpleField(userId, 'name', userName);
             }
 
             return playerData;
@@ -71,63 +68,33 @@ class PlayerService {
     }
 
     /**
-     * 获取玩家数据（统一返回Player实例）
+     * 检查玩家是否存在
      * @param {string} userId 用户ID
-     * @returns {Player} Player实例
+     * @returns {boolean} 是否存在
      */
-    async getPlayerData(userId) {
-        return await this.getPlayer(userId);
+    async isPlayer(userId) {
+        const playerData = await this.getPlayer(userId)
+        return !!playerData
     }
 
     /**
-     * 确保玩家存在（如果不存在则创建）
+     * 创建新玩家
      * @param {string} userId 用户ID
-     * @param {string} userName 用户名
+     * @param {string|null} userName 用户名（可选）
      * @returns {Player} Player实例
      */
-    async ensurePlayer(userId, userName = null) {
+    async createPlayer(userId, userName = null) {
         try {
-            const playerData = await this.getPlayerData(userId);
-
-            // 如果提供了用户名且玩家名称为空，更新名称
-            if (userName && !playerData.name) {
-                playerData.name = userName;
-                await this.dataService.updateSimpleField(userId, 'name', userName);
-            }
-
-            return playerData;
-        } catch (error) {
-            logger.error(`[PlayerService] 确保玩家存在失败 [${userId}]: ${error.message}`);
-            throw error;
-        }
-    }
-
-    /**
-     * 创建玩家（显式创建）
-     * @param {string} userId 用户ID
-     * @param {string} userName 用户名
-     * @returns {Player} Player实例
-     */
-    async createPlayer(userId, userName) {
-        try {
-            // 检查玩家是否已存在
-            const existingPlayer = await this.dataService.getPlayer(userId);
-            if (existingPlayer) {
-                return existingPlayer;
-            }
-
-            // 创建新玩家
-            const playerData = this.dataService.createNewPlayerData(userName
-            );
+            
+            // 创建新玩家数据
+            const playerData = this.dataService.createNewPlayerData(userName || '');
             await this.dataService.savePlayer(userId, playerData);
-
-            logger.info(`[PlayerService] 显式创建新玩家: ${userId} (${userName})`);
+            logger.info(`[PlayerService] 创建新玩家: ${userId}${userName ? ` (${userName})` : ''}`);
 
             // 发放初始礼包
             await this._giveInitialGift(userId, playerData);
 
-            // 重新获取玩家数据以确保返回Player实例
-            return await this.getPlayer(userId);
+            return playerData;
         } catch (error) {
             logger.error(`[PlayerService] 创建玩家失败 [${userId}]: ${error.message}`);
             throw error;

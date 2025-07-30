@@ -43,7 +43,7 @@ class LandService {
    */
   async getLandExpansionInfo(userId) {
     try {
-      const playerData = await this.playerService.getPlayerData(userId);
+      const playerData = await this.playerService.getPlayer(userId);
 
       // 检查是否可以扩张
       const canExpand = playerData.landCount < playerData.maxLandCount;
@@ -114,7 +114,7 @@ class LandService {
    */
   async getLandExpansionPlan(userId, count = 5) {
     try {
-      const playerData = await this.playerService.getPlayerData(userId);
+      const playerData = await this.playerService.getPlayer(userId);
       const expansionPlan = [];
 
       for (let i = 1; i <= count; i++) {
@@ -169,7 +169,7 @@ class LandService {
    */
   async validateExpansionConditions(userId) {
     try {
-      const playerData = await this.playerService.getPlayerData(userId);
+      const playerData = await this.playerService.getPlayer(userId);
       const expansionInfo = await this.getLandExpansionInfo(userId);
 
       if (!expansionInfo.canExpand) {
@@ -221,7 +221,7 @@ class LandService {
       }
 
       // 获取玩家数据
-      const playerData = await this.playerService.getPlayerData(userId);
+      const playerData = await this.playerService.getPlayer(userId);
       if (!playerData) {
         return {
           canUpgrade: false,
