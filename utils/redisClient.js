@@ -186,8 +186,8 @@ class RedisClient {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // 尝试获取锁（SET NX EX）
-        const result = await this.client.set(lockKey, lockValue, 'EX', ttl, 'NX');
+        // 尝试获取锁（SET NX EX）- Redis v4 语法
+        const result = await this.client.set(lockKey, lockValue, { NX: true, EX: ttl });
 
         if (result === 'OK') {
           return {
@@ -251,7 +251,7 @@ class RedisClient {
         end
       `;
 
-      const result = await this.client.eval(luaScript, 1, lockKey, lockValue);
+      const result = await this.client.eval(luaScript, { keys: [lockKey], arguments: [lockValue] });
       return result === 1;
     } catch (error) {
       // 保留原始错误堆栈跟踪

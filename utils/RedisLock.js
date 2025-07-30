@@ -3,7 +3,7 @@
  * 用于处理并发请求，确保数据一致性
  */
 export class RedisLock {
-  constructor(redisClient, logger = console) {
+  constructor(redisClient) {
     this.redis = redisClient;
     this.defaultTimeout = 30 * 1000; // 30秒默认超时
     this.lockPrefix = `${this.redis.keyPrefix}:lock:`;
@@ -26,8 +26,8 @@ export class RedisLock {
 
     while (retries < maxRetries) {
       try {
-        // 使用 SET key value NX EX expire 原子操作
-        const result = await this.redis.client.set(lockKey, lockValue, 'NX', 'EX', expireTime);
+        // 使用 SET key value NX EX expire 原子操作 (Redis v4 语法)
+        const result = await this.redis.client.set(lockKey, lockValue, { NX: true, EX: expireTime });
 
         if (result === 'OK') {
           const lock = {
@@ -78,7 +78,7 @@ export class RedisLock {
         end
       `;
 
-      const result = await this.redis.client.eval(luaScript, 1, lock.key, lock.value);
+      const result = await this.redis.client.eval(luaScript, { keys: [lock.key], arguments: [lock.value] });
 
       if (result === 1) {
         logger.debug(`[RedisLock] 成功释放锁: ${lock.key}`);
