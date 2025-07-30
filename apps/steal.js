@@ -53,14 +53,10 @@ export class steal extends plugin {
       const thiefUserId = e.user_id
 
       // 3. 确保偷菜者已注册
-      await this.playerService.getPlayer(thiefUserId)
+      if (!(await this.playerService.isPlayer(thiefUserId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 4. 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await this.playerService.getDataService().getPlayer(targetUserId)
-      if (!targetPlayerData) {
-        e.reply('该用户还没有开始游戏哦~')
-        return true
-      }
+      // 4. 检查目标玩家是否存在
+      if (!(await this.playerService.isPlayer(targetUserId))) return e.reply('该用户未注册，请先"#nc注册"')
 
       // 5. 执行偷菜操作
       const result = await this.stealService.executeSteal(thiefUserId, targetUserId)
@@ -106,7 +102,7 @@ export class steal extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 解析狗粮类型（如果未指定，自动选择最好的）
       let dogFoodId = null

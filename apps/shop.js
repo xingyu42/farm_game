@@ -63,7 +63,8 @@ export class ShopCommands extends plugin {
       const userId = e.user_id.toString();
 
       // 确保玩家存在
-      const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const playerData = await this.playerService.getPlayer(userId);
 
       // 获取商店商品
       const shopItems = await this.shopService.getShopItems();
@@ -178,7 +179,7 @@ export class ShopCommands extends plugin {
       }
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 执行购买
       const result = await this.shopService.buyItem(userId, itemName, quantity);
@@ -222,7 +223,7 @@ export class ShopCommands extends plugin {
       }
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 执行出售
       const result = await this.shopService.sellItem(userId, itemName, quantity);
@@ -252,7 +253,7 @@ export class ShopCommands extends plugin {
       const userId = e.user_id.toString();
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 执行批量出售
       const result = await this.shopService.sellAllCrops(userId);

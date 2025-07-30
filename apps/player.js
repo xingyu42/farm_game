@@ -58,7 +58,8 @@ export class player extends plugin {
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
 
       // 获取玩家数据
-      const playerData = await this.playerService.getPlayer(e, userId, userName);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const playerData = await this.playerService.getPlayer(userId, userName);
 
       const levelInfo = await this.playerService.getLevelInfo(playerData.level);
       const experienceToNext = levelInfo ? levelInfo.experienceRequired : 'Max';
@@ -171,7 +172,7 @@ export class player extends plugin {
     try {
       const userId = e.user_id.toString();
 
-      await this.playerService.getPlayer(e, userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 使用签到服务
       const signInResult = await this.playerService.signInService.signIn(userId);

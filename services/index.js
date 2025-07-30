@@ -56,6 +56,9 @@ class ServiceContainer {
 
       logger.info('开始初始化服务容器...');
 
+      // 注册配置服务
+      this.services.config = config;
+
       // 注册工具类服务
       this.services.commonUtils = CommonUtils;
 

@@ -29,14 +29,7 @@ for (let i in files) {
 logger.info(logger.green(`- 农场游戏插件载入成功 -`))
 
 // 初始化服务
-(async () => {
-  try {
-    await serviceContainer.init();
-    logger.info('[农场游戏] 服务初始化完成');
-  } catch (error) {
-    logger.error('[农场游戏] 服务初始化失败', error);
-    process.exit(1);
-  }
-})();
+await serviceContainer.init();
+logger.info('[农场游戏] 服务初始化完成')
 
 export { apps }

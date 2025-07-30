@@ -8,10 +8,6 @@
 // }}
 
 import serviceContainer from '../services/index.js';
-
-// 使用全局logger，如果不存在则使用console
-const logger = global.logger || console;
-
 export class InventoryCommands extends plugin {
   constructor() {
     super({
@@ -62,8 +58,7 @@ export class InventoryCommands extends plugin {
       const userId = e.user_id.toString();
       
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
-      
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       // 获取格式化的仓库信息
       const inventoryData = await this.inventoryService.getFormattedInventory(userId);
       
@@ -126,7 +121,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 查找物品ID
       const itemId = this.itemResolver.findItemByName(itemName);
@@ -176,7 +171,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"');
 
       // 查找物品ID
       const itemId = this.itemResolver.findItemByName(itemName);
@@ -213,7 +208,7 @@ export class InventoryCommands extends plugin {
       const userId = e.user_id.toString();
 
       // 确保玩家存在
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 获取锁定物品列表
       const lockedData = await this.inventoryService.getLockedItems(userId);

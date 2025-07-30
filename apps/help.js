@@ -1,14 +1,6 @@
 /**
  * 农场游戏帮助系统 (Miao-Yunzai 插件)
  * 提供全面的游戏命令帮助和使用指南
- */
-
-
-
-// 使用全局logger，如果不存在则使用console
-const logger = global.logger || console;
-
-/**
  * 帮助系统命令处理器
  */
 export class HelpCommands extends plugin {

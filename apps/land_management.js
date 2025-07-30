@@ -64,7 +64,7 @@ export class LandManagementCommands extends plugin {
   async expandLand(e) {
     try {
       const userId = e.user_id.toString();
-      await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       const result = await this.landService.expandLand(userId);
       
       if (result.success) {
@@ -88,6 +88,7 @@ export class LandManagementCommands extends plugin {
   async viewLandInfo(e) {
     try {
       const userId = e.user_id.toString();
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
       const landInfo = await this.landService.getLandExpansionInfo(userId);
       
@@ -139,7 +140,7 @@ export class LandManagementCommands extends plugin {
 
       const landId = parseInt(match[2]);
       
-      await this.landService.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       
       const result = await this.landService.upgradeLandQuality(userId, landId);
       
@@ -175,6 +176,7 @@ export class LandManagementCommands extends plugin {
       const userId = e.user_id.toString();
       const match = e.msg.match(/^#(nc)?土地品质\s*(\d+)?$/);
 
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       const playerData = await this.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
 
       if (!match || !match[2]) {
@@ -259,7 +261,7 @@ export class LandManagementCommands extends plugin {
 
       const landId = parseInt(match[2]);
 
-      await this.landService.playerService.getPlayer(userId, e.sender?.card || e.sender?.nickname);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       const result = await this.landService.enhanceLand(userId, landId);
 

@@ -80,14 +80,12 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+
       const playerData = await this.playerService.getPlayer(userId)
 
-      if (!playerData) {
-        e.reply('获取农场信息失败，请稍后重试')
-        return true
-      }
-
       const farmDisplay = await this._buildFarmDisplay(playerData, true)
+
       e.reply(farmDisplay)
       return true
     } catch (error) {
@@ -111,13 +109,10 @@ export class farm extends plugin {
         return true
       }
 
-      // 检查目标玩家是否存在（不自动创建）
-      const targetPlayerData = await this.playerService.getDataService().getPlayer(targetUserId)
-      if (!targetPlayerData) {
-        e.reply('该用户还没有开始游戏哦~')
-        return true
-      }
+      // 检查目标玩家是否存在
+      if (!(await this.playerService.isPlayer(targetUserId))) return e.reply('该用户未注册，请先"#nc注册"')
 
+      const targetPlayerData = await this.playerService.getPlayer(targetUserId)
       const farmDisplay = await this._buildFarmDisplay(targetPlayerData, false)
       e.reply(farmDisplay)
       return true
@@ -156,15 +151,10 @@ export class farm extends plugin {
       farmInfo.push(landDisplay)
     }
 
-
     return farmInfo.join('\n')
   }
 
   /**
-   * 格式化土地状态显示
-   * 格式：[品质][地号]：[作物名] [健康度] [成熟时间] [负面状态] [可偷窃]
-   * @param {Object} land 土地数据
-   * @param {Object} cropsConfig 作物配置
    * @returns {string} 土地状态文本
    */
   _formatLandStatus(land, cropsConfig) {
@@ -279,7 +269,7 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
@@ -323,7 +313,7 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 执行浇水
       const result = await this.plantingService.waterCrop(userId, landIdNum)
@@ -369,7 +359,7 @@ export class farm extends plugin {
       const userId = e.user_id;
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId);
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 解析肥料类型（如果指定了）
       let fertilizerType = null;
@@ -421,7 +411,7 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 执行除虫
       const result = await this.plantingService.pesticideCrop(userId, landIdNum)
@@ -463,7 +453,7 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 调用收获服务
       const result = await this.plantingService.harvestCrop(userId, landIdNum)
@@ -485,7 +475,7 @@ export class farm extends plugin {
       const userId = e.user_id
 
       // 确保玩家已注册
-      await this.playerService.getPlayer(userId)
+      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
       // 调用收获服务（不指定landId表示收获全部）
       const result = await this.plantingService.harvestCrop(userId)
