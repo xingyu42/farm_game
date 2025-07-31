@@ -1,6 +1,6 @@
 // services/StatisticsService.js
 
-const CACHE_KEY = 'farm:stats:cache';
+const CACHE_KEY = 'farm_game:stats:cache';
 const CACHE_TTL = 3600; // 1 hour in seconds
 
 class GlobalStatsService {
@@ -52,7 +52,7 @@ class GlobalStatsService {
   async _calculateEconomyStats() {
     let cursor = '0';
     const playerKeys = [];
-    const pattern = 'farm:player:*';
+    const pattern = 'farm_game:player:*';
 
     do {
       const reply = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);

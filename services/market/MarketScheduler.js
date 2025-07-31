@@ -8,9 +8,7 @@
  * @version 3.0.0 - 简化重构版
  */
 
-import { TaskConfig } from './TaskConfig.js';
-import { SimpleTaskScheduler } from './SimpleTaskScheduler.js';
-import { TaskExecutor } from './TaskExecutor.js';
+import { TaskScheduler } from './taskScheduler.js';
 import { RedisLock } from '../../utils/RedisLock.js';
 
 export class MarketScheduler {
@@ -22,15 +20,12 @@ export class MarketScheduler {
     this.isRunning = false;
 
     // 组装新架构组件
-    this.taskConfig = new TaskConfig(config);
     this.lockManager = new RedisLock(redisClient);
-    this.scheduler = new SimpleTaskScheduler(this.taskConfig, this.lockManager);
-    this.executor = new TaskExecutor(marketService, config);
-
-    // 设置任务触发回调
-    this.scheduler._onTaskTrigger = (taskName, timeout) => {
-      this._handleTaskTrigger(taskName, timeout);
-    };
+    this.scheduler = new TaskScheduler({
+      marketService,
+      lockManager: this.lockManager,
+      rawConfig: config
+    });
   }
 
   /**
@@ -55,43 +50,6 @@ export class MarketScheduler {
     this.scheduler.stop();
     this.isRunning = false;
     logger.info('[MarketScheduler] 任务调度器已停止');
-  }
-
-  /**
-   * 手动执行任务 - 向后兼容API
-   * @param {string} taskName 任务名称
-   * @returns {Promise<any>} 执行结果
-   */
-  async executeTask(taskName) {
-    logger.info(`[MarketScheduler] 手动触发任务: ${taskName}`);
-    const taskDef = this.taskConfig.getTaskDefinition(taskName);
-    if (!taskDef) {
-      throw new Error(`未知任务: ${taskName}`);
-    }
-    
-    return await this.scheduler.executeTask(
-      `manual_${taskName}`,
-      () => this.executor.execute(taskName),
-      taskDef.timeout
-    );
-  }
-
-  /**
-   * 处理任务触发 - 私有方法
-   * @param {string} taskName 任务名称
-   * @param {number} timeout 超时时间
-   * @private
-   */
-  async _handleTaskTrigger(taskName, timeout) {
-    try {
-      await this.scheduler.executeTask(
-        taskName,
-        () => this.executor.execute(taskName),
-        timeout
-      );
-    } catch (error) {
-      logger.error(`[MarketScheduler] 任务 ${taskName} 执行失败`, { error: error.message });
-    }
   }
 }
 

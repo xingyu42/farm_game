@@ -30,6 +30,9 @@ import PlantingDataService from './planting/PlantingDataService.js';
 import DataBackupService from './system/DataBackupService.js';
 import { MarketService } from './market/MarketService.js';
 import { MarketScheduler } from './market/MarketScheduler.js';
+import { PriceCalculator } from './market/PriceCalculator.js';
+import { MarketDataManager } from './market/MarketDataManager.js';
+import { TransactionManager } from './market/TransactionManager.js';
 import ItemResolver from '../utils/ItemResolver.js';
 
 class ServiceContainer {
@@ -158,11 +161,27 @@ class ServiceContainer {
         this.services.playerService,
       );
 
-      // 实例化MarketService（增强版本，市场动态定价服务）
+      // 实例化市场专门服务（新架构）
+      this.services.priceCalculator = new PriceCalculator(config);
+      
+      this.services.marketDataManager = new MarketDataManager(
+        redisClient,
+        config
+      );
+      
+      this.services.transactionManager = new TransactionManager(
+        redisClient,
+        config
+      );
+
+      // 实例化MarketService（重构版本，Facade模式）
       this.services.marketService = new MarketService(
         redisClient,
         config,
         this.services.playerService,
+        this.services.priceCalculator,
+        this.services.marketDataManager,
+        this.services.transactionManager
       );
 
       // 实例化MarketScheduler（增强版本，带Redis分布式锁保护）
@@ -179,7 +198,6 @@ class ServiceContainer {
       if (this.services.marketService) {
         try {
           await this.services.marketService.initializeMarketData();
-          logger.info('市场数据初始化完成');
         } catch (error) {
           logger.error('市场数据初始化失败', { error: error.message });
         }

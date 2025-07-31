@@ -2,17 +2,14 @@
  * MarketScheduler 集成测试
  */
 
+import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import MarketScheduler from '../../../services/market/MarketScheduler.js';
 
 // 模拟依赖组件
-jest.mock('../../../services/market/TaskConfig.js');
-jest.mock('../../../services/market/SimpleTaskScheduler.js');
-jest.mock('../../../services/market/TaskExecutor.js');
+jest.mock('../../../services/market/taskScheduler.js');
 jest.mock('../../../utils/RedisLock.js');
 
-import { TaskConfig } from '../../../services/market/TaskConfig.js';
-import { SimpleTaskScheduler } from '../../../services/market/SimpleTaskScheduler.js';
-import { TaskExecutor } from '../../../services/market/TaskExecutor.js';
+import { TaskScheduler } from '../../../services/market/taskScheduler.js';
 import { RedisLock } from '../../../utils/RedisLock.js';
 
 // 模拟global.logger
@@ -52,23 +49,15 @@ describe('MarketScheduler', () => {
     };
 
     // 设置mock实现
-    TaskConfig.mockImplementation(() => ({
+    TaskScheduler.mockImplementation(() => ({
+      start: jest.fn(),
+      stop: jest.fn(),
+      triggerNow: jest.fn().mockResolvedValue({ success: true }),
       getTaskDefinition: jest.fn().mockReturnValue({
         name: 'testTask',
         timeout: 5000,
         retryAttempts: 2
       })
-    }));
-
-    SimpleTaskScheduler.mockImplementation(() => ({
-      start: jest.fn(),
-      stop: jest.fn(),
-      executeTask: jest.fn().mockResolvedValue({ success: true }),
-      _onTaskTrigger: null
-    }));
-
-    TaskExecutor.mockImplementation(() => ({
-      execute: jest.fn().mockResolvedValue({ success: true })
     }));
 
     RedisLock.mockImplementation(() => ({}));
@@ -106,7 +95,7 @@ describe('MarketScheduler', () => {
   describe('向后兼容的API', () => {
     test('应该能启动调度器', () => {
       marketScheduler.start();
-      
+
       expect(marketScheduler.isRunning).toBe(true);
       expect(marketScheduler.scheduler.start).toHaveBeenCalledTimes(1);
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 启动市场任务调度器');
@@ -116,7 +105,7 @@ describe('MarketScheduler', () => {
     test('应该能停止调度器', () => {
       marketScheduler.start();
       marketScheduler.stop();
-      
+
       expect(marketScheduler.isRunning).toBe(false);
       expect(marketScheduler.scheduler.stop).toHaveBeenCalledTimes(1);
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 停止市场任务调度器');
@@ -126,14 +115,14 @@ describe('MarketScheduler', () => {
     test('应该防止重复启动', () => {
       marketScheduler.start();
       marketScheduler.start(); // 第二次启动
-      
+
       expect(global.logger.warn).toHaveBeenCalledWith('[MarketScheduler] 调度器已在运行中');
       expect(marketScheduler.scheduler.start).toHaveBeenCalledTimes(1); // 只调用一次
     });
 
     test('应该能手动执行任务', async () => {
       const result = await marketScheduler.executeTask('testTask');
-      
+
       expect(marketScheduler.taskConfig.getTaskDefinition).toHaveBeenCalledWith('testTask');
       expect(marketScheduler.scheduler.executeTask).toHaveBeenCalledWith(
         'manual_testTask',
@@ -146,7 +135,7 @@ describe('MarketScheduler', () => {
 
     test('应该处理未知任务', async () => {
       marketScheduler.taskConfig.getTaskDefinition.mockReturnValue(null);
-      
+
       await expect(marketScheduler.executeTask('unknownTask')).rejects.toThrow('未知任务: unknownTask');
     });
   });
@@ -154,7 +143,7 @@ describe('MarketScheduler', () => {
   describe('任务触发处理', () => {
     test('应该正确处理任务触发', async () => {
       await marketScheduler._handleTaskTrigger('testTask', 5000);
-      
+
       expect(marketScheduler.scheduler.executeTask).toHaveBeenCalledWith(
         'testTask',
         expect.any(Function),
@@ -165,10 +154,10 @@ describe('MarketScheduler', () => {
     test('应该处理任务触发失败', async () => {
       const error = new Error('Task execution failed');
       marketScheduler.scheduler.executeTask.mockRejectedValue(error);
-      
+
       // 不应该抛出错误，而是记录日志
       await expect(marketScheduler._handleTaskTrigger('testTask', 5000)).resolves.toBeUndefined();
-      
+
       expect(global.logger.error).toHaveBeenCalledWith(
         '[MarketScheduler] 任务 testTask 执行失败',
         { error: 'Task execution failed' }
@@ -184,7 +173,7 @@ describe('MarketScheduler', () => {
       });
 
       await marketScheduler.executeTask('testTask');
-      
+
       expect(marketScheduler.executor.execute).toHaveBeenCalledWith('testTask');
     });
 
@@ -195,7 +184,7 @@ describe('MarketScheduler', () => {
       });
 
       await marketScheduler._handleTaskTrigger('testTask', 5000);
-      
+
       expect(marketScheduler.executor.execute).toHaveBeenCalledWith('testTask');
     });
   });
@@ -203,30 +192,30 @@ describe('MarketScheduler', () => {
   describe('错误处理', () => {
     test('应该记录启动日志', () => {
       marketScheduler.start();
-      
+
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 启动市场任务调度器');
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 任务调度器启动成功');
     });
 
     test('应该记录停止日志', () => {
       marketScheduler.stop();
-      
+
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 停止市场任务调度器');
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 任务调度器已停止');
     });
 
     test('应该记录手动任务执行日志', async () => {
       await marketScheduler.executeTask('testTask');
-      
+
       expect(global.logger.info).toHaveBeenCalledWith('[MarketScheduler] 手动触发任务: testTask');
     });
 
     test('应该记录任务执行失败日志', async () => {
       const error = new Error('Execution failed');
       marketScheduler.scheduler.executeTask.mockRejectedValue(error);
-      
+
       await marketScheduler._handleTaskTrigger('testTask', 5000);
-      
+
       expect(global.logger.error).toHaveBeenCalledWith(
         '[MarketScheduler] 任务 testTask 执行失败',
         { error: 'Execution failed' }
@@ -237,7 +226,7 @@ describe('MarketScheduler', () => {
   describe('向后兼容性验证', () => {
     test('应该保持相同的构造函数签名', () => {
       const scheduler = new MarketScheduler(mockMarketService, mockRedisClient, mockConfig);
-      
+
       expect(scheduler.marketService).toBe(mockMarketService);
       expect(scheduler.redis).toBe(mockRedisClient);
       expect(scheduler.config).toBe(mockConfig);

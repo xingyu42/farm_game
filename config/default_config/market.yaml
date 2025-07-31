@@ -22,19 +22,19 @@ update:
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小
 performance:
-  cache_enabled: true # 是否启用缓存
-  cache_ttl: 300 # 缓存TTL（秒）
+  cache_enabled: true # 是否启用缓存 (TODO: 未实现)
+  cache_ttl: 300 # 缓存TTL（秒）(TODO: 未实现)
   max_batch_size: 500 # 最大批次大小
-  connection_pool_size: 10 # Redis连接池大小
-  max_total_duration: 60000 # 总耗时告警阈值（毫秒）
-  max_avg_time_per_item: 100 # 单项平均耗时告警阈值（毫秒）
+  connection_pool_size: 10 # Redis连接池大小 (TODO: 未实现)
+  max_total_duration: 60000 # 总耗时告警阈值（毫秒）(TODO: 未实现)
+  max_avg_time_per_item: 100 # 单项平均耗时告警阈值（毫秒）(TODO: 未实现)
 
 # 浮动价格物品配置
 floating_items:
   # 基于类别的物品
   categories:
     - crops # 作物类别
-    - basic_seeds # 基础种子类别（可通过items.yaml的category字段匹配）
+    - seeds # 种子类别（可通过items.yaml的category字段匹配）
 
   # 特定物品ID列表（如果需要特别指定某些物品）
   items:
@@ -47,7 +47,7 @@ monitoring:
   enabled: true # 是否启用监控
   price_change_threshold: 0.3 # 价格变化超过30%时告警
   extreme_ratio_threshold: 2.0 # 供需比极端值告警阈值
-  alert_cooldown: 300 # 告警冷却时间（秒）
+  alert_cooldown: 300 # 告警冷却时间（秒）(TODO: 未实现)
 
 # 任务调度器配置（增强版）
 scheduler:
@@ -56,7 +56,6 @@ scheduler:
   task_timeout: 300000 # 任务超时时间（毫秒）
   retry_attempts: 2 # 任务重试次数
   lock_ttl: 600000 # 分布式锁TTL（毫秒）
-
   # 任务定义配置（新增）- 支持配置驱动的任务管理
   tasks:
     - name: priceUpdate
@@ -80,7 +79,13 @@ scheduler:
       enabled: true # 启用任务
       description: "市场监控任务"
 
+# 事务配置
+transaction:
+  lock_timeout: 600000 # 事务锁超时时间（毫秒）
+  max_retries: 2 # 事务最大重试次数
+  retry_delay: 1000 # 事务重试延迟（毫秒）
+
 # 价格历史
 history:
-  keep_days: 7 # 保留价格历史天数
+  keep_days: 7 # 保留价格历史天数 (TODO: 未实现)
   max_records: 168 # 最大历史记录数（7天 * 24小时）
