@@ -302,7 +302,7 @@ export class TransactionManager {
    * @private
    */
   async _performBatchOperations(operations, transactionId) {
-    const multi = this.redis.multi();
+    const multi = this.redis.pipeline();
     let successCount = 0;
     const errors = [];
 
@@ -324,15 +324,16 @@ export class TransactionManager {
       // 执行事务
       const results = await multi.exec();
       
-      // 检查事务结果
+      // 检查事务结果 (适配 node-redis 返回格式)
       if (results && results.length > 0) {
         for (let i = 0; i < results.length; i++) {
-          const [error, result] = results[i];
-          if (error) {
+          const result = results[i];
+          // node-redis 返回的错误是 Error 对象，成功时是值
+          if (result instanceof Error) {
             errors.push({
               operation: operations[i]?.type || 'unknown',
               key: operations[i]?.key,
-              error: error.message
+              error: result.message
             });
             successCount--;
           }

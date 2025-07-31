@@ -105,7 +105,7 @@ export class MarketDataManager {
       const field = transactionType === 'buy' ? 'demand_24h' : 'supply_24h';
 
       // 使用Redis事务确保原子性
-      const multi = this.redis.multi();
+      const multi = this.redis.pipeline();
       multi.hIncrBy(statsKey, field, quantity);
       multi.hSet(statsKey, 'last_transaction', Date.now().toString());
 
@@ -142,8 +142,8 @@ export class MarketDataManager {
       const stats = [];
 
       for (let i = 0; i < ids.length; i++) {
-        const [err, data] = results[i];
-        if (!err && data && Object.keys(data).length > 0) {
+        const data = results[i];
+        if (data && Object.keys(data).length > 0) {
           stats.push({
             itemId: ids[i],
             ...this._parseStatsData(data)
@@ -151,7 +151,7 @@ export class MarketDataManager {
         } else {
           stats.push({
             itemId: ids[i],
-            error: err?.message || '数据不存在'
+            error: '数据不存在'
           });
         }
       }

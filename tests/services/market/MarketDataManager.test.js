@@ -182,7 +182,7 @@ describe('MarketDataManager', () => {
       const mockMulti = {
         hIncrBy: jest.fn().mockReturnThis(),
         hSet: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]])
+        exec: jest.fn().mockResolvedValue([1, 1])
       };
       mockRedisClient.multi.mockReturnValue(mockMulti);
 
@@ -197,7 +197,7 @@ describe('MarketDataManager', () => {
       const mockMulti = {
         hIncrBy: jest.fn().mockReturnThis(),
         hSet: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]])
+        exec: jest.fn().mockResolvedValue([1, 1])
       };
       mockRedisClient.multi.mockReturnValue(mockMulti);
 
@@ -247,7 +247,7 @@ describe('MarketDataManager', () => {
 
       const mockPipeline = {
         hGetAll: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, mockStatsData]])
+        exec: jest.fn().mockResolvedValue([mockStatsData])
       };
       mockRedisClient.pipeline.mockReturnValue(mockPipeline);
 
@@ -276,8 +276,8 @@ describe('MarketDataManager', () => {
       const mockPipeline = {
         hGetAll: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([
-          [null, mockStatsData1],
-          [null, mockStatsData2]
+          mockStatsData1,
+          mockStatsData2
         ])
       };
       mockRedisClient.pipeline.mockReturnValue(mockPipeline);
@@ -293,7 +293,7 @@ describe('MarketDataManager', () => {
     test('应该处理数据不存在的情况', async () => {
       const mockPipeline = {
         hGetAll: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, {}]]) // 空数据
+        exec: jest.fn().mockResolvedValue([{}]) // 空数据
       };
       mockRedisClient.pipeline.mockReturnValue(mockPipeline);
 
@@ -316,7 +316,7 @@ describe('MarketDataManager', () => {
       
       // 对于空字符串，实际会进入pipeline逻辑但返回错误结果
       // 因为''会被当作有效itemId处理，需要mock pipeline返回
-      mockPipeline.exec.mockResolvedValue([[null, {}]]); // 空数据
+      mockPipeline.exec.mockResolvedValue([{}]); // 空数据
       const result2 = await marketDataManager.getMarketStats('');
       expect(result2.itemId).toBe('');
       expect(result2.error).toBeDefined();
@@ -325,7 +325,7 @@ describe('MarketDataManager', () => {
     test('应该处理Redis操作错误', async () => {
       const mockPipeline = {
         hGetAll: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[new Error('Redis错误'), null]])
+        exec: jest.fn().mockResolvedValue([null])
       };
       mockRedisClient.pipeline.mockReturnValue(mockPipeline);
 

@@ -14,11 +14,6 @@ pricing:
   extreme_ratio_max: 10 # 极端供需比上限
   extreme_ratio_min: 0.1 # 极端供需比下限
 
-# 更新策略
-update:
-  interval: 3600 # 价格更新间隔（秒）
-  reset_stats: true # 是否重置24小时统计
-
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小
 performance:

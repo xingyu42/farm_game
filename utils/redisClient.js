@@ -86,11 +86,12 @@ class RedisClient {
         throw new Error('Transaction was discarded (WATCH key was modified)');
       }
 
-      // 检查每个命令的执行结果
+      // 检查每个命令的执行结果 (适配 node-redis 返回格式)
       for (let i = 0; i < results.length; i++) {
-        const [err] = results[i];
-        if (err) {
-          throw new Error(`Transaction command ${i} failed: ${err.message}`, { cause: err });
+        const result = results[i];
+        // node-redis 返回的错误是 Error 对象，成功时是值
+        if (result instanceof Error) {
+          throw new Error(`Transaction command ${i} failed: ${result.message}`, { cause: result });
         }
       }
 
