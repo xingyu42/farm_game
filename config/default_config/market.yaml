@@ -54,7 +54,7 @@ scheduler:
   # 任务定义配置（新增）- 支持配置驱动的任务管理
   tasks:
     - name: priceUpdate
-      interval: 3600 # 1小时（秒）
+      interval: 600 # 10分钟（秒）
       timeout: 300 # 5分钟超时（秒）
       retry_attempts: 2 # 重试2次
       enabled: true # 启用任务
@@ -68,7 +68,7 @@ scheduler:
       description: "每日统计重置任务"
 
     - name: monitoring
-      interval: 900 # 15分钟（秒）
+      interval: 1800 # 30分钟（秒）
       timeout: 120 # 2分钟超时（秒）
       retry_attempts: 1 # 重试1次
       enabled: true # 启用任务
