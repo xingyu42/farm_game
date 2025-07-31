@@ -133,7 +133,7 @@ export class TaskScheduler {
             }
 
             await this._execute(taskDef.name, taskDef.timeout);
-        }, taskDef.interval);
+        }, taskDef.interval * 1000);
 
         this.jobs.set(taskDef.name, job);
     }
@@ -161,7 +161,7 @@ export class TaskScheduler {
                 logger.error(`[TaskScheduler] 任务失败: ${taskName}, 耗时: ${duration}ms`, { error: error.message });
                 throw error;
             }
-        }, timeout + 5000);
+        }, (timeout * 1000) + 5000);
     }
 
     /**
@@ -185,7 +185,7 @@ export class TaskScheduler {
                 logger.debug(`[TaskScheduler] 执行任务 ${taskName}, 尝试 ${attempt}/${maxAttempts}`);
 
                 // 超时保护
-                const result = await this._executeWithTimeout(taskFn, timeout);
+                const result = await this._executeWithTimeout(taskFn, timeout * 1000);
 
                 if (attempt > 1) {
                     logger.info(`[TaskScheduler] 任务 ${taskName} 重试成功，尝试次数: ${attempt}`);
@@ -219,7 +219,7 @@ export class TaskScheduler {
      */
     async _executeWithTimeout(taskFunction, timeout) {
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`Task timeout after ${timeout}ms`)), timeout);
+            setTimeout(() => reject(new Error(`Task timeout after ${timeout}s`)), timeout * 1000);
         });
         return Promise.race([taskFunction(), timeoutPromise]);
     }

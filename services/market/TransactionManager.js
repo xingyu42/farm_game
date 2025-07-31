@@ -15,10 +15,10 @@ export class TransactionManager {
     this.lockManager = new RedisLock(redisClient);
     
     // 获取事务配置
-    this.transactionConfig = this.config.market?.transaction
-    this.lockTimeout = this.transactionConfig.lock_timeout
+    this.transactionConfig = this.config.market.transaction
+    this.lockTimeout = this.transactionConfig.lock_timeout * 1000;
     this.maxRetries = this.transactionConfig.max_retries
-    this.retryDelay = this.transactionConfig.retry_delay
+    this.retryDelay = this.transactionConfig.retry_delay * 1000;
     
     // 活跃事务跟踪
     this.activeTransactions = new Map();
@@ -210,8 +210,8 @@ export class TransactionManager {
       // 分析锁的状态
       for (let i = 0; i < lockKeys.length; i++) {
         const key = lockKeys[i];
-        const value = results[i * 2][1];
-        const ttl = results[i * 2 + 1][1];
+        const value = results[i * 2];
+        const ttl = results[i * 2 + 1];
         
         // 检查是否有长时间持有的锁
         if (ttl > this.lockTimeout / 1000) {
@@ -324,16 +324,15 @@ export class TransactionManager {
       // 执行事务
       const results = await multi.exec();
       
-      // 检查事务结果 (适配 node-redis 返回格式)
+      // 检查事务结果
       if (results && results.length > 0) {
         for (let i = 0; i < results.length; i++) {
-          const result = results[i];
-          // node-redis 返回的错误是 Error 对象，成功时是值
-          if (result instanceof Error) {
+          const result = results[i]; // node-redis 返回扁平数组
+          if (result instanceof Error) { // 直接检查元素是否为 Error 对象
             errors.push({
               operation: operations[i]?.type || 'unknown',
               key: operations[i]?.key,
-              error: result.message
+              error: result.message // 使用 result.message
             });
             successCount--;
           }
