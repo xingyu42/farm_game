@@ -18,6 +18,8 @@ export class TaskScheduler {
         // 调度器状态
         this.jobs = new Map();
         this.isRunning = false;
+        // 新增：用于跟踪每日任务的最后执行日期
+        this.lastResetDate = null;
 
         // 任务映射表 - 原 TaskExecutor 逻辑
         this.taskMapping = {
@@ -116,10 +118,18 @@ export class TaskScheduler {
      */
     _scheduleTask(taskDef) {
         const job = setInterval(async () => {
-            // statsReset 任务特殊处理：仅在00:00执行
+            // statsReset 任务特殊处理：确保每天只执行一次
             if (taskDef.name === 'statsReset') {
                 const now = new Date();
-                if (now.getHours() !== 0 || now.getMinutes() !== 0) return;
+                const today = now.toDateString(); // 获取今天的日期字符串
+
+                // 如果今天已经执行过，则跳过
+                if (this.lastResetDate === today) {
+                    return;
+                }
+                
+                // 标记为今天已执行（在执行前设置，防止重复执行）
+                this.lastResetDate = today;
             }
 
             await this._execute(taskDef.name, taskDef.timeout);
