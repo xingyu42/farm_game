@@ -75,8 +75,8 @@ class RedisClient {
     const multi = this.client.multi();
 
     try {
-      // 执行事务函数，传入multi实例
-      await transactionFn(multi);
+      // 执行事务函数，传入multi实例，并获取业务返回值
+      const operationResult = await transactionFn(multi);
 
       // 执行事务并检查结果
       const results = await multi.exec();
@@ -95,7 +95,8 @@ class RedisClient {
         }
       }
 
-      return results;
+      // 返回业务操作的结果，而不是Redis命令结果
+      return operationResult;
     } catch (error) {
       // 保留原始错误堆栈跟踪
       throw new Error(`Transaction failed: ${error.message}`, { cause: error });

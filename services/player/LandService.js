@@ -446,6 +446,44 @@ class LandService {
   }
 
   /**
+ * 获取所有土地信息
+ * @param {string} userId 用户ID
+ * @returns {Object} 包含成功状态和土地数组的对象
+ */
+  async getAllLands(userId) {
+    try {
+      const lands = await this.playerService.getAllLands(userId);
+
+      return {
+        success: true,
+        lands: lands || []
+      };
+    } catch (error) {
+      logger.error(`[LandService] 获取所有土地失败 [${userId}]: ${error.message}`);
+      return {
+        success: false,
+        lands: [],
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 根据土地ID获取土地信息
+   * @param {string} userId 用户ID
+   * @param {number} landId 土地ID (1-based)
+   * @returns {Object|null} 土地数据或null
+   */
+  async getLandById(userId, landId) {
+    try {
+      return await this.playerService.getLandById(userId, landId);
+    } catch (error) {
+      logger.error(`[LandService] 获取土地失败 [${userId}, ${landId}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * 获取物品名称（使用统一的ItemResolver）
    * @param {string} itemId 物品ID
    * @returns {string} 物品名称

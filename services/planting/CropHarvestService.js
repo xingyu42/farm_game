@@ -15,6 +15,8 @@ class CropHarvestService {
     this.landService = landService;
     this.playerService = playerService;
     this.cropMonitorService = cropMonitorService;
+    // cropScheduleService 功能已合并到 cropMonitorService 中
+    this.cropScheduleService = cropMonitorService;
     this.config = config;
     // 初始化依赖组件
     this.calculator = new Calculator(config);
@@ -107,6 +109,7 @@ class CropHarvestService {
               landId: currentLandId,
               cropType: landData.crop,
               cropName: cropConfig.name,
+              yield: harvestResult.yield,
               items: harvestResult.items,
               experience: harvestResult.experience,
               quality: harvestResult.quality

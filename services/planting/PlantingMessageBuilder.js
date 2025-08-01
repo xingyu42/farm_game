@@ -57,6 +57,18 @@ class PlantingMessageBuilder {
   }
 
   /**
+   * 构建信息消息
+   * @param {string} content 消息内容
+   * @returns {Object} 标准响应格式
+   */
+  buildInfoMessage(content) {
+    return {
+      success: true,
+      message: `${this.icons.info} ${content}`
+    };
+  }
+
+  /**
    * 构建种植成功消息
    * @param {string} cropName 作物名称
    * @param {number} landId 土地编号

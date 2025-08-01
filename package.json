@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -14,7 +11,6 @@
   "author": "",
   "description": "",
   "devDependencies": {
-    "@eslint/js": "^9.31.0",
-    "jest": "^30.0.3"
+    "@eslint/js": "^9.31.0"
   }
 }

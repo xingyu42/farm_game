@@ -58,7 +58,7 @@ export class farm extends plugin {
 
     // 初始化配置
     this.config = Config
-    
+
     // 初始化服务
     this._initServices();
   }
