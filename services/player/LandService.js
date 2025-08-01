@@ -456,7 +456,7 @@ class LandService {
 
       return {
         success: true,
-        lands: lands || []
+        lands: lands
       };
     } catch (error) {
       logger.error(`[LandService] 获取所有土地失败 [${userId}]: ${error.message}`);
@@ -476,7 +476,8 @@ class LandService {
    */
   async getLandById(userId, landId) {
     try {
-      return await this.playerService.getLandById(userId, landId);
+      const result = await this.playerService.getLandById(userId, landId);
+      return result;
     } catch (error) {
       logger.error(`[LandService] 获取土地失败 [${userId}, ${landId}]: ${error.message}`);
       return null;

@@ -177,7 +177,16 @@ export class player extends plugin {
       // 使用签到服务
       const signInResult = await this.playerService.signInService.signIn(userId);
 
-      await e.reply(signInResult.message);
+      // 如果签到失败，直接返回错误信息
+      if (!signInResult.success) {
+        await e.reply(signInResult.message);
+        return true;
+      }
+
+      // 格式化详细的签到奖励信息
+      const detailedMessage = this._formatSignInRewards(signInResult);
+      
+      await e.reply(detailedMessage);
       return true;
 
     } catch (error) {
@@ -185,6 +194,87 @@ export class player extends plugin {
       e.reply('签到失败，请稍后重试');
       return true;
     }
+  }
+
+  /**
+   * 格式化签到奖励信息
+   * @param {Object} signInResult 签到结果
+   * @returns {string} 格式化后的奖励信息
+   */
+  _formatSignInRewards(signInResult) {
+    const { rewards, consecutiveDays, totalSignDays } = signInResult;
+    
+    const messages = [
+      `🎉 签到成功！连续签到 ${consecutiveDays} 天`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `🎁 今日奖励：`
+    ];
+
+    // 基础奖励展示
+    if (rewards.coins > 0) {
+      messages.push(`💰 金币: +${rewards.coins.toLocaleString()}`);
+    }
+    
+    if (rewards.experience > 0) {
+      messages.push(`✨ 经验: +${rewards.experience}`);
+    }
+
+    // 物品奖励展示
+    if (rewards.items && rewards.items.length > 0) {
+      messages.push(`📦 物品奖励:`);
+      rewards.items.forEach(item => {
+        const itemName = this.itemResolver ? this.itemResolver.getItemName(item.type) : item.type;
+        messages.push(`   • ${itemName} x${item.quantity}`);
+      });
+    }
+
+    // 里程碑奖励特殊展示
+    if (rewards.milestone) {
+      messages.push(``, `🏆 里程碑达成: ${rewards.milestone}!`);
+      
+      // 根据连续签到天数显示特殊祝贺
+      if (consecutiveDays === 7) {
+        messages.push(`🌟 坚持一周签到，真不容易！`);
+      } else if (consecutiveDays === 30) {
+        messages.push(`🎊 连续签到一个月，你是真正的农场主！`);
+      } else if (consecutiveDays === 100) {
+        messages.push(`👑 签到百日成就解锁，传奇农场主诞生！`);
+      }
+    }
+
+    // 签到统计信息
+    messages.push(``, `📊 签到统计:`);
+    messages.push(`📅 总签到天数: ${totalSignDays} 天`);
+    messages.push(`🔥 连续签到: ${consecutiveDays} 天`);
+
+    // 下次签到奖励预览 - 使用SignInService的预览功能
+    try {
+      const previewRewards = this.playerService.signInService.getSignInRewardsPreview(consecutiveDays);
+      const nextDayReward = previewRewards.find(reward => reward.day === consecutiveDays + 1);
+      
+      if (nextDayReward) {
+        messages.push(``, `🔮 明日奖励预览:`);
+        messages.push(`💰 金币: +${nextDayReward.coins.toLocaleString()}`);
+        messages.push(`✨ 经验: +${nextDayReward.experience}`);
+        
+        if (nextDayReward.milestone) {
+          messages.push(`🏆 里程碑: ${nextDayReward.milestone}`);
+        }
+      }
+    } catch (error) {
+      logger.warn('[农场游戏] 获取明日奖励预览失败:', error);
+    }
+
+    // 激励信息
+    if (consecutiveDays < 7) {
+      const remainingDays = 7 - consecutiveDays;
+      messages.push(``, `💪 再坚持 ${remainingDays} 天可获得一周里程碑奖励！`);
+    } else if (consecutiveDays < 30) {
+      const remainingDays = 30 - consecutiveDays;
+      messages.push(``, `🚀 距离月度里程碑还有 ${remainingDays} 天！`);
+    }
+
+    return messages.join('\n');
   }
 }
 

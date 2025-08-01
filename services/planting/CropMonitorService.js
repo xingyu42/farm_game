@@ -651,11 +651,11 @@ class CropMonitorService {
             const growthProgress = timeSincePlant / totalGrowTime;
 
             // 在生长过程中随机生成护理需求
-            if (growthProgress > 0.3 && !landData.needsWater && Math.random() < 0.1) {
+            if (growthProgress > 0.3 && !landData.needsWater && Math.random() < 0.12) {
                 landUpdate.needsWater = true;
             }
 
-            if (growthProgress > 0.5 && !landData.hasPests && Math.random() < 0.05) {
+            if (growthProgress > 0.5 && !landData.hasPests && Math.random() < 0.10) {
                 landUpdate.hasPests = true;
             }
         }

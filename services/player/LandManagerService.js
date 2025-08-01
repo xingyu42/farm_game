@@ -177,7 +177,6 @@ class LandManagerService {
                 logger.warn(`[LandManagerService] 玩家 ${userId} 土地数据结构异常`);
                 return null;
             }
-
             if (landId < 1 || landId > playerData.lands.length) {
                 logger.warn(`[LandManagerService] 土地ID越界 [${userId}]: landId=${landId}, length=${playerData.lands.length}`);
                 return null;

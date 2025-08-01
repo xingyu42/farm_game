@@ -85,7 +85,7 @@ class PlayerService {
      */
     async createPlayer(userId, userName = null) {
         try {
-            
+
             // 创建新玩家数据
             const playerData = this.dataService.createNewPlayerData(userName || '');
             await this.dataService.savePlayer(userId, playerData);
@@ -464,7 +464,8 @@ class PlayerService {
      * @returns {Object|null} 土地数据或null
      */
     async getLandById(userId, landId) {
-        return await this.landManagerService.getLandById(userId, landId);
+        const result = await this.landManagerService.getLandById(userId, landId);
+        return result;
     }
 
     /**

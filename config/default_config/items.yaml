@@ -57,6 +57,19 @@ fertilizers:
     aliases: ["顶级", "豪华肥料", "顶级化肥", "最好的"] # 别名配置
     effect:
       speedBonus: 0.6 # 加速60%
+
+# 杀虫剂配置
+pesticides:
+  pesticide_basic:
+    name: "基础杀虫剂"
+    price: 8
+    sellPrice: 3
+    category: "pesticide"
+    description: "清除作物害虫，恢复健康"
+    effects:
+      health: 15
+    aliases: ["杀虫剂", "基础杀虫剂"]
+
 # 狗粮配置（防御系统）
 dogFood:
   normal:
@@ -171,6 +184,8 @@ shop:
       items: ["carrot_seed", "tomato_seed", "wheat_seed"]
     - name: "肥料"
       items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
+    - name: "杀虫剂"
+      items: ["pesticide_basic"]
     - name: "防御"
       items: ["normal", "premium", "deluxe"]
     - name: "工具"

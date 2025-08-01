@@ -33,8 +33,13 @@ class CropCareService {
           throw new Error(`土地 ${landId} 不存在`);
         }
 
-        // 2. 验证护理条件
-        const validation = this.validator.validateCareOperation(landData, 'water');
+                // 2. 验证护理条件
+        const playerData = await this.landService.playerService.getPlayer(userId);
+        if (!playerData) {
+          throw new Error('获取玩家数据失败');
+        }
+        
+        const validation = this.validator.validateCareOperation(playerData, landId, 'water');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
@@ -82,8 +87,12 @@ class CropCareService {
           throw new Error(`土地 ${landId} 不存在`);
         }
 
-        // 2. 验证护理条件
-        const validation = this.validator.validateCareOperation(landData, 'fertilize');
+        // 2. 验证护理条件 - 需要完整的玩家数据
+        const playerData = await this.landService.playerService.getPlayer(userId);
+        if (!playerData) {
+          throw new Error('获取玩家数据失败');
+        }
+        const validation = this.validator.validateCareOperation(playerData, landId, 'fertilize');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
@@ -161,8 +170,12 @@ class CropCareService {
           throw new Error(`土地 ${landId} 不存在`);
         }
 
-        // 2. 验证护理条件
-        const validation = this.validator.validateCareOperation(landData, 'pesticide');
+        // 2. 验证护理条件 - 需要完整的玩家数据
+        const playerData = await this.landService.playerService.getPlayer(userId);
+        if (!playerData) {
+          throw new Error('获取玩家数据失败');
+        }
+        const validation = this.validator.validateCareOperation(playerData, landId, 'pesticide');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
@@ -225,7 +238,13 @@ class CropCareService {
         const landUpdates = {};
         const inventoryUpdates = {};
 
-        // 1. 验证所有护理动作
+        // 1. 获取玩家数据用于验证
+        const playerData = await this.landService.playerService.getPlayer(userId);
+        if (!playerData) {
+          throw new Error('获取玩家数据失败');
+        }
+
+        // 2. 验证所有护理动作
         for (const action of careActions) {
           const { landId, action: careAction, itemType } = action;
 
@@ -234,7 +253,7 @@ class CropCareService {
             throw new Error(`土地 ${landId} 不存在`);
           }
 
-          const validation = this.validator.validateCareOperation(landData, careAction);
+          const validation = this.validator.validateCareOperation(playerData, landId, careAction);
           if (!validation.success) {
             throw new Error(`土地 ${landId}: ${validation.error.message}`);
           }
@@ -355,7 +374,13 @@ class CropCareService {
         return { success: false, message: `土地 ${landId} 不存在` };
       }
 
-      const validation = this.validator.validateCareOperation(landData, careType);
+      // 获取完整的玩家数据用于验证
+      const playerData = await this.landService.playerService.getPlayer(userId);
+      if (!playerData) {
+        return { success: false, message: '获取玩家数据失败' };
+      }
+
+      const validation = this.validator.validateCareOperation(playerData, landId, careType);
       if (!validation.success) {
         return validation;
       }

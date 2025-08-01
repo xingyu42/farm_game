@@ -22,7 +22,6 @@ class SignInService {
         try {
             return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
                 const playerData = await this.dataService.getPlayer(userId);
-
                 if (!playerData) {
                     throw new Error('玩家不存在');
                 }

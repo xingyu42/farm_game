@@ -73,6 +73,7 @@ class PlantingDataService {
                 return null;
             }
 
+
             const landIndex = landId - 1;
             if (landIndex < 0 || landIndex >= cropData.lands.length) {
                 return null;
@@ -200,9 +201,9 @@ class PlantingDataService {
     async executeWithTransaction(userId, operation) {
         try {
             const playerKey = this.redis.generateKey('player', userId);
-
             return await this.redis.transaction(async (multi) => {
-                return await operation(multi, playerKey);
+                const result = await operation(multi, playerKey);
+                return result;
             });
         } catch (error) {
             logger.error(`[PlantingDataService] 事务执行失败 [${userId}]: ${error.message}`);
