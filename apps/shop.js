@@ -26,11 +26,11 @@ export class ShopCommands extends plugin {
           fnc: 'viewMarket'
         },
         {
-          reg: '^#(nc)?购买\\s+(.+?)\\s*(\\d+)?$',
+          reg: '^#(nc)?购买(.+?)(\\d+)?$',
           fnc: 'buyItem'
         },
         {
-          reg: '^#(nc)?出售\\s+(.+?)\\s*(\\d+)?$',
+          reg: '^#(nc)?出售(.+?)(\\d+)?$',
           fnc: 'sellItem'
         },
         {
@@ -39,7 +39,7 @@ export class ShopCommands extends plugin {
         }
       ]
     });
-    
+
     // 初始化服务
     this._initServices();
   }
@@ -163,10 +163,10 @@ export class ShopCommands extends plugin {
     try {
       const userId = e.user_id.toString();
       // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to numbered capture groups for consistency with rule patterns; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(nc)?购买\s+(.+?)\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?购买(.+?)(\d+)?$/);
 
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #nc购买 [物品名] [数量]');
+        await e.reply('❌ 格式错误！使用: #nc购买[物品名][数量]');
         return true;
       }
 
@@ -207,10 +207,10 @@ export class ShopCommands extends plugin {
     try {
       const userId = e.user_id.toString();
       // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:36:57 +08:00; Reason: Shrimp Task ID: #db7410e1, upgrading to numbered capture groups for consistency with rule patterns; Principle_Applied: RegexPattern-Modernization;}}
-      const match = e.msg.match(/^#(nc)?出售\s+(.+?)\s*(\d+)?$/);
+      const match = e.msg.match(/^#(nc)?出售(.+?)(\d+)?$/);
 
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #nc出售 [物品名] [数量]');
+        await e.reply('❌ 格式错误！使用: #nc出售[物品名][数量]');
         return true;
       }
 

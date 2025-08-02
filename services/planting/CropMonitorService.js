@@ -234,6 +234,22 @@ class CropMonitorService {
             for (const land of allLands.lands) {
                 if (!land.crop || land.status === 'empty') {
                     statusInfo.empty++;
+                    // 将空地信息也加入crops数组，确保数据一致性
+                    const cropInfo = {
+                        landId: land.id,
+                        cropType: null,
+                        cropName: null,
+                        status: 'empty',
+                        health: land.health || 100,
+                        needsWater: false,
+                        hasPests: false,
+                        plantTime: null,
+                        harvestTime: null,
+                        stealable: false,
+                        remainingTime: 0,
+                        isReady: false
+                    };
+                    statusInfo.crops.push(cropInfo);
                     continue;
                 }
 

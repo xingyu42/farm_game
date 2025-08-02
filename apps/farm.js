@@ -22,7 +22,11 @@ export class farm extends plugin {
           fnc: 'showOtherFarm'
         },
         {
-          reg: '^#(nc)?种植\\s+(.+)\\s+(\\d+)$',
+          reg: '^#(nc)?种植全部(?:(.+))?$',
+          fnc: 'plantAll'
+        },
+        {
+          reg: '^#(nc)?种植(.+?)(\\d+)$',
           fnc: 'plantCrop'
         },
         {
@@ -30,7 +34,7 @@ export class farm extends plugin {
           fnc: 'waterCrop'
         },
         {
-          reg: '^#(nc)?施肥(\\d+|全部)(?:\\s+(.+))?$',
+          reg: '^#(nc)?施肥(\\d+|全部)(.+)?$',
           fnc: 'fertilizeCrop'
         },
         {
@@ -38,7 +42,7 @@ export class farm extends plugin {
           fnc: 'pesticideCrop'
         },
         {
-          reg: '^#(nc)?收获\\s+(\\d+)$',
+          reg: '^#(nc)?收获(\\d+)$',
           fnc: 'harvestCrop'
         },
         {
@@ -70,6 +74,7 @@ export class farm extends plugin {
   _initServices() {
     this.playerService = serviceContainer.getService('playerService');
     this.plantingService = serviceContainer.getService('plantingService');
+    this.inventoryService = serviceContainer.getService('inventoryService');
   }
 
   /**
@@ -246,9 +251,9 @@ export class farm extends plugin {
   async plantCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(nc)?种植\s+(.+)\s+(\d+)$/);
+      const match = e.msg.match(/^#(nc)?种植(.+)(\d+)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #种植 [作物名称] [土地编号]');
+        await e.reply('❌ 格式错误！使用: #种植[作物名称][土地编号]');
         return true;
       }
 
@@ -347,9 +352,9 @@ export class farm extends plugin {
       // #施肥 1 普通肥料  -> 使用指定肥料
       // #施肥 全部       -> 智能施肥所有生长中的作物
       // #施肥 全部 普通肥料 -> 使用指定肥料智能施肥
-      const match = e.msg.match(/^#(nc)?施肥(\d+|全部)(?:\s+(.+))?$/);
+      const match = e.msg.match(/^#(nc)?施肥(\d+|全部)(.+)?$/);
       if (!match) {
-        await e.reply('❌ 格式错误！\n使用方法：\n#施肥 [土地编号] - 自动选择最好的肥料\n#施肥 [土地编号] [肥料名称] - 使用指定肥料\n#施肥 全部 - 智能施肥所有生长中的作物\n#施肥 全部 [肥料名称] - 使用指定肥料智能施肥');
+        await e.reply('❌ 格式错误！\n使用方法：\n#施肥[土地编号] - 自动选择最好的肥料\n#施肥[土地编号][肥料名称] - 使用指定肥料\n#施肥全部 - 智能施肥所有生长中的作物\n#施肥全部[肥料名称] - 使用指定肥料智能施肥');
         return true;
       }
 
@@ -447,14 +452,64 @@ export class farm extends plugin {
   }
 
   /**
+   * 种植全部作物 - 统一入口方法
+   */
+  async plantAll(e) {
+    try {
+      // 解析命令参数
+      const match = e.msg.match(/^#(nc)?种植全部(?:(.+))?$/);
+      if (!match) {
+        await e.reply('❌ 格式错误！\n使用方法：\n#种植全部 - 智能自动种植\n#种植全部[作物名称] - 指定作物种植');
+        return true;
+      }
+
+      const cropName = match[2]; // 可选的作物名称
+      const userId = e.user_id;
+
+      // 验证玩家注册状态
+      if (!(await this.playerService.isPlayer(userId))) {
+        return e.reply('您未注册，请先"#nc注册"');
+      }
+
+      // 获取空闲土地
+      let emptyLands;
+      try {
+        emptyLands = await this.getEmptyLands(userId);
+      } catch (error) {
+        logger.error('[农场游戏] 获取空闲土地失败:', error);
+        return e.reply('获取农场状态失败，请稍后重试');
+      }
+
+      // 检查是否有空闲土地
+      if (emptyLands.length === 0) {
+        return e.reply('🌾 所有土地都已种植，没有空闲土地可用！');
+      }
+
+      // 根据参数路由到不同的处理逻辑
+      if (cropName) {
+        // 指定作物批量种植
+        return await this.plantSpecificCrop(userId, e, emptyLands, cropName);
+      } else {
+        // 智能选择作物批量种植
+        return await this.plantWithSmartSelection(userId, e, emptyLands);
+      }
+
+    } catch (error) {
+      logger.error('[农场游戏] 批量种植失败:', error);
+      e.reply('批量种植失败，请稍后重试');
+      return true;
+    }
+  }
+
+  /**
    * 收获作物
    */
   async harvestCrop(e) {
     try {
       // 优化：使用更高效的正则匹配，避免重复解析
-      const match = e.msg.match(/^#(nc)?收获\s+(\d+)$/);
+      const match = e.msg.match(/^#(nc)?收获(\d+)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #收获 [土地编号]');
+        await e.reply('❌ 格式错误！使用: #收获[土地编号]');
         return true;
       }
 
@@ -613,7 +668,7 @@ export class farm extends plugin {
           } else {
             failCount++;
             results.push(`土地${landId}: ${result.message}`);
-            }
+          }
         } catch (error) {
           failCount++;
           results.push(`土地${landId}: 浇水失败`);
@@ -788,6 +843,302 @@ export class farm extends plugin {
       await e.reply('❌ 智能施肥失败，请稍后重试');
       return true;
     }
+  }
+
+  /**
+   * 获取空闲土地列表
+   * @param {string} userId 用户ID
+   * @returns {Promise<Array>} 空闲土地ID数组
+   */
+  async getEmptyLands(userId) {
+    const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
+    if (!cropsStatusResult.success) {
+      throw new Error('获取作物状态失败');
+    }
+
+    const cropsStatus = cropsStatusResult.data;
+
+    // 使用 crops 数组过滤空地（现在包含所有土地信息）
+    const emptyLands = cropsStatus.crops
+      .filter(crop => crop.status === 'empty')
+      .map(crop => crop.landId);
+
+    return emptyLands;
+  }
+
+  /**
+   * 计算作物评分
+   * @param {string} cropType 作物类型
+   * @param {Object} cropConfig 作物配置
+   * @param {Object} seedConfig 种子配置
+   * @param {number} inventory 库存数量
+   * @returns {number} 作物评分
+   */
+  calculateCropScore(cropType, cropConfig, seedConfig, inventory) {
+    // 收益率 = (售价 - 种子价格) / 种子价格
+    const profitRatio = (cropConfig.sellPrice - seedConfig.price) / seedConfig.price;
+
+    // 生长时间转换为小时
+    const growTimeHours = cropConfig.growTime / 3600;
+
+    // 时间效率 = 收益率 / 生长时间（小时）
+    const timeEfficiency = profitRatio / growTimeHours;
+
+    // 库存权重：库存数量越多，评分加成越高，但有上限
+    const inventoryWeight = Math.min(inventory / 10, 1.5);
+
+    return timeEfficiency * inventoryWeight;
+  }
+
+  /**
+   * 智能作物选择算法
+   * @param {Object} seedInventory 种子库存对象
+   * @returns {Object|null} 选中的作物信息
+   */
+  selectOptimalCrop(seedInventory) {
+    const cropsConfig = this.config.crops;
+    const seedsConfig = this.config.items.seeds;
+
+    let bestCrop = null;
+    let bestScore = -1;
+
+    // 遍历所有作物类型
+    for (const [cropType, cropConfig] of Object.entries(cropsConfig)) {
+      // 查找对应的种子配置
+      const seedId = `${cropType}_seed`;
+      const seedConfig = seedsConfig[seedId];
+
+      if (!seedConfig) continue;
+
+      // 检查库存
+      const inventory = seedInventory[seedId] || 0;
+      if (inventory <= 0) continue;
+
+      // 计算评分
+      const score = this.calculateCropScore(cropType, cropConfig, seedConfig, inventory);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCrop = {
+          seedId,
+          cropType,
+          cropName: cropConfig.name,
+          score,
+          inventory,
+          profitRatio: (cropConfig.sellPrice - seedConfig.price) / seedConfig.price,
+          growTimeHours: cropConfig.growTime / 3600
+        };
+      }
+    }
+
+    return bestCrop;
+  }
+
+  /**
+   * 智能选择作物进行批量种植
+   * @param {string} userId 用户ID
+   * @param {Object} e 消息事件对象
+   * @param {Array} emptyLands 空闲土地列表
+   * @returns {Promise<boolean>}
+   */
+  async plantWithSmartSelection(userId, e, emptyLands) {
+    try {
+      // 获取玩家种子库存
+      const inventory = await this.inventoryService.getInventory(userId);
+      const seedInventory = {};
+
+      // 构建种子库存对象
+      for (const [itemId, item] of Object.entries(inventory.items)) {
+        if (itemId.endsWith('_seed')) {
+          seedInventory[itemId] = item.quantity;
+        }
+      }
+
+      // 调用智能选择算法
+      const selectedCrop = this.selectOptimalCrop(seedInventory);
+
+      // 处理无种子的边界情况
+      if (!selectedCrop) {
+        return e.reply('❌ 您没有任何种子可以种植！请先到商店购买种子。');
+      }
+
+      // 计算实际种植数量（库存和空地的最小值）
+      const plantCount = Math.min(selectedCrop.inventory, emptyLands.length);
+      const landIds = emptyLands.slice(0, plantCount);
+
+      // 调用批量种植执行方法
+      const results = await this.executeBatchPlanting(userId, landIds, selectedCrop.cropType);
+
+      // 发送智能种植结果
+      await this.sendSmartPlantingResults(e, selectedCrop, results, plantCount, emptyLands.length);
+
+      return true;
+
+    } catch (error) {
+      logger.error('[农场游戏] 智能种植失败:', error);
+      e.reply('智能种植失败，请稍后重试');
+      return true;
+    }
+  }
+
+  /**
+   * 指定作物批量种植
+   * @param {string} userId 用户ID
+   * @param {Object} e 消息事件对象
+   * @param {Array} emptyLands 空闲土地列表
+   * @param {string} cropName 作物名称
+   * @returns {Promise<boolean>}
+   */
+  async plantSpecificCrop(userId, e, emptyLands, cropName) {
+    try {
+      // 解析和验证作物名称（支持别名）
+      const cropType = await this._parseCropType(cropName);
+      if (!cropType) {
+        return e.reply(`❌ 未知的作物类型："${cropName}"\n请检查名称是否正确`);
+      }
+
+      // 获取对应种子ID和库存数量
+      const seedId = `${cropType}_seed`;
+      const inventory = await this.inventoryService.getInventory(userId);
+      const seedItem = inventory.items[seedId];
+
+      if (!seedItem || seedItem.quantity <= 0) {
+        return e.reply(`❌ 您没有${cropName}的种子！请先到商店购买。`);
+      }
+
+      // 计算实际种植数量（库存和空地的最小值）
+      const plantCount = Math.min(seedItem.quantity, emptyLands.length);
+      const landIds = emptyLands.slice(0, plantCount);
+
+      // 调用批量种植执行方法
+      const results = await this.executeBatchPlanting(userId, landIds, cropType);
+
+      // 发送指定作物种植结果
+      await this.sendSpecificPlantingResults(e, cropName, results, plantCount, emptyLands.length);
+
+      return true;
+
+    } catch (error) {
+      logger.error('[农场游戏] 指定作物种植失败:', error);
+      e.reply('指定作物种植失败，请稍后重试');
+      return true;
+    }
+  }
+
+  /**
+   * 执行批量种植
+   * @param {string} userId 用户ID
+   * @param {Array} landIds 土地ID列表
+   * @param {string} cropType 作物类型
+   * @returns {Promise<Object>} 批量操作结果
+   */
+  async executeBatchPlanting(userId, landIds, cropType) {
+    const results = {
+      successCount: 0,
+      failCount: 0,
+      results: []
+    };
+
+    // 遍历土地列表，逐个调用现有的种植方法
+    for (const landId of landIds) {
+      try {
+        const result = await this.plantingService.plantCrop(userId, landId, cropType);
+        if (result.success) {
+          results.successCount++;
+        } else {
+          results.failCount++;
+          results.results.push(`土地${landId}: ${result.message}`);
+        }
+      } catch (error) {
+        results.failCount++;
+        results.results.push(`土地${landId}: 种植失败`);
+        logger.error(`[农场游戏] 批量种植失败 [${userId}][${landId}]:`, error);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 格式化智能种植结果消息
+   * @param {Object} e 消息事件对象
+   * @param {Object} selectedCrop 选中的作物信息
+   * @param {Object} results 种植结果
+   * @param {number} plantCount 种植数量
+   * @param {number} totalEmpty 空闲土地总数
+   */
+  async sendSmartPlantingResults(e, selectedCrop, results, plantCount, totalEmpty) {
+    const cropConfig = this.config.crops[selectedCrop.cropType];
+
+    // 计算预期收益
+    const expectedProfit = results.successCount * cropConfig.sellPrice;
+
+    // 计算收获时间
+    const growTimeHours = Math.round(selectedCrop.growTimeHours * 10) / 10;
+
+    let message = `🌱 智能种植完成！\n`;
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    message += `🎯 选择作物: ${selectedCrop.cropName}\n`;
+    message += `💡 选择原因: 时间效率最高 (${Math.round(selectedCrop.score * 100) / 100}分)\n`;
+    message += `✅ 成功种植: ${results.successCount}块土地\n`;
+
+    if (results.failCount > 0) {
+      message += `❌ 种植失败: ${results.failCount}块土地\n`;
+    }
+
+    if (plantCount < totalEmpty) {
+      message += `📦 种子不足: 剩余${totalEmpty - plantCount}块空地未种植\n`;
+    }
+
+    message += `💰 预期收益: ${expectedProfit}金币\n`;
+    message += `⏰ 收获时间: ${growTimeHours}小时后\n`;
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    message += `💡 提示: 使用"#种植 全部 [作物名]"可指定作物种植`;
+
+    if (results.failCount > 0 && results.results.length > 0) {
+      message += `\n\n失败详情:\n${results.results.slice(0, 3).join('\n')}`;
+      if (results.results.length > 3) {
+        message += `\n... 还有${results.results.length - 3}个失败`;
+      }
+    }
+
+    await e.reply(message);
+  }
+
+  /**
+   * 格式化指定作物种植结果消息
+   * @param {Object} e 消息事件对象
+   * @param {string} cropName 作物名称
+   * @param {Object} results 种植结果
+   * @param {number} plantCount 种植数量
+   * @param {number} totalEmpty 空闲土地总数
+   */
+  async sendSpecificPlantingResults(e, cropName, results, plantCount, totalEmpty) {
+    let message = `🌾 指定作物种植完成！\n`;
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    message += `🎯 种植作物: ${cropName}\n`;
+    message += `✅ 成功种植: ${results.successCount}块土地\n`;
+
+    if (results.failCount > 0) {
+      message += `❌ 种植失败: ${results.failCount}块土地\n`;
+    }
+
+    if (plantCount < totalEmpty) {
+      message += `📦 种子不足: 剩余${totalEmpty - plantCount}块空地未种植\n`;
+      message += `💡 提示: 请到商店购买更多${cropName}种子\n`;
+    }
+
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    message += `💡 提示: 使用"#种植 全部"可让系统智能选择最优作物`;
+
+    if (results.failCount > 0 && results.results.length > 0) {
+      message += `\n\n失败详情:\n${results.results.slice(0, 3).join('\n')}`;
+      if (results.results.length > 3) {
+        message += `\n... 还有${results.results.length - 3}个失败`;
+      }
+    }
+
+    await e.reply(message);
   }
 }
 

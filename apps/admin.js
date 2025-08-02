@@ -11,12 +11,12 @@ export class adminApp extends plugin {
       priority: 400,
       rule: [
         {
-          reg: '^#nc管理\\s*(重置玩家|添加金币|添加经验|设置土地品质|统计|经济分析|重载配置|备份)(.*)$',
+          reg: '^#nc管理(重置玩家|添加金币|添加经验|设置土地品质|统计|经济分析|重载配置|备份)(.*)$',
           fnc: 'handleAdmin'
         }
       ]
     });
-    
+
     // 初始化服务
     this._initServices();
   }
@@ -37,8 +37,11 @@ export class adminApp extends plugin {
       return true;
     }
 
-    const command = e.msg.replace(/#nc管理\\s*/, '').trim();
-    const [action, ...args] = command.split(/\s+/);
+    const command = e.msg.replace(/#nc管理/, '').trim();
+    // 直接提取 action 和参数字符串，不做空格分割
+    const match = command.match(/^(\S+)(.*)$/);
+    const action = match ? match[1] : '';
+    const args = match && match[2] ? [match[2].trim()] : [];
 
     switch (action) {
       case '重置玩家':

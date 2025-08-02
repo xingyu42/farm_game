@@ -25,7 +25,6 @@ class PlayerDataService {
       'landCount',          // 当前土地数量（相对稳定）
       'inventoryCapacity',  // 当前仓库容量（相对稳定）
       'inventory_capacity', // 仓库容量别名
-      'inventory',          // 仓库物品（相对稳定）
       'stats',              // 统计信息（相对稳定）
       'signIn',             // 签到信息（相对稳定）
       'statistics'          // 详细统计（相对稳定）
@@ -37,6 +36,7 @@ class PlayerDataService {
       'lastUpdated',        // 最后更新时间
       'lastActiveTime',     // 最后活跃时间
       'lands',              // 土地信息（种植状态等）
+      'inventory',          // 仓库物品（频繁变动：种植、收获、使用物品）
       'protection',         // 保护状态
       'stealing'            // 偷菜信息
     ];
@@ -159,15 +159,22 @@ class PlayerDataService {
   }
 
   /**
-   * 高效更新单个简单字段
+   * 高效更新单个简单字段（支持分级存储）
    * @param {string} userId 用户ID
    * @param {string} field 字段名
    * @param {any} value 新值
    */
   async updateSimpleField(userId, field, value) {
     try {
-      const playerKey = this.redis.generateKey('player', userId);
-      await this.redis.client.hSet(playerKey, field, value.toString());
+      if (this.infrequentFields.includes(field)) {
+        // 长期字段存储到YAML文件
+        const parsedValue = this._parseFieldValue(field, value.toString());
+        await this._updateYamlFields(userId, { [field]: parsedValue });
+      } else {
+        // 频繁字段存储到Redis
+        const playerKey = this.redis.generateKey('player', userId);
+        await this.redis.client.hSet(playerKey, field, value.toString());
+      }
     } catch (error) {
       logger.error(`[PlayerDataService] 更新简单字段失败 [${userId}][${field}]: ${error.message}`);
       throw error;
@@ -175,24 +182,41 @@ class PlayerDataService {
   }
 
   /**
-   * 高效更新多个简单字段
+   * 高效更新多个简单字段（支持分级存储）
    * @param {string} userId 用户ID
    * @param {Object} fieldUpdates 字段更新映射
    */
   async updateSimpleFields(userId, fieldUpdates) {
     try {
-      const playerKey = this.redis.generateKey('player', userId);
-      const hashUpdates = {};
+      const redisUpdates = {};
+      const yamlUpdates = {};
 
       for (const [field, value] of Object.entries(fieldUpdates)) {
         if (this.serializer.simpleFields.includes(field)) {
-          hashUpdates[field] = value.toString();
+          if (this.infrequentFields.includes(field)) {
+            // 长期字段存储到YAML
+            const parsedValue = this._parseFieldValue(field, value.toString());
+            yamlUpdates[field] = parsedValue;
+          } else {
+            // 频繁字段存储到Redis
+            redisUpdates[field] = value.toString();
+          }
         }
       }
 
-      if (Object.keys(hashUpdates).length > 0) {
-        await this.redis.client.hSet(playerKey, hashUpdates);
+      // 并行更新Redis和YAML
+      const promises = [];
+
+      if (Object.keys(redisUpdates).length > 0) {
+        const playerKey = this.redis.generateKey('player', userId);
+        promises.push(this.redis.client.hSet(playerKey, redisUpdates));
       }
+
+      if (Object.keys(yamlUpdates).length > 0) {
+        promises.push(this._updateYamlFields(userId, yamlUpdates));
+      }
+
+      await Promise.all(promises);
     } catch (error) {
       logger.error(`[PlayerDataService] 批量更新简单字段失败 [${userId}]: ${error.message}`);
       throw error;

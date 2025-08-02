@@ -21,11 +21,11 @@ export class InventoryCommands extends plugin {
           fnc: 'viewInventory'
         },
         {
-          reg: '^#(nc)?锁定\\s+(.+)$',
+          reg: '^#(nc)?锁定(.+)$',
           fnc: 'lockItem'
         },
         {
-          reg: '^#(nc)?解锁\\s+(.+)$',
+          reg: '^#(nc)?解锁(.+)$',
           fnc: 'unlockItem'
         },
         {
@@ -34,7 +34,7 @@ export class InventoryCommands extends plugin {
         }
       ]
     });
-    
+
     // 初始化服务
     this._initServices();
   }
@@ -56,21 +56,21 @@ export class InventoryCommands extends plugin {
   async viewInventory(e) {
     try {
       const userId = e.user_id.toString();
-      
+
       // 确保玩家存在
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
       // 获取格式化的仓库信息
       const inventoryData = await this.inventoryService.getFormattedInventory(userId);
-      
+
       if (inventoryData.isEmpty) {
         await e.reply('🎒 你的仓库是空的，快去种植作物或购买物品吧！');
         return true;
       }
-      
+
       // 构建仓库显示
       let message = `🎒 仓库状态 (${inventoryData.usage}/${inventoryData.capacity})\n`;
       message += '━━━━━━━━━━━━━━━━━━━━\n';
-      
+
       for (const category of inventoryData.inventory) {
         message += `📦 ${category.category}\n`;
 
@@ -82,7 +82,7 @@ export class InventoryCommands extends plugin {
 
         message += '\n';
       }
-      
+
       message += '━━━━━━━━━━━━━━━━━━━━\n';
       message += '💡 使用 #nc出售 [物品名] [数量] 出售物品\n';
       message += '💡 使用 #nc锁定 [物品名] 锁定物品\n';
@@ -106,17 +106,17 @@ export class InventoryCommands extends plugin {
   async lockItem(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(nc)?锁定\s+(.+)$/);
-      
+      const match = e.msg.match(/^#(nc)?锁定(.+)$/);
+
       if (!match) {
-        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定 [物品名]');
+        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定[物品名]');
         return true;
       }
-      
+
       const itemName = match[2].trim();
-      
+
       if (!itemName) {
-        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定 [物品名]');
+        await e.reply('❌ 请指定要锁定的物品名称\n💡 使用格式: #nc锁定[物品名]');
         return true;
       }
 
@@ -156,17 +156,17 @@ export class InventoryCommands extends plugin {
   async unlockItem(e) {
     try {
       const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(nc)?解锁\s+(.+)$/);
-      
+      const match = e.msg.match(/^#(nc)?解锁(.+)$/);
+
       if (!match) {
-        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁 [物品名]');
+        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁[物品名]');
         return true;
       }
-      
+
       const itemName = match[2].trim();
-      
+
       if (!itemName) {
-        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁 [物品名]');
+        await e.reply('❌ 请指定要解锁的物品名称\n💡 使用格式: #nc解锁[物品名]');
         return true;
       }
 

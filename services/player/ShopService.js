@@ -101,8 +101,11 @@ export class ShopService {
         if (marketService) {
           await marketService.recordTransaction(itemId, quantity, transactionType);
 
-          // 记录审计日志
-          logger.logAudit('transaction', transactionType, 'system', {
+          // 记录审计日志（使用info级别）
+          logger.info('交易审计记录', {
+            action: 'transaction',
+            type: transactionType,
+            source: 'system',
             itemId,
             quantity,
             transactionType,
@@ -250,7 +253,13 @@ export class ShopService {
         };
       }
 
-      return await this.playerService.executePlayerAction(userId, async (player) => {
+      return await this.playerService.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
+        const player = await this.playerService.getPlayer(userId);
+
+        if (!player) {
+          throw new Error('玩家不存在');
+        }
+
         // 获取当前价格
         const unitPrice = await this._getItemPrice(itemId, 'buy');
         const totalCost = unitPrice * quantity;
@@ -291,6 +300,16 @@ export class ShopService {
         // 执行购买
         player.coins -= totalCost;
         player.inventory[itemId] = (player.inventory[itemId] || 0) + quantity;
+        player.lastUpdated = Date.now();
+
+        // 更新统计数据
+        if (player.statistics) {
+          player.statistics.totalMoneySpent += totalCost;
+        }
+
+        // 使用序列化器保存玩家数据
+        const serializer = this.playerService.dataService.getSerializer();
+        multi.hSet(playerKey, serializer.serializeForHash(player));
 
         // 记录交易统计（不影响主流程）
         await this._recordTransactionSafely(itemId, quantity, 'buy');
@@ -315,6 +334,8 @@ export class ShopService {
         return {
           success: true,
           message: `成功购买 ${quantity} 个 ${itemInfo.name}，花费 ${CommonUtils.formatNumber(totalCost)} 金币`,
+          remainingCoins: CommonUtils.formatNumber(player.coins),
+          inventoryUsage: `${newUsage}%`,
           transaction: {
             itemId,
             itemName: itemInfo.name,

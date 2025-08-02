@@ -16,7 +16,7 @@ export class HelpCommands extends plugin {
           fnc: 'showMainHelp'
         },
         {
-          reg: '^#nc帮助\\s+(.+)$',
+          reg: '^#nc帮助(.+)$',
           fnc: 'showCategoryHelp'
         }
       ]
@@ -34,7 +34,7 @@ export class HelpCommands extends plugin {
     try {
       const isAdmin = e.isMaster;
       const helpMessage = this._buildMainHelpMessage(isAdmin);
-      
+
       await e.reply(helpMessage);
       return true;
     } catch (error) {
@@ -50,17 +50,17 @@ export class HelpCommands extends plugin {
    */
   async showCategoryHelp(e) {
     try {
-      const match = e.msg.match(/^#nc帮助\s+(.+)$/);
+      const match = e.msg.match(/^#nc帮助(.+)$/);
       if (!match) {
-        await e.reply('❌ 请指定要查看的帮助分类，例如：#nc帮助 农场管理');
+        await e.reply('❌ 请指定要查看的帮助分类，例如：#nc帮助农场管理');
         return true;
       }
 
       const category = match[1].trim();
       const isAdmin = e.isMaster;
-      
+
       const helpMessage = this._buildCategoryHelpMessage(category, isAdmin);
-      
+
       if (!helpMessage) {
         const availableCategories = this._getAvailableCategories(isAdmin);
         await e.reply(`❌ 未找到分类"${category}"\n\n可用分类：${availableCategories.join('、')}`);

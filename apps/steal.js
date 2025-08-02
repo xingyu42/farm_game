@@ -18,7 +18,7 @@ export class steal extends plugin {
           fnc: 'stealCrop'
         },
         {
-          reg: '^#(nc)?使用狗粮(?:\\s+(.+))?$',
+          reg: '^#(nc)?使用狗粮(.+)?$',
           fnc: 'useDogFood'
         }
       ]
@@ -26,7 +26,7 @@ export class steal extends plugin {
 
     // 初始化配置
     this.config = Config
-    
+
     // 初始化服务
     this._initServices();
   }
@@ -92,9 +92,9 @@ export class steal extends plugin {
    */
   async useDogFood(e) {
     try {
-      const match = e.msg.match(/^#(nc)?使用狗粮(?:\s+(.+))?$/)
+      const match = e.msg.match(/^#(nc)?使用狗粮(.+)?$/)
       if (!match) {
-        e.reply('❌ 格式错误！使用: #使用狗粮 [狗粮类型]')
+        e.reply('❌ 格式错误！使用: #使用狗粮[狗粮类型]')
         return true
       }
 
