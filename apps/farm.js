@@ -588,7 +588,7 @@ export class farm extends plugin {
     const normalizedCropName = cropName.replace('种子', '')
 
     for (const [cropId, config] of Object.entries(cropsConfig)) {
-      const matchTargets = [config.name, ...(config.aliases)]
+      const matchTargets = [config.name]
 
       for (const target of matchTargets) {
         if (target === cropName || target === normalizedCropName) {
@@ -614,7 +614,7 @@ export class farm extends plugin {
 
     for (const [fertilizerId, config] of Object.entries(fertilizersConfig)) {
       // 构建匹配目标数组：名称 + 别名
-      const matchTargets = [config.name, ...(config.aliases)]
+      const matchTargets = [config.name]
 
       // 精确匹配
       for (const target of matchTargets) {

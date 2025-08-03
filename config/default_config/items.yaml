@@ -10,6 +10,8 @@ seeds:
     category: "seeds"
     is_dynamic_price: true # 启用动态定价
     description: "常见的蔬菜种子"
+    requiredLevel: 1
+    maxStack: 99
 
   tomato_seed:
     name: "西红柿种子"
@@ -18,6 +20,8 @@ seeds:
     category: "seeds"
     is_dynamic_price: true # 启用动态定价
     description: "营养丰富的蔬菜种子"
+    requiredLevel: 3
+    maxStack: 99
 
   wheat_seed:
     name: "小麦种子"
@@ -26,6 +30,8 @@ seeds:
     category: "seeds"
     is_dynamic_price: true # 启用动态定价
     description: "基础的谷物种子"
+    requiredLevel: 2
+    maxStack: 99
 
 # 肥料配置
 fertilizers:
@@ -35,7 +41,8 @@ fertilizers:
     sellPrice: 4
     category: "fertilizer"
     description: "加速作物生长"
-    aliases: ["普通", "基础肥料", "普通化肥"] # 别名配置
+    requiredLevel: 1
+    maxStack: 50
     effect:
       speedBonus: 0.2 # 加速20%
 
@@ -45,16 +52,19 @@ fertilizers:
     sellPrice: 10
     category: "fertilizer"
     description: "显著加速作物生长"
-    aliases: ["高级", "优质肥料", "高级化肥"] # 别名配置
+    requiredLevel: 5
+    maxStack: 50
     effect:
       speedBonus: 0.4 # 加速40%
+
   fertilizer_deluxe:
     name: "顶级肥料"
     price: 50
     sellPrice: 20
     category: "fertilizer"
     description: "极大加速作物生长"
-    aliases: ["顶级", "豪华肥料", "顶级化肥", "最好的"] # 别名配置
+    requiredLevel: 10
+    maxStack: 50
     effect:
       speedBonus: 0.6 # 加速60%
 
@@ -66,9 +76,10 @@ pesticides:
     sellPrice: 3
     category: "pesticide"
     description: "清除作物害虫，恢复健康"
+    requiredLevel: 1
+    maxStack: 50
     effects:
       health: 15
-    aliases: ["杀虫剂", "基础杀虫剂"]
 
 # 狗粮配置（防御系统）
 dogFood:
@@ -78,6 +89,8 @@ dogFood:
     sellPrice: 12
     category: "defense"
     description: "提供基础防御"
+    requiredLevel: 1
+    maxStack: 20
     defenseBonus: 20 # 防御加成20%
     duration: 30 # 持续30分钟
   premium:
@@ -86,6 +99,8 @@ dogFood:
     sellPrice: 32
     category: "defense"
     description: "提供中等防御"
+    requiredLevel: 5
+    maxStack: 20
     defenseBonus: 35 # 防御加成35%
     duration: 60 # 持续60分钟
   deluxe:
@@ -94,6 +109,8 @@ dogFood:
     sellPrice: 60
     category: "defense"
     description: "提供强力防御"
+    requiredLevel: 10
+    maxStack: 20
     defenseBonus: 50 # 防御加成50%
     duration: 120 # 持续120分钟
 # 偷菜工具配置（未来扩展）
@@ -104,33 +121,36 @@ stealTools:
     sellPrice: 40
     category: "tools"
     description: "提高偷菜成功率的基础工具"
+    requiredLevel: 5
+    maxStack: 10
     effect:
       successRateBonus: 10 # +10%成功率
       duration: 60 # 持续60分钟
-    rarity: "common"
   advanced_gloves:
     name: "隐形手套"
     price: 250
     sellPrice: 100
     category: "tools"
     description: "减少被发现概率的高级工具"
+    requiredLevel: 10
+    maxStack: 10
     effect:
       successRateBonus: 20 # +20%成功率
       stealthBonus: 15 # +15%隐匿加成
       duration: 90 # 持续90分钟
-    rarity: "rare"
   master_toolkit:
     name: "大师工具包"
     price: 500
     sellPrice: 200
     category: "tools"
     description: "专业偷菜者的终极装备"
+    requiredLevel: 15
+    maxStack: 5
     effect:
       successRateBonus: 35 # +35%成功率
       rewardBonus: 25 # +25%收益加成
       cooldownReduction: 20 # -20%冷却时间
       duration: 120 # 持续120分钟
-    rarity: "legendary"
 # 土地进阶材料
 landMaterials:
   copper_essence:
@@ -139,21 +159,24 @@ landMaterials:
     sellPrice: 3000
     category: "materials"
     description: "用于土地品质进阶的珍贵材料"
-    rarity: "rare"
+    requiredLevel: 10
+    maxStack: 10
   silver_essence:
     name: "银质精华"
     price: 50000 # 商店价格（超稀有）
     sellPrice: 15000
     category: "materials"
     description: "用于土地品质进阶的传奇材料"
-    rarity: "legendary"
+    requiredLevel: 15
+    maxStack: 5
   gold_essence:
     name: "金质精华"
     price: 200000 # 商店价格（传说）
     sellPrice: 60000
     category: "materials"
     description: "用于土地品质进阶的神话材料"
-    rarity: "mythic"
+    requiredLevel: 20
+    maxStack: 3
 # 作物产出配置
 crops:
   carrot:
@@ -220,19 +243,3 @@ inventory:
       cost: 15000
     - capacity: 200
       cost: 25000
-  # 稀有度排序配置
-  rarityOrder:
-    mythic: 6
-    legendary: 5
-    epic: 4
-    rare: 3
-    uncommon: 2
-    common: 1
-  # 稀有度图标配置
-  rarityIcons:
-    mythic: "💎"
-    legendary: "🟡"
-    epic: "🟣"
-    rare: "🔵"
-    uncommon: "🟢"
-    common: "⚪"

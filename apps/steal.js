@@ -201,8 +201,7 @@ export class steal extends plugin {
 
     // 匹配中文名称
     for (const [dogFoodId, config] of Object.entries(itemsConfig)) {
-      if (config.name === dogFoodName ||
-        (config.aliases && config.aliases.includes(dogFoodName))) {
+      if (config.name === dogFoodName) {
         return dogFoodId
       }
     }

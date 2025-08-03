@@ -2,6 +2,7 @@
 
 import Calculator from '../../utils/calculator.js';
 import Item from '../../models/Item.js';
+import ItemResolver from '../../utils/ItemResolver.js';
 
 /**
  * 仓库服务 - 管理玩家物品仓库（根据PRD v3.2设计）
@@ -11,6 +12,7 @@ export class InventoryService {
   constructor(redisClient, config, _logger = null) {
     this.redis = redisClient;
     this.config = config;
+    this.itemResolver = new ItemResolver(config);
   }
 
   /**
@@ -77,8 +79,11 @@ export class InventoryService {
    */
   async addItem(userId, itemId, quantity) {
     try {
+      logger.info(`[InventoryService] 开始添加物品 [${userId}]: ${itemId} x${quantity}`);
+
       // 直接获取当前仓库数据，内部已包含存在检查
       const inventory = await this.getInventory(userId);
+      logger.info(`[InventoryService] 当前仓库状态 [${userId}]: 使用量=${inventory.usage}, 容量=${inventory.capacity}, 物品数=${Object.keys(inventory.items).length}`);
 
       // 检查仓库容量
       if (inventory.usage + quantity > inventory.capacity) {
@@ -96,8 +101,17 @@ export class InventoryService {
         // 现有物品，尝试添加数量
         targetItem = inventory.items[itemId];
 
+        logger.info(`[InventoryService] 发现现有物品 [${userId}]:`, {
+          itemId,
+          currentQuantity: targetItem.quantity,
+          name: targetItem.name,
+          category: targetItem.category,
+          isValid: !isNaN(targetItem.quantity)
+        });
+
         try {
           targetItem.addQuantity(quantity);
+          logger.info(`[InventoryService] 现有物品数量更新成功 [${userId}]: ${itemId} 新数量=${targetItem.quantity}`);
         } catch (error) {
           if (error.message.includes('超过最大堆叠数量')) {
             const canAdd = targetItem.maxStack - targetItem.quantity;
@@ -122,11 +136,20 @@ export class InventoryService {
         }
       } else {
         // 新物品，从配置创建
-        targetItem = Item.fromConfig(itemId, quantity, this.config);
+        logger.info(`[InventoryService] 创建新物品 [${userId}]: ${itemId} x${quantity}`);
+        targetItem = Item.fromConfig(itemId, quantity, this.config, this.itemResolver);
+
+        logger.info(`[InventoryService] 物品创建成功 [${userId}]:`, {
+          id: targetItem.id,
+          name: targetItem.name,
+          quantity: targetItem.quantity,
+          category: targetItem.category
+        });
 
         // 验证新创建的物品
         const validation = targetItem.validate();
         if (!validation.isValid) {
+          logger.error(`[InventoryService] 物品验证失败 [${userId}]: ${validation.errors.join(', ')}`);
           return {
             success: false,
             message: `物品验证失败: ${validation.errors.join(', ')}`
@@ -134,17 +157,28 @@ export class InventoryService {
         }
 
         inventory.items[itemId] = targetItem;
+        logger.info(`[InventoryService] 新物品已添加到仓库 [${userId}]: ${itemId}`);
       }
 
       // 更新物品元数据
       targetItem.metadata.lastUpdated = Date.now();
 
       // 保存到Redis
+      logger.info(`[InventoryService] 保存仓库数据到Redis [${userId}]`);
       await this._saveInventoryToRedis(userId, inventory);
 
       logger.info(`玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
 
       const displayInfo = targetItem.getDisplayInfo();
+      const newUsage = this._calculateInventoryUsage(inventory.items);
+
+      logger.info(`[InventoryService] 添加物品完成 [${userId}]:`, {
+        itemId,
+        itemName: displayInfo.name,
+        quantity: targetItem.quantity,
+        newUsage,
+        totalItems: Object.keys(inventory.items).length
+      });
 
       return {
         success: true,
@@ -156,7 +190,7 @@ export class InventoryService {
           category: targetItem.category,
           displayInfo: displayInfo
         },
-        newUsage: this._calculateInventoryUsage(inventory.items)
+        newUsage: newUsage
       };
     } catch (error) {
       logger.error(`添加物品失败 [${userId}]: ${error.message}`);
@@ -244,7 +278,7 @@ export class InventoryService {
         } else {
           // 新物品
           try {
-            targetItem = Item.fromConfig(item.item_id, item.quantity, this.config);
+            targetItem = Item.fromConfig(item.item_id, item.quantity, this.config, this.itemResolver);
 
             const validation = targetItem.validate();
             if (!validation.isValid) {
@@ -448,34 +482,23 @@ export class InventoryService {
           quantity: displayInfo.quantity,
           displayText: displayInfo.displayText,
           icon: displayInfo.icon,
-          rarity: displayInfo.rarity,
-          rarityIcon: displayInfo.rarityIcon,
+
           category: displayInfo.category,
           sellPrice: economicInfo.sellPrice,
           totalSellValue: economicInfo.totalSellValue,
           canSell: economicInfo.canSell,
-          canTrade: displayInfo.canTrade,
           isExpired: displayInfo.isExpired,
           locked: Boolean(item.metadata.locked),
           description: displayInfo.description,
-          requiredLevel: item.requiredLevel,
-          tradeable: item.tradeable,
-          usable: item.usable,
-          consumable: item.consumable
+          requiredLevel: item.requiredLevel
         });
       }
 
-      // 按类别顺序组织显示，按稀有度和名称排序
-      const rarityOrder = this.config.items.inventory.rarityOrder;
-
+      // 按类别顺序组织显示，按名称排序
       for (const [categoryKey, categoryName] of Object.entries(categories)) {
         if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
           const sortedItems = groupedItems[categoryKey].sort((a, b) => {
-            // 首先按稀有度排序（稀有度越高越靠前）
-            const rarityDiff = rarityOrder[b.rarity] - rarityOrder[a.rarity];
-            if (rarityDiff !== 0) return rarityDiff;
-
-            // 然后按名称排序
+            // 按名称排序
             return a.name.localeCompare(b.name);
           });
 
@@ -838,7 +861,7 @@ export class InventoryService {
             lockedAt: item.metadata.lockedAt,
             category: displayInfo.category,
             displayText: displayInfo.displayText,
-            rarity: displayInfo.rarity
+
           });
         }
       }

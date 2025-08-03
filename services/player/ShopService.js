@@ -222,8 +222,8 @@ export class ShopService {
   }
 
   /**
-   * 购买物品（增强版本）
-   * 
+   * 购买物品（增强版本）- 使用 InventoryService 保持数据一致性
+   *
    * @param {string} userId 用户ID
    * @param {string} itemName 物品名称
    * @param {number} quantity 购买数量
@@ -232,12 +232,17 @@ export class ShopService {
   async buyItem(userId, itemName, quantity = 1) {
     const startTime = Date.now();
 
+    logger.info(`[ShopService] 开始购买流程 [${userId}]: ${itemName} x${quantity}`);
+
     try {
       // 参数验证（使用CommonUtils）
       CommonUtils.validateQuantity(quantity, 'buyItem quantity');
+      logger.info(`[ShopService] 参数验证通过 [${userId}]: quantity=${quantity}`);
 
       // 查找物品ID
       const itemId = this.itemResolver.findItemByName(itemName);
+      logger.info(`[ShopService] 物品ID查找结果 [${userId}]: ${itemName} -> ${itemId || 'NOT_FOUND'}`);
+
       if (!itemId) {
         return {
           success: false,
@@ -246,6 +251,12 @@ export class ShopService {
       }
 
       const itemInfo = this.itemResolver.getItemInfo(itemId);
+      logger.info(`[ShopService] 物品信息获取 [${userId}]:`, {
+        itemId,
+        hasInfo: !!itemInfo,
+        hasPrice: itemInfo?.price !== undefined
+      });
+
       if (!itemInfo || itemInfo.price === undefined) {
         return {
           success: false,
@@ -253,63 +264,84 @@ export class ShopService {
         };
       }
 
+      // 获取当前价格
+      const unitPrice = await this._getItemPrice(itemId, 'buy');
+      const totalCost = unitPrice * quantity;
+      logger.info(`[ShopService] 价格计算 [${userId}]: 单价=${unitPrice}, 总价=${totalCost}`);
+
+      // 获取玩家数据
+      const player = await this.playerService.getPlayer(userId);
+      logger.info(`[ShopService] 玩家数据获取 [${userId}]:`, {
+        exists: !!player,
+        coins: player?.coins,
+        inventoryCapacity: player?.inventoryCapacity
+      });
+
+      if (!player) {
+        return {
+          success: false,
+          message: '玩家不存在'
+        };
+      }
+
+      // 验证金币是否足够
+      logger.info(`[ShopService] 金币验证 [${userId}]: 需要=${totalCost}, 拥有=${player.coins}`);
+      if (player.coins < totalCost) {
+        return {
+          success: false,
+          message: `金币不足，需要 ${CommonUtils.formatNumber(totalCost)} 金币，当前拥有 ${CommonUtils.formatNumber(player.coins)} 金币`
+        };
+      }
+
+      // 使用 InventoryService 检查仓库容量
+      logger.info(`[ShopService] 检查仓库容量 [${userId}]: 需要添加 ${quantity} 个物品`);
+      const hasCapacity = await this.inventoryService.hasCapacity(userId, quantity);
+      logger.info(`[ShopService] 仓库容量检查结果 [${userId}]: ${hasCapacity ? '有足够空间' : '空间不足'}`);
+
+      if (!hasCapacity) {
+        return {
+          success: false,
+          message: `仓库空间不足，无法添加 ${quantity} 个物品`
+        };
+      }
+
+      // 执行购买事务：扣除金币 + 添加物品
+      logger.info(`[ShopService] 开始购买事务 [${userId}]: ${itemName} x${quantity}, 总价 ${totalCost} 金币`);
+
       return await this.playerService.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-        const player = await this.playerService.getPlayer(userId);
+        logger.info(`[ShopService] 事务内部 - 扣除金币前 [${userId}]: 当前金币 ${player.coins}`);
 
-        if (!player) {
-          throw new Error('玩家不存在');
-        }
-
-        // 获取当前价格
-        const unitPrice = await this._getItemPrice(itemId, 'buy');
-        const totalCost = unitPrice * quantity;
-
-        // 验证金币是否足够
-        if (player.coins < totalCost) {
-          return {
-            success: false,
-            message: `金币不足，需要 ${CommonUtils.formatNumber(totalCost)} 金币，当前拥有 ${CommonUtils.formatNumber(player.coins)} 金币`
-          };
-        }
-
-        // 检查库存容量（使用CommonUtils）
-        const maxCapacity = player.inventoryCapacity || 100;
-        const currentUsage = CommonUtils.calculateInventoryUsage(player.inventory, maxCapacity);
-
-        if (currentUsage >= 100) {
-          return {
-            success: false,
-            message: `仓库已满（${currentUsage}%），请先清理仓库空间`
-          };
-        }
-
-        // 计算购买后的容量使用率
-        const newUsage = CommonUtils.calculateInventoryUsage({
-          ...player.inventory,
-          [itemId]: (player.inventory[itemId] || 0) + quantity
-        }, maxCapacity);
-
-        if (newUsage > 100) {
-          const availableSpace = maxCapacity - Object.values(player.inventory).reduce((sum, qty) => sum + parseInt(qty || 0), 0);
-          return {
-            success: false,
-            message: `仓库空间不足，最多还能购买 ${availableSpace} 个物品`
-          };
-        }
-
-        // 执行购买
+        // 扣除金币
         player.coins -= totalCost;
-        player.inventory[itemId] = (player.inventory[itemId] || 0) + quantity;
         player.lastUpdated = Date.now();
+
+        logger.info(`[ShopService] 事务内部 - 扣除金币后 [${userId}]: 剩余金币 ${player.coins}`);
 
         // 更新统计数据
         if (player.statistics) {
           player.statistics.totalMoneySpent += totalCost;
+          logger.info(`[ShopService] 更新统计数据 [${userId}]: 总花费 ${player.statistics.totalMoneySpent}`);
         }
 
-        // 使用序列化器保存玩家数据
+        // 保存玩家数据（金币变更）
         const serializer = this.playerService.dataService.getSerializer();
         multi.hSet(playerKey, serializer.serializeForHash(player));
+        logger.info(`[ShopService] 玩家数据已保存到事务 [${userId}]`);
+
+        // 使用 InventoryService 添加物品到仓库
+        logger.info(`[ShopService] 调用 InventoryService.addItem [${userId}]: ${itemId} x${quantity}`);
+        const addResult = await this.inventoryService.addItem(userId, itemId, quantity);
+        logger.info(`[ShopService] InventoryService.addItem 结果 [${userId}]:`, {
+          success: addResult.success,
+          message: addResult.message,
+          newUsage: addResult.newUsage
+        });
+
+        if (!addResult.success) {
+          logger.error(`[ShopService] 添加物品失败，回滚事务 [${userId}]: ${addResult.message}`);
+          // 如果添加物品失败，回滚金币（通过抛出错误让事务回滚）
+          throw new Error(`添加物品失败: ${addResult.message}`);
+        }
 
         // 记录交易统计（不影响主流程）
         await this._recordTransactionSafely(itemId, quantity, 'buy');
@@ -327,15 +359,22 @@ export class ShopService {
           quantity,
           unitPrice: CommonUtils.formatNumber(unitPrice),
           totalCost: CommonUtils.formatNumber(totalCost),
-          newInventoryUsage: `${newUsage}%`,
+          newInventoryUsage: `${addResult.newUsage}`,
           duration: `${duration}ms`
         });
 
-        return {
+        // 获取仓库容量来计算百分比
+        logger.info(`[ShopService] 获取仓库数据计算使用率 [${userId}]`);
+        const inventoryData = await this.inventoryService.getInventory(userId);
+        const usagePercentage = Math.round((addResult.newUsage / inventoryData.capacity) * 100);
+
+        logger.info(`[ShopService] 仓库使用率计算 [${userId}]: ${addResult.newUsage}/${inventoryData.capacity} = ${usagePercentage}%`);
+
+        const result = {
           success: true,
           message: `成功购买 ${quantity} 个 ${itemInfo.name}，花费 ${CommonUtils.formatNumber(totalCost)} 金币`,
           remainingCoins: CommonUtils.formatNumber(player.coins),
-          inventoryUsage: `${newUsage}%`,
+          inventoryUsage: `${usagePercentage}%`,
           transaction: {
             itemId,
             itemName: itemInfo.name,
@@ -343,9 +382,20 @@ export class ShopService {
             unitPrice,
             totalCost,
             remainingCoins: player.coins,
-            inventoryUsage: `${newUsage}%`
+            inventoryUsage: `${usagePercentage}%`
           }
         };
+
+        logger.info(`[ShopService] 购买事务完成 [${userId}]:`, {
+          success: result.success,
+          itemId,
+          quantity,
+          totalCost,
+          remainingCoins: player.coins,
+          inventoryUsage: result.inventoryUsage
+        });
+
+        return result;
       });
 
     } catch (error) {

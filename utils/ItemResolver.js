@@ -42,7 +42,7 @@ class ItemResolver {
         return {
           ...itemConfig,
           id: itemId,
-          category: this.categoryNormalization[category],
+          category: this.categoryNormalization[category] || category,
           originalCategory: category
         };
       }

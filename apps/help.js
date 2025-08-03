@@ -91,21 +91,18 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc注册',
-            aliases: ['#nc开始游戏', '#nc加入游戏'],
             desc: '注册成为农场玩家，开始游戏',
             params: '无',
             example: '#nc注册'
           },
           {
             cmd: '#nc我的信息',
-            aliases: ['#nc信息', '#nc个人信息', '#nc玩家信息'],
             desc: '查看个人农场详细信息',
             params: '无',
             example: '#nc我的信息'
           },
           {
             cmd: '#nc签到',
-            aliases: [],
             desc: '每日签到获取金币和经验奖励',
             params: '无',
             example: '#nc签到'
@@ -120,56 +117,48 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc我的农场',
-            aliases: [],
             desc: '查看自己的农场状态和作物情况',
             params: '无',
             example: '#nc我的农场'
           },
           {
             cmd: '@用户名 #nc农场',
-            aliases: [],
             desc: '查看其他玩家的农场状态',
             params: '@用户名',
             example: '@张三 #nc农场'
           },
           {
             cmd: '#nc种植',
-            aliases: [],
             desc: '在指定土地种植作物',
             params: '[土地编号] [作物名称] 或 [作物名称] [土地编号]',
             example: '#nc种植 1 小麦'
           },
           {
             cmd: '#nc浇水',
-            aliases: [],
             desc: '给指定土地的作物浇水，提升生长速度',
             params: '[土地编号]',
             example: '#nc浇水 1'
           },
           {
             cmd: '#nc施肥',
-            aliases: [],
             desc: '给指定土地施肥，提升作物品质',
             params: '[土地编号]',
             example: '#nc施肥 1'
           },
           {
             cmd: '#nc除虫',
-            aliases: [],
             desc: '给指定土地除虫，保护作物健康',
             params: '[土地编号]',
             example: '#nc除虫 1'
           },
           {
             cmd: '#nc收获',
-            aliases: [],
             desc: '收获指定土地的成熟作物',
             params: '[土地编号]',
             example: '#nc收获 1'
           },
           {
             cmd: '#nc收获全部',
-            aliases: [],
             desc: '一键收获所有成熟的作物',
             params: '无',
             example: '#nc收获全部'
@@ -184,28 +173,24 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc仓库',
-            aliases: [],
             desc: '查看仓库中的所有物品和容量',
             params: '无',
             example: '#nc仓库'
           },
           {
             cmd: '#nc锁定',
-            aliases: [],
             desc: '锁定指定物品，防止误操作出售',
             params: '[物品名称]',
             example: '#nc锁定 小麦'
           },
           {
             cmd: '#nc解锁',
-            aliases: [],
             desc: '解锁指定物品，允许出售',
             params: '[物品名称]',
             example: '#nc解锁 小麦'
           },
           {
             cmd: '#nc查看锁定',
-            aliases: ['#nc锁定列表'],
             desc: '查看所有已锁定的物品',
             params: '无',
             example: '#nc查看锁定'
@@ -220,35 +205,30 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc商店',
-            aliases: [],
             desc: '查看商店中可购买的物品',
             params: '无',
             example: '#nc商店'
           },
           {
             cmd: '#nc市场',
-            aliases: [],
             desc: '查看市场价格信息',
             params: '无',
             example: '#nc市场'
           },
           {
             cmd: '#nc购买',
-            aliases: [],
             desc: '购买指定物品',
             params: '[物品名称] [数量(可选)]',
             example: '#nc购买 小麦种子 10'
           },
           {
             cmd: '#nc出售',
-            aliases: [],
             desc: '出售指定物品',
             params: '[物品名称] [数量(可选)]',
             example: '#nc出售 小麦 5'
           },
           {
             cmd: '#nc出售全部',
-            aliases: [],
             desc: '出售所有可出售的作物',
             params: '无',
             example: '#nc出售全部'
@@ -263,35 +243,30 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc土地扩张',
-            aliases: [],
             desc: '扩张新的土地，增加种植面积',
             params: '无',
             example: '#nc土地扩张'
           },
           {
             cmd: '#nc土地信息',
-            aliases: [],
             desc: '查看所有土地的详细信息',
             params: '无',
             example: '#nc土地信息'
           },
           {
             cmd: '#nc土地进阶',
-            aliases: [],
             desc: '提升指定土地的品质等级',
             params: '[土地编号]',
             example: '#nc土地进阶 1'
           },
           {
             cmd: '#nc土地品质',
-            aliases: [],
             desc: '查看指定土地的品质信息',
             params: '[土地编号]',
             example: '#nc土地品质 1'
           },
           {
             cmd: '#nc强化土地',
-            aliases: [],
             desc: '强化指定土地，提升产出效果',
             params: '[土地编号]',
             example: '#nc强化土地 1'
@@ -306,28 +281,24 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '@用户名 #nc偷菜',
-            aliases: [],
             desc: '偷取其他玩家农场的成熟作物',
             params: '@用户名',
             example: '@张三 #nc偷菜'
           },
           {
             cmd: '#nc使用狗粮',
-            aliases: [],
             desc: '使用狗粮激活农场防护',
             params: '[狗粮类型(可选)]',
             example: '#nc使用狗粮 高级狗粮'
           },
           {
             cmd: '#nc防护状态',
-            aliases: [],
             desc: '查看当前农场的防护状态',
             params: '无',
             example: '#nc防护状态'
           },
           {
             cmd: '#nc偷菜状态',
-            aliases: [],
             desc: '查看偷菜冷却时间和相关状态',
             params: '无',
             example: '#nc偷菜状态'
@@ -342,42 +313,36 @@ export class HelpCommands extends plugin {
         commands: [
           {
             cmd: '#nc管理 重置玩家',
-            aliases: [],
             desc: '重置指定玩家的游戏数据',
             params: '@用户名',
             example: '#nc管理 重置玩家 @张三'
           },
           {
             cmd: '#nc管理 添加金币',
-            aliases: [],
             desc: '给指定玩家添加金币',
             params: '@用户名 [数量]',
             example: '#nc管理 添加金币 @张三 1000'
           },
           {
             cmd: '#nc管理 添加经验',
-            aliases: [],
             desc: '给指定玩家添加经验',
             params: '@用户名 [数量]',
             example: '#nc管理 添加经验 @张三 500'
           },
           {
             cmd: '#nc管理 设置土地品质',
-            aliases: [],
             desc: '设置指定玩家的土地品质',
             params: '@用户名 [土地编号] [品质]',
             example: '#nc管理 设置土地品质 @张三 1 优质'
           },
           {
             cmd: '#nc管理 统计',
-            aliases: ['#nc管理 经济分析'],
             desc: '查看游戏统计和经济分析数据',
             params: '无',
             example: '#nc管理 统计'
           },
           {
             cmd: '#nc管理 重载配置',
-            aliases: [],
             desc: '重新加载游戏配置文件',
             params: '无',
             example: '#nc管理 重载配置'
@@ -453,11 +418,6 @@ export class HelpCommands extends plugin {
       message += `   功能：${command.desc}\n`;
       message += `   参数：${command.params}\n`;
       message += `   示例：${command.example}\n`;
-
-      // 如果有别名，显示别名
-      if (command.aliases && command.aliases.length > 0) {
-        message += `   别名：${command.aliases.join('、')}\n`;
-      }
 
       message += `\n`;
     }

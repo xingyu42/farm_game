@@ -3,40 +3,31 @@
  * 支持作物、种子、材料等各类物品的统一管理
  */
 
-
-
+import ItemResolver from '../utils/ItemResolver.js';
 
 class Item {
   constructor(data = {}, config) {
     this.config = config;
 
     // 基础属性
-    this.id = data.id || null;
-    this.type = data.type || 'unknown';
-    this.category = data.category || 'general';
-    this.name = data.name || '';
-    this.description = data.description || '';
+    this.id = data.id
+    this.category = data.category
+    this.name = data.name
+    this.description = data.description
 
-    // 数量和容量
+    // 数量和容量 - stackable 默认为 true，所有物品都可堆叠
     this.quantity = data.quantity;
-    this.stackable = data.stackable;
     this.maxStack = data.maxStack;
 
     // 经济属性
     this.buyPrice = data.buyPrice;
     this.sellPrice = data.sellPrice;
-    this.rarity = data.rarity;
-
-    // 功能属性
-    this.usable = data.usable;
-    this.consumable = data.consumable;
-    this.tradeable = data.tradeable;
 
     // 扩展属性
     this.icon = data.icon;
     this.requiredLevel = data.requiredLevel;
     this.expiryTime = data.expiryTime;
-    this.metadata = data.metadata;
+    this.metadata = data.metadata || {};
   }
 
   /**
@@ -53,7 +44,7 @@ class Item {
     }
 
     // 如果没有提供ItemResolver实例，则创建一个新的（向后兼容）
-    const resolver = itemResolver;
+    const resolver = itemResolver || new ItemResolver(config);
     const itemConfig = resolver.findItemById(itemId);
 
     if (!itemConfig) {
@@ -63,21 +54,45 @@ class Item {
     return new Item({
       id: itemId,
       quantity: quantity,
-      type: itemConfig.type,
       category: itemConfig.category,
       name: itemConfig.name,
       description: itemConfig.description,
       buyPrice: itemConfig.buyPrice,
       sellPrice: itemConfig.sellPrice,
-      rarity: itemConfig.rarity,
-      usable: itemConfig.usable,
-      consumable: itemConfig.consumable,
-      tradeable: itemConfig.tradeable,
       icon: itemConfig.icon,
       requiredLevel: itemConfig.requiredLevel,
-      stackable: itemConfig.stackable,
       maxStack: itemConfig.maxStack,
       metadata: itemConfig.metadata
+    }, config);
+  }
+
+  /**
+   * 从JSON数据创建物品实例 - 用于从Redis等存储中恢复物品数据
+   * @param {Object} jsonData JSON数据对象
+   * @param {Object} config 配置对象
+   * @returns {Item} 物品实例
+   */
+  static fromJSON(jsonData, config) {
+    if (!jsonData) {
+      throw new Error('JSON数据不能为空');
+    }
+
+    if (!config) {
+      throw new Error('配置数据不存在');
+    }
+
+    // 确保metadata存在且为对象
+    const metadata = jsonData.metadata
+
+    // 直接使用JSON数据创建Item实例，因为JSON数据已经包含了完整的物品信息
+    return new Item({
+      ...jsonData,
+      metadata: {
+        ...metadata,
+        // 确保关键的metadata字段存在
+        lastUpdated: metadata.lastUpdated || Date.now(),
+        locked: Boolean(metadata.locked)
+      }
     }, config);
   }
 
@@ -91,10 +106,7 @@ class Item {
   static createStack(itemId, quantity, config) {
     const item = Item.fromConfig(itemId, quantity, config);
 
-    if (!item.stackable && quantity > 1) {
-      throw new Error(`物品 ${itemId} 不支持堆叠`);
-    }
-
+    // 所有物品都支持堆叠，只需检查最大堆叠数量
     if (quantity > item.maxStack) {
       throw new Error(`物品 ${itemId} 超过最大堆叠数量 ${item.maxStack}`);
     }
@@ -123,11 +135,7 @@ class Item {
       errors.push('物品数量必须是非负整数');
     }
 
-    // 验证堆叠
-    if (!this.stackable && this.quantity > 1) {
-      errors.push('不可堆叠物品的数量必须为1');
-    }
-
+    // 验证堆叠 - 所有物品都支持堆叠
     if (this.quantity > this.maxStack) {
       errors.push(`物品数量不能超过最大堆叠数量 ${this.maxStack}`);
     }
@@ -163,31 +171,11 @@ class Item {
   }
 
   /**
-   * 检查是否可以使用
-   * @param {number} playerLevel 玩家等级
-   * @returns {boolean}
-   */
-  canUse(playerLevel) {
-    return this.usable &&
-      playerLevel >= this.requiredLevel &&
-      !this.isExpired() &&
-      this.quantity > 0;
-  }
-
-  /**
-   * 检查是否可以交易
-   * @returns {boolean}
-   */
-  canTrade() {
-    return this.tradeable && !this.isExpired() && this.quantity > 0;
-  }
-
-  /**
-   * 检查是否可以出售
+   * 检查是否可以出售 - 简化版本，只检查售价
    * @returns {boolean}
    */
   canSell() {
-    return this.sellPrice > 0 && this.canTrade();
+    return this.sellPrice > 0 && !this.isExpired() && this.quantity > 0;
   }
 
   /**
@@ -198,10 +186,6 @@ class Item {
   addQuantity(amount) {
     if (!Number.isInteger(amount) || amount < 0) {
       throw new Error('添加数量必须是非负整数');
-    }
-
-    if (!this.stackable && amount > 0 && this.quantity > 0) {
-      throw new Error('不可堆叠物品无法增加数量');
     }
 
     const newQuantity = this.quantity + amount;
@@ -242,10 +226,6 @@ class Item {
       throw new Error('数量必须是非负整数');
     }
 
-    if (!this.stackable && quantity > 1) {
-      throw new Error('不可堆叠物品的数量必须为1');
-    }
-
     if (quantity > this.maxStack) {
       throw new Error(`超过最大堆叠数量 ${this.maxStack}`);
     }
@@ -260,10 +240,6 @@ class Item {
    * @returns {Item} 新的物品实例
    */
   split(splitQuantity) {
-    if (!this.stackable) {
-      throw new Error('不可堆叠物品无法分割');
-    }
-
     if (!Number.isInteger(splitQuantity) || splitQuantity <= 0) {
       throw new Error('分割数量必须是正整数');
     }
@@ -314,85 +290,39 @@ class Item {
    * @returns {boolean}
    */
   canMergeWith(otherItem) {
-    return this.stackable &&
-      otherItem.stackable &&
-      this.id === otherItem.id &&
-      this.type === otherItem.type &&
+    return this.id === otherItem.id &&
       this.category === otherItem.category &&
       !this.isExpired() &&
       !otherItem.isExpired();
   }
 
-  /**
-   * 使用物品
-   * @param {number} amount 使用数量
-   * @returns {Object} 使用结果
-   */
-  use(amount = 1) {
-    if (!this.usable) {
-      throw new Error('该物品不可使用');
-    }
 
-    if (this.isExpired()) {
-      throw new Error('物品已过期');
-    }
-
-    if (amount > this.quantity) {
-      throw new Error(`数量不足，当前: ${this.quantity}, 需要: ${amount}`);
-    }
-
-    const useResult = {
-      success: true,
-      itemId: this.id,
-      usedAmount: amount,
-      remainingQuantity: this.quantity - amount,
-      effects: this.metadata.effects
-    };
-
-    if (this.consumable) {
-      this.removeQuantity(amount);
-    }
-
-    return useResult;
-  }
 
   /**
    * 获取显示信息
    * @returns {Object} 显示信息
    */
   getDisplayInfo() {
-    // 从配置文件获取稀有度图标
-    const rarityIcons = this.config.items.inventory.rarityIcons;
-
     const statusInfo = [];
 
     if (this.isExpired()) {
       statusInfo.push('已过期');
     }
 
-    if (!this.tradeable) {
-      statusInfo.push('绑定');
-    }
-
     const statusText = statusInfo.length > 0 ? ` [${statusInfo.join(', ')}]` : '';
-    const rarityIcon = rarityIcons[this.rarity];
-    const quantityText = this.stackable && this.quantity > 1 ? ` x${this.quantity}` : '';
+    const quantityText = this.quantity > 1 ? ` x${this.quantity}` : '';
 
     return {
       id: this.id,
       name: this.name,
       icon: this.icon,
       quantity: this.quantity,
-      rarity: this.rarity,
-      rarityIcon,
       category: this.category,
-      type: this.type,
       buyPrice: this.buyPrice,
       sellPrice: this.sellPrice,
       canSell: this.canSell(),
-      canTrade: this.canTrade(),
       isExpired: this.isExpired(),
-      displayText: `${this.icon}${rarityIcon}${this.name}${quantityText}${statusText}`,
+      displayText: `${this.icon}${this.name}${quantityText}${statusText}`,
       description: this.description
     };
   }
@@ -421,19 +351,13 @@ class Item {
   toJSON() {
     return {
       id: this.id,
-      type: this.type,
       category: this.category,
       name: this.name,
       description: this.description,
       quantity: this.quantity,
-      stackable: this.stackable,
       maxStack: this.maxStack,
       buyPrice: this.buyPrice,
       sellPrice: this.sellPrice,
-      rarity: this.rarity,
-      usable: this.usable,
-      consumable: this.consumable,
-      tradeable: this.tradeable,
       icon: this.icon,
       requiredLevel: this.requiredLevel,
       expiryTime: this.expiryTime,
