@@ -1,7 +1,10 @@
 /**
  * Redis客户端工具类
- * 提供Key生成、JSON处理、事务封装、分布式锁等核心功能
- * 
+ * 提供分布式锁、TTL管理、原子计数器等核心功能
+ *
+ * Hash操作使用说明：
+ * - 仅用于非玩家数据的临时状态管理（如市场统计、全局计数器）
+ * - 禁止用于玩家核心数据（资产、状态等），玩家数据请使用YAML存储
  */
 
 
@@ -62,46 +65,6 @@ class RedisClient {
     }
   }
 
-  /**
-   * 执行Redis事务
-   * @param {Function} transactionFn 事务函数，接收multi实例
-   * @returns {Promise<any>} 事务执行结果
-   */
-  async transaction(transactionFn) {
-    if (!this.isConnected()) {
-      throw new Error('Redis client not connected');
-    }
-
-    const multi = this.client.multi();
-
-    try {
-      // 执行事务函数，传入multi实例，并获取业务返回值
-      const operationResult = await transactionFn(multi);
-
-      // 执行事务并检查结果
-      const results = await multi.exec();
-
-      // 检查事务执行结果
-      if (!results) {
-        throw new Error('Transaction was discarded (WATCH key was modified)');
-      }
-
-      // 检查每个命令的执行结果 (适配 node-redis 返回格式)
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        // node-redis 返回的错误是 Error 对象，成功时是值
-        if (result instanceof Error) {
-          throw new Error(`Transaction command ${i} failed: ${result.message}`, { cause: result });
-        }
-      }
-
-      // 返回业务操作的结果，而不是Redis命令结果
-      return operationResult;
-    } catch (error) {
-      // 保留原始错误堆栈跟踪
-      throw new Error(`Transaction failed: ${error.message}`, { cause: error });
-    }
-  }
 
   /**
    * 设置数据（自动JSON序列化）
@@ -286,85 +249,8 @@ class RedisClient {
     }
   }
 
-  /**
-   * 执行增强的Redis事务（支持条件检查）
-   * @param {Function} transactionFn 事务函数
-   * @param {Array} watchKeys 监控的Key列表
-   * @returns {Promise<any>} 事务执行结果
-   */
-  async enhancedTransaction(transactionFn, watchKeys = []) {
-    try {
-      // 监控指定的键
-      if (watchKeys.length > 0) {
-        await this.client.watch(...watchKeys);
-      }
 
-      const multi = this.client.multi();
 
-      // 执行事务函数
-      const preparedData = await transactionFn(multi);
-
-      // 执行事务
-      const results = await multi.exec();
-
-      if (results === null) {
-        // 事务被取消（WATCH的键被修改）
-        throw new Error('事务被取消：监控的键已被修改');
-      }
-
-      return {
-        success: true,
-        results,
-        preparedData
-      };
-    } catch (error) {
-      // 保留原始错误堆栈跟踪
-      throw new Error(`Batch operation failed: ${error.message}`, { cause: error });
-    }
-  }
-
-  /**
-   * 批量获取数据
-   * @param {Array<string>} keys Key列表
-   * @returns {Promise<Array>} 数据列表
-   */
-  async mget(keys) {
-    try {
-      const values = await this.client.mget(...keys);
-      return values.map(value => value ? this.deserialize(value) : null);
-    } catch (error) {
-      // 保留原始错误堆栈跟踪
-      throw new Error(`Batch get failed for keys [${keys.join(', ')}]: ${error.message}`, { cause: error });
-    }
-  }
-
-  /**
-   * 批量设置数据
-   * @param {Object} keyValuePairs Key-Value对象
-   * @param {number} ttl 可选的过期时间
-   * @returns {Promise<boolean>} 设置结果
-   */
-  async mset(keyValuePairs, ttl = null) {
-    try {
-      const multi = this.client.multi();
-
-      for (const [key, value] of Object.entries(keyValuePairs)) {
-        const serializedValue = this.serialize(value);
-
-        if (ttl) {
-          multi.setex(key, ttl, serializedValue);
-        } else {
-          multi.set(key, serializedValue);
-        }
-      }
-
-      await multi.exec();
-      return true;
-    } catch (error) {
-      // 保留原始错误堆栈跟踪
-      throw new Error(`Batch set failed: ${error.message}`, { cause: error });
-    }
-  }
 
   /**
    * 原子性增加数值
@@ -378,6 +264,75 @@ class RedisClient {
     } catch (error) {
       // 保留原始错误堆栈跟踪
       throw new Error(`Increment failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  // ==========================================
+  // Hash操作方法 - 仅用于非玩家数据的临时状态管理
+  // 适用场景：市场统计、全局计数器、临时状态等
+  // 禁止用于：玩家核心数据（资产、状态等）
+  // ==========================================
+
+  /**
+   * 设置Hash字段值
+   * @param {string} key Redis Hash Key
+   * @param {Object|string} field 字段名或字段对象
+   * @param {string} value 字段值（当field为字符串时使用）
+   * @returns {Promise<number>} 设置的字段数量
+   */
+  async hSet(key, field, value = null) {
+    try {
+      if (typeof field === 'object' && field !== null) {
+        // 批量设置：hSet(key, {field1: value1, field2: value2})
+        return await this.client.hSet(key, field);
+      } else {
+        // 单个设置：hSet(key, field, value)
+        return await this.client.hSet(key, field, value);
+      }
+    } catch (error) {
+      throw new Error(`Hash set failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取Hash字段值
+   * @param {string} key Redis Hash Key
+   * @param {string} field 字段名
+   * @returns {Promise<string|null>} 字段值
+   */
+  async hGet(key, field) {
+    try {
+      return await this.client.hGet(key, field);
+    } catch (error) {
+      throw new Error(`Hash get failed for key ${key}, field ${field}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取Hash所有字段和值
+   * @param {string} key Redis Hash Key
+   * @returns {Promise<Object>} 所有字段和值的对象
+   */
+  async hGetAll(key) {
+    try {
+      return await this.client.hGetAll(key);
+    } catch (error) {
+      throw new Error(`Hash getall failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * Hash字段原子性增加数值
+   * @param {string} key Redis Hash Key
+   * @param {string} field 字段名
+   * @param {number} increment 增加量
+   * @returns {Promise<number>} 增加后的值
+   */
+  async hIncrBy(key, field, increment = 1) {
+    try {
+      return await this.client.hIncrBy(key, field, increment);
+    } catch (error) {
+      throw new Error(`Hash increment failed for key ${key}, field ${field}: ${error.message}`, { cause: error });
     }
   }
 
@@ -409,89 +364,10 @@ class RedisClient {
     }
   }
 
-  /**
-   * 设置Hash字段
-   * @param {string} key Redis Key
-   * @param {string|Object} fieldOrObject 字段名或字段对象
-   * @param {any} value 字段值（当第二个参数为字段名时使用）
-   * @returns {Promise<number>} 新增字段数量
-   */
-  async hSet(key, fieldOrObject, value) {
-    try {
-      if (!this.isConnected()) {
-        throw new Error('Redis client not connected');
-      }
 
-      return await this.client.hSet(key, fieldOrObject, value);
-    } catch (error) {
-      throw new Error(`Hash set failed for key ${key}: ${error.message}`, { cause: error });
-    }
-  }
 
-  /**
-   * 获取Hash字段值
-   * @param {string} key Redis Key
-   * @param {string} field 字段名
-   * @returns {Promise<string|null>} 字段值
-   */
-  async hGet(key, field) {
-    try {
-      if (!this.isConnected()) {
-        throw new Error('Redis client not connected');
-      }
 
-      return await this.client.hGet(key, field);
-    } catch (error) {
-      throw new Error(`Hash get failed for key ${key}, field ${field}: ${error.message}`, { cause: error });
-    }
-  }
 
-  /**
-   * 获取Hash所有字段
-   * @param {string} key Redis Key
-   * @returns {Promise<Object>} 所有字段和值
-   */
-  async hGetAll(key) {
-    try {
-      if (!this.isConnected()) {
-        throw new Error('Redis client not connected');
-      }
-
-      return await this.client.hGetAll(key);
-    } catch (error) {
-      throw new Error(`Hash get all failed for key ${key}: ${error.message}`, { cause: error });
-    }
-  }
-
-  /**
-   * 删除Hash字段
-   * @param {string} key Redis Key
-   * @param {...string} fields 要删除的字段名
-   * @returns {Promise<number>} 删除的字段数量
-   */
-  async hDel(key, ...fields) {
-    try {
-      if (!this.isConnected()) {
-        throw new Error('Redis client not connected');
-      }
-
-      return await this.client.hDel(key, ...fields);
-    } catch (error) {
-      throw new Error(`Hash delete failed for key ${key}: ${error.message}`, { cause: error });
-    }
-  }
-
-  /**
-   * 获取Redis Pipeline对象
-   * @returns {Object} Pipeline对象
-   */
-  pipeline() {
-    if (!this.isConnected()) {
-      throw new Error('Redis client not connected');
-    }
-
-    return this.client.multi();
-  }
 
   /**
    * 私有方法：睡眠等待

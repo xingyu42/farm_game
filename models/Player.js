@@ -98,129 +98,9 @@ class Player {
     return new Player(playerData, config);
   }
 
-  /**
-   * 验证Redis Hash数据的完整性
-   * @param {Object} hashData Redis Hash数据
-   * @returns {Object} 验证结果
-   */
-  static validateHashData(hashData) {
-    const errors = [];
 
-    if (!hashData || typeof hashData !== 'object') {
-      errors.push('Hash数据必须是有效对象');
-      return { isValid: false, errors };
-    }
 
-    // 检查必要的简单字段
-    const requiredSimpleFields = ['name', 'level', 'coins'];
-    for (const field of requiredSimpleFields) {
-      if (hashData[field] === undefined || hashData[field] === null) {
-        errors.push(`缺少必要字段: ${field}`);
-      }
-    }
 
-    // 验证数值字段格式
-    const numericFields = ['level', 'experience', 'coins', 'landCount', 'createdAt'];
-    for (const field of numericFields) {
-      if (hashData[field] !== undefined && isNaN(parseInt(hashData[field]))) {
-        errors.push(`字段 ${field} 必须是有效数值`);
-      }
-    }
-
-    // 验证JSON字段格式
-    const jsonFields = ['lands', 'inventory', 'stats', 'signIn', 'protection', 'stealing', 'statistics'];
-    for (const field of jsonFields) {
-      if (hashData[field]) {
-        try {
-          JSON.parse(hashData[field]);
-        } catch (error) {
-          errors.push(`字段 ${field} 包含无效JSON: ${error.message}`);
-        }
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-
-  /**
-   * 从Redis Hash数据创建玩家实例
-   * @param {Object} hashData Redis Hash数据
-   * @param {Object} config 配置对象
-   * @returns {Player} 玩家实例
-   */
-  static fromRawData(hashData, config) {
-    // 验证输入数据
-    const validation = Player.validateHashData(hashData);
-    if (!validation.isValid) {
-      throw new Error(`Redis Hash数据验证失败: ${validation.errors.join(', ')}`);
-    }
-
-    const playerData = {};
-
-    // 定义简单字段（与PlayerService保持一致）
-    const simpleFields = [
-      'name', 'level', 'experience', 'coins', 'landCount', 'maxLandCount',
-      'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-      'createdAt', 'lastUpdated', 'lastActiveTime'
-    ];
-
-    // 定义复杂字段（与PlayerService保持一致）
-    const complexFields = [
-      'lands', 'inventory', 'stats', 'signIn', 'protection', 'stealing', 'statistics'
-    ];
-
-    // 处理简单字段
-    for (const field of simpleFields) {
-      if (hashData[field] !== undefined) {
-        // 数值字段转换
-        if (['level', 'experience', 'coins', 'landCount', 'maxLandCount',
-          'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-          'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
-          const numValue = parseInt(hashData[field]);
-          playerData[field] = isNaN(numValue) ? 0 : numValue;
-        } else {
-          playerData[field] = hashData[field]
-        }
-      } else {
-        // 为缺失的简单字段提供默认值
-        if (['level'].includes(field)) {
-          playerData[field] = 1;
-        } else if (['experience', 'coins', 'landCount', 'maxLandCount',
-          'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity'].includes(field)) {
-          playerData[field] = 0;
-        } else if (['createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
-          playerData[field] = Date.now();
-        } else {
-          playerData[field] = '';
-        }
-      }
-    }
-
-    // 处理复杂字段（JSON反序列化）
-    for (const field of complexFields) {
-      if (hashData[field]) {
-        try {
-          const parsedData = JSON.parse(hashData[field]);
-          playerData[field] = parsedData;
-        } catch (error) {
-          console.warn(`[Player] 解析复杂字段失败 [${field}]: ${error.message}`);
-          playerData[field] = Player._getDefaultComplexField(field, config);
-        }
-      } else {
-        playerData[field] = Player._getDefaultComplexField(field, config);
-      }
-    }
-
-    // 确保关键字段存在
-    if (!playerData.name) playerData.name = '';
-    if (!playerData.level || playerData.level < 1) playerData.level = 1;
-    if (playerData.coins < 0) playerData.coins = 0;
-
-    return new Player(playerData, config);
-  }
 
   /**
    * 从普通对象数据创建玩家实例
@@ -232,22 +112,7 @@ class Player {
     return new Player(rawData, config);
   }
 
-  /**
-   * 创建默认土地数组
-   * @param {number} landCount 土地数量
-   * @returns {Array} 土地数组
-   * @private
-   */
-  _createDefaultLands(landCount) {
-    return new Array(landCount).fill(null).map((_, i) => ({
-      id: i + 1,
-      crop: null,
-      quality: 'normal',
-      plantTime: null,
-      harvestTime: null,
-      status: 'empty'
-    }));
-  }
+
 
   /**
    * 获取复杂字段的默认值
@@ -600,42 +465,6 @@ class Player {
    */
   shallowClone() {
     return new Player(this.toJSON(), this.config);
-  }
-
-  /**
-   * 转换为Redis Hash存储格式
-   * @returns {Object} Redis Hash格式的数据
-   */
-  toHashData() {
-    const hashData = {};
-
-    // 简单字段（与PlayerService保持一致）
-    const simpleFields = [
-      'name', 'level', 'experience', 'coins', 'landCount', 'maxLandCount',
-      'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-      'createdAt', 'lastUpdated', 'lastActiveTime'
-    ];
-
-    // 复杂字段（与PlayerService保持一致）
-    const complexFields = [
-      'lands', 'inventory', 'stats', 'signIn', 'protection', 'stealing', 'statistics'
-    ];
-
-    // 处理简单字段
-    for (const field of simpleFields) {
-      if (this[field] !== undefined) {
-        hashData[field] = this[field].toString();
-      }
-    }
-
-    // 处理复杂字段（JSON序列化）
-    for (const field of complexFields) {
-      if (this[field] !== undefined) {
-        hashData[field] = JSON.stringify(this[field]);
-      }
-    }
-
-    return hashData;
   }
 
   /**

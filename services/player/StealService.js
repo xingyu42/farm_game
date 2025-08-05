@@ -3,7 +3,7 @@
  * 包含成功率计算、双重锁机制、防重复偷取等功能
  */
 
-import { RedisLock } from '../../utils/RedisLock.js';
+
 
 // {{RIPER-5:
 // Action: Added
@@ -24,8 +24,7 @@ export class StealService {
     this.inventoryService = inventoryService;
     this.protectionService = protectionService;
     this.landService = landService;
-    // 初始化Redis锁
-    this.redisLock = new RedisLock(redisClient);
+
 
     // 获取偷窃配置
     this.stealConfig = this.config.steal;
@@ -53,40 +52,20 @@ export class StealService {
 
     // 双重分布式锁：确保操作原子性
     const lockKeys = [attackerId, targetId].sort(); // 按字母序排序防止死锁
-    const lockTimeout = this.stealConfig.locks.timeout;
-    const locks = [];
+    const lockTimeout = Math.ceil(this.stealConfig.locks.timeout / 1000); // 转换为秒
 
     try {
-      // 获取双重锁
-      for (const key of lockKeys) {
-        const lock = await this.redisLock.acquire(
-          `steal:${key}`,
-          lockTimeout,
-          this.stealConfig.locks.retryDelay,
-          this.stealConfig.locks.maxRetries
-        );
-
-        if (!lock) {
-          throw new Error(`获取用户锁失败: ${key}，请稍后再试`);
-        }
-        locks.push(lock);
-      }
-
-      // 执行偷窃核心逻辑
-      return await this._executeStealCore(attackerId, targetId);
+      // 嵌套获取双重锁，按排序顺序避免死锁
+      return await this.redisClient.withLock(lockKeys[0], async () => {
+        return await this.redisClient.withLock(lockKeys[1], async () => {
+          // 执行偷窃核心逻辑
+          return await this._executeStealCore(attackerId, targetId);
+        }, 'steal_operation', lockTimeout);
+      }, 'steal_operation', lockTimeout);
 
     } catch (error) {
       logger.error(`[StealService] 偷窃操作失败 [${attackerId} -> ${targetId}]: ${error.message}`);
       throw error;
-    } finally {
-      // 释放所有锁
-      for (const lock of locks) {
-        try {
-          await this.redisLock.release(lock);
-        } catch (releaseError) {
-          logger.error(`[StealService] 释放锁失败: ${releaseError.message}`);
-        }
-      }
     }
   }
 

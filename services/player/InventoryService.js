@@ -9,10 +9,11 @@ import ItemResolver from '../../utils/ItemResolver.js';
  * 包含：物品添加、移除、查询、仓库扩容等功能
  */
 export class InventoryService {
-  constructor(redisClient, config, _logger = null) {
+  constructor(redisClient, config, _logger = null, playerDataService = null) {
     this.redis = redisClient;
     this.config = config;
     this.itemResolver = new ItemResolver(config);
+    this.playerDataService = playerDataService;
   }
 
   /**
@@ -22,26 +23,23 @@ export class InventoryService {
    */
   async getInventory(userId) {
     try {
-      const playerKey = this.redis.generateKey('player', userId);
-
-      // 检查Hash是否存在
-      const exists = await this.redis.exists(playerKey);
-      if (!exists) {
-        throw new Error('玩家不存在');
+      if (!this.playerDataService) {
+        throw new Error('PlayerDataService not initialized');
       }
 
-      // 获取所有Hash字段
-      const hashData = await this.redis.client.hGetAll(playerKey);
-
-      if (!hashData || Object.keys(hashData).length === 0) {
-        throw new Error('玩家数据为空');
+      // 通过PlayerDataService获取玩家数据
+      const playerData = await this.playerDataService.getPlayer(userId);
+      if (!playerData) {
+        throw new Error('玩家不存在');
       }
 
       // 解析inventory字段为Item实例
       const itemInstances = {};
-      if (hashData.inventory) {
+      if (playerData.inventory) {
         try {
-          const inventoryData = JSON.parse(hashData.inventory);
+          const inventoryData = typeof playerData.inventory === 'string'
+            ? JSON.parse(playerData.inventory)
+            : playerData.inventory;
 
           // 将每个物品数据转换为Item实例
           for (const [itemId, itemData] of Object.entries(inventoryData)) {
@@ -60,8 +58,8 @@ export class InventoryService {
 
       return {
         items: itemInstances,
-        capacity: parseInt(hashData.inventory_capacity),
-        maxCapacity: parseInt(hashData.maxInventoryCapacity),
+        capacity: parseInt(playerData.inventory_capacity) || this.config.player.defaultInventoryCapacity,
+        maxCapacity: parseInt(playerData.maxInventoryCapacity) || this.config.player.maxInventoryCapacity,
         usage: this._calculateInventoryUsage(itemInstances)
       };
     } catch (error) {
@@ -528,26 +526,28 @@ export class InventoryService {
   }
 
   /**
-   * 保存仓库数据到Redis - 私有方法
+   * 保存仓库数据 - 私有方法
    * @param {string} userId 用户ID
    * @param {Object} inventory 仓库数据对象
    * @returns {Promise<void>}
    * @private
    */
   async _saveInventoryToRedis(userId, inventory) {
-    const playerKey = this.redis.generateKey('player', userId);
-    const serializedInventory = {};
+    if (!this.playerDataService) {
+      throw new Error('PlayerDataService not initialized');
+    }
 
+    const serializedInventory = {};
     for (const [id, item] of Object.entries(inventory.items)) {
       serializedInventory[id] = item.toJSON();
     }
 
     const updates = {
-      inventory: JSON.stringify(serializedInventory),
-      lastUpdated: Date.now().toString()
+      inventory: serializedInventory,
+      lastUpdated: Date.now()
     };
 
-    await this.redis.client.hSet(playerKey, updates);
+    await this.playerDataService.updateFields(userId, updates);
   }
 
   /**

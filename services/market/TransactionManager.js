@@ -1,25 +1,23 @@
 /**
  * TransactionManager - 事务管理服务
- * 
+ *
  * 专门负责分布式锁管理、事务性批量更新、数据一致性保证。
  * 确保市场数据更新的原子性和并发安全性。
- * 
+ *
  * @version 1.0.0
  */
-import { RedisLock } from '../../utils/RedisLock.js';
 
 export class TransactionManager {
   constructor(redisClient, config) {
     this.redis = redisClient;
     this.config = config;
-    this.lockManager = new RedisLock(redisClient);
-    
+
     // 获取事务配置
     this.transactionConfig = this.config.market.transaction
     this.lockTimeout = this.transactionConfig.lock_timeout * 1000;
     this.maxRetries = this.transactionConfig.max_retries
     this.retryDelay = this.transactionConfig.retry_delay * 1000;
-    
+
     // 活跃事务跟踪
     this.activeTransactions = new Map();
   }
@@ -34,13 +32,13 @@ export class TransactionManager {
     const transactionId = this._generateTransactionId();
     const lockKey = options.lockKey || `market:batch:${transactionId}`;
     const timeout = options.timeout || this.lockTimeout;
-    
+
     let lockAcquired = false;
     const startTime = Date.now();
 
     try {
       logger.info(`[TransactionManager] 开始批量事务 ${transactionId}，操作数量: ${operations.length}`);
-      
+
       // 跟踪活跃事务
       this.activeTransactions.set(transactionId, {
         id: transactionId,
@@ -50,14 +48,6 @@ export class TransactionManager {
         status: 'starting'
       });
 
-      // 获取分布式锁
-      lockAcquired = await this._acquireLockWithRetry(lockKey, timeout);
-      if (!lockAcquired) {
-        throw new Error(`获取事务锁失败: ${lockKey}`);
-      }
-
-      this._updateTransactionStatus(transactionId, 'locked');
-
       // 验证操作
       const validationResult = this._validateOperations(operations);
       if (!validationResult.valid) {
@@ -66,14 +56,18 @@ export class TransactionManager {
 
       this._updateTransactionStatus(transactionId, 'validated');
 
-      // 执行批量操作
-      const result = await this._performBatchOperations(operations, transactionId);
-      
+      // 使用分布式锁执行批量操作
+      const result = await this.redis.withLock(lockKey, async () => {
+        this._updateTransactionStatus(transactionId, 'locked');
+        lockAcquired = true;
+        return await this._performBatchOperations(operations, transactionId);
+      }, 'batch_transaction', Math.ceil(timeout / 1000));
+
       // 验证结果一致性
       await this._validateBatchResult(result, operations);
 
       this._updateTransactionStatus(transactionId, 'completed');
-      
+
       const duration = Date.now() - startTime;
       logger.info(`[TransactionManager] 批量事务 ${transactionId} 成功完成，耗时: ${duration}ms`);
 
@@ -89,7 +83,7 @@ export class TransactionManager {
     } catch (error) {
       this._updateTransactionStatus(transactionId, 'failed');
       logger.error(`[TransactionManager] 批量事务 ${transactionId} 失败: ${error.message}`);
-      
+
       // 尝试回滚
       try {
         await this._rollbackTransaction(operations, transactionId);
@@ -99,19 +93,12 @@ export class TransactionManager {
 
       throw error;
     } finally {
-      // 释放锁
-      if (lockAcquired) {
-        try {
-          await this.lockManager.withLock(lockKey, async () => {
-            // 空操作，主要是为了释放锁
-          }, 1000);
-        } catch (unlockError) {
-          logger.warn(`[TransactionManager] 释放锁失败: ${unlockError.message}`);
-        }
-      }
-
       // 清理活跃事务记录
       this.activeTransactions.delete(transactionId);
+
+      if (lockAcquired) {
+        logger.debug(`[TransactionManager] 锁 ${lockKey} 已自动释放`);
+      }
     }
   }
 
@@ -124,11 +111,11 @@ export class TransactionManager {
    */
   async executeAtomicOperation(lockKey, operation, timeout = this.lockTimeout) {
     const operationId = this._generateTransactionId();
-    
+
     try {
       logger.debug(`[TransactionManager] 开始原子操作 ${operationId}，锁键: ${lockKey}`);
-      
-      return await this.lockManager.withLock(lockKey, operation, timeout);
+
+      return await this.redis.withLock(lockKey, operation, 'atomic_operation', Math.ceil(timeout / 1000));
     } catch (error) {
       logger.error(`[TransactionManager] 原子操作 ${operationId} 失败: ${error.message}`);
       throw error;
@@ -144,16 +131,19 @@ export class TransactionManager {
   async acquireBatchLocks(lockKeys, timeout = this.lockTimeout) {
     const acquiredLocks = [];
     const failedLocks = [];
-    
+
     try {
       // 按顺序获取锁，避免死锁
       const sortedKeys = [...lockKeys].sort();
-      
+
       for (const key of sortedKeys) {
         try {
-          const lock = await this.lockManager.acquire(key, timeout);
-          if (lock) {
-            acquiredLocks.push(lock);
+          const lockResult = await this.redis.acquireLock(key, 'batch_operation', Math.ceil(timeout / 1000));
+          if (lockResult.success) {
+            acquiredLocks.push({
+              key: lockResult.lockKey,
+              value: lockResult.lockValue
+            });
           } else {
             failedLocks.push(key);
           }
@@ -170,12 +160,12 @@ export class TransactionManager {
         acquiredCount: acquiredLocks.length,
         totalCount: lockKeys.length
       };
-      
+
     } catch (error) {
       // 释放已获取的锁
       for (const lock of acquiredLocks) {
         try {
-          await this.lockManager.release(lock);
+          await this.redis.releaseLock(lock.key, lock.value);
         } catch (releaseError) {
           logger.warn(`[TransactionManager] 释放锁失败: ${releaseError.message}`);
         }
@@ -192,27 +182,27 @@ export class TransactionManager {
     try {
       const deadlocks = [];
       const lockPattern = `${this.redis.keyPrefix}:lock:*`;
-      const lockKeys = await this.redis.keys(lockPattern);
-      
+      const lockKeys = await this.redis.client.keys(lockPattern);
+
       if (lockKeys.length === 0) {
         return deadlocks;
       }
 
       // 获取所有锁的信息
-      const pipeline = this.redis.pipeline();
+      const pipeline = this.redis.client.pipeline();
       for (const key of lockKeys) {
         pipeline.get(key);
         pipeline.ttl(key);
       }
-      
+
       const results = await pipeline.exec();
-      
+
       // 分析锁的状态
       for (let i = 0; i < lockKeys.length; i++) {
         const key = lockKeys[i];
         const value = results[i * 2];
         const ttl = results[i * 2 + 1];
-        
+
         // 检查是否有长时间持有的锁
         if (ttl > this.lockTimeout / 1000) {
           deadlocks.push({
@@ -266,31 +256,29 @@ export class TransactionManager {
    */
   async _acquireLockWithRetry(lockKey, timeout) {
     let attempts = 0;
-    
+
     while (attempts < this.maxRetries) {
       try {
-        const success = await this.lockManager.withLock(lockKey, async () => {
-          return true; // 成功获取锁
-        }, timeout);
-        
-        if (success) {
+        const lockResult = await this.redis.acquireLock(lockKey, 'transaction', Math.ceil(timeout / 1000));
+
+        if (lockResult.success) {
           return true;
         }
       } catch (error) {
         attempts++;
-        
+
         if (attempts >= this.maxRetries) {
           logger.error(`[TransactionManager] 获取锁最终失败 ${lockKey}，已重试 ${attempts} 次`);
           return false;
         }
-        
+
         logger.warn(`[TransactionManager] 获取锁失败 ${lockKey}，第 ${attempts} 次重试: ${error.message}`);
-        
+
         // 等待后重试
         await new Promise(resolve => setTimeout(resolve, this.retryDelay));
       }
     }
-    
+
     return false;
   }
 
@@ -302,7 +290,7 @@ export class TransactionManager {
    * @private
    */
   async _performBatchOperations(operations, transactionId) {
-    const multi = this.redis.pipeline();
+    const multi = this.redis.client.pipeline();
     let successCount = 0;
     const errors = [];
 
@@ -323,7 +311,7 @@ export class TransactionManager {
 
       // 执行事务
       const results = await multi.exec();
-      
+
       // 检查事务结果
       if (results && results.length > 0) {
         for (let i = 0; i < results.length; i++) {
@@ -340,7 +328,7 @@ export class TransactionManager {
       }
 
       logger.debug(`[TransactionManager] 事务 ${transactionId} 批量操作完成，成功: ${successCount}/${operations.length}`);
-      
+
       return { successCount, totalCount: operations.length, errors };
     } catch (error) {
       logger.error(`[TransactionManager] 事务 ${transactionId} 批量操作失败: ${error.message}`);
@@ -386,7 +374,7 @@ export class TransactionManager {
         throw new Error(`批量操作错误率过高: ${(errorRate * 100).toFixed(1)}%`);
       }
     }
-    
+
     if (result.successCount === 0 && operations.length > 0) {
       throw new Error('所有批量操作都失败了');
     }
@@ -400,7 +388,7 @@ export class TransactionManager {
    */
   async _rollbackTransaction(operations, transactionId) {
     logger.warn(`[TransactionManager] 开始回滚事务 ${transactionId}`);
-    
+
     try {
       // 这里实现回滚逻辑
       // 由于Redis的限制，实际的回滚可能需要应用层面的补偿操作
@@ -419,28 +407,28 @@ export class TransactionManager {
    */
   _validateOperations(operations) {
     const errors = [];
-    
+
     if (!Array.isArray(operations)) {
       errors.push('操作列表必须是数组');
       return { valid: false, errors };
     }
-    
+
     if (operations.length === 0) {
       errors.push('操作列表不能为空');
       return { valid: false, errors };
     }
-    
+
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
-      
+
       if (!op.type) {
         errors.push(`操作 ${i}: 缺少操作类型`);
       }
-      
+
       if (!op.key) {
         errors.push(`操作 ${i}: 缺少操作键`);
       }
-      
+
       // 根据操作类型验证必需的字段
       switch (op.type) {
         case 'hset':
@@ -460,7 +448,7 @@ export class TransactionManager {
           break;
       }
     }
-    
+
     return { valid: errors.length === 0, errors };
   }
 

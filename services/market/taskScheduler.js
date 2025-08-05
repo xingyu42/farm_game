@@ -127,7 +127,7 @@ export class TaskScheduler {
                 if (this.lastResetDate === today) {
                     return;
                 }
-                
+
                 // 标记为今天已执行（在执行前设置，防止重复执行）
                 this.lastResetDate = today;
             }
@@ -161,7 +161,7 @@ export class TaskScheduler {
                 logger.error(`[TaskScheduler] 任务失败: ${taskName}, 耗时: ${duration}ms`, { error: error.message });
                 throw error;
             }
-        }, (timeout * 1000) + 5000);
+        }, 'scheduler_task', timeout + 5);
     }
 
     /**

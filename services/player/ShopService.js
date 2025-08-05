@@ -308,7 +308,7 @@ export class ShopService {
       // 执行购买事务：扣除金币 + 添加物品
       logger.info(`[ShopService] 开始购买事务 [${userId}]: ${itemName} x${quantity}, 总价 ${totalCost} 金币`);
 
-      return await this.playerService.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
+      return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
         logger.info(`[ShopService] 事务内部 - 扣除金币前 [${userId}]: 当前金币 ${player.coins}`);
 
         // 扣除金币
@@ -324,9 +324,8 @@ export class ShopService {
         }
 
         // 保存玩家数据（金币变更）
-        const serializer = this.playerService.dataService.getSerializer();
-        multi.hSet(playerKey, serializer.serializeForHash(player));
-        logger.info(`[ShopService] 玩家数据已保存到事务 [${userId}]`);
+        await dataService.savePlayer(userId, player);
+        logger.info(`[ShopService] 玩家数据已保存 [${userId}]`);
 
         // 使用 InventoryService 添加物品到仓库
         logger.info(`[ShopService] 调用 InventoryService.addItem [${userId}]: ${itemId} x${quantity}`);

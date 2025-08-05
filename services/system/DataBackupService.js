@@ -1,10 +1,11 @@
 /**
  * 数据备份服务
- * 定期备份Redis中的玩家动态数据到JSON文件
+ * 定期备份YAML文件中的玩家数据到JSON文件
  * 支持自动清理旧备份文件，确保存储空间可控
  */
 
 import { FileStorage } from '../../utils/fileStorage.js';
+import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';
 
 class DataBackupService {
     constructor(redisClient, config, playerService = null) {
@@ -13,6 +14,8 @@ class DataBackupService {
         this.playerService = playerService;
         // 创建专门用于备份的 FileStorage 实例
         this.backupStorage = new FileStorage('data/backups');
+        // 创建玩家YAML存储实例
+        this.playerYamlStorage = new PlayerYamlStorage();
 
         // 备份定时器
         this.backupTimer = null;
@@ -219,25 +222,23 @@ class DataBackupService {
      */
     async _getAllPlayerData() {
         try {
-            // 获取所有玩家键
-            const playerKeys = await this.redis.client.keys('farm_game:player:*');
+            // 获取所有玩家ID列表
+            const playerIds = await this.playerYamlStorage.listAllPlayers();
 
-            if (!playerKeys || playerKeys.length === 0) {
+            if (!playerIds || playerIds.length === 0) {
                 return {};
             }
 
             const playerData = {};
 
             // 批量获取玩家数据
-            for (const key of playerKeys) {
-                const userId = key.replace('farm_game:player:', '');
-
+            for (const userId of playerIds) {
                 try {
-                    const hashData = await this.redis.client.hGetAll(key);
+                    const yamlData = await this.playerYamlStorage.readPlayer(userId);
 
-                    if (hashData && Object.keys(hashData).length > 0) {
-                        // 只备份频繁字段（Redis中的数据）
-                        playerData[userId] = hashData;
+                    if (yamlData && Object.keys(yamlData).length > 0) {
+                        // 备份完整的玩家数据
+                        playerData[userId] = yamlData;
                     }
                 } catch (error) {
                     logger.warn(`[DataBackupService] 获取玩家数据失败 [${userId}]: ${error.message}`);

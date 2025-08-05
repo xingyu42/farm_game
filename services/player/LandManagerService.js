@@ -21,9 +21,9 @@ class LandManagerService {
     async expandLand(userId) {
         try {
             // 执行扩张 - 所有检查和操作都在事务内进行，确保原子性
-            return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
                 // 在事务内获取最新的玩家数据
-                const playerData = await this.dataService.getPlayer(userId);
+                const playerData = await dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -76,9 +76,8 @@ class LandManagerService {
 
                 playerData.lastUpdated = Date.now();
 
-                // 使用序列化器统一处理
-                const serializer = this.dataService.getSerializer();
-                multi.hSet(playerKey, serializer.serializeForHash(playerData));
+                // 保存更新后的数据
+                await dataService.savePlayer(userId, playerData);
 
                 logger.info(`[LandManagerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
 
@@ -198,8 +197,8 @@ class LandManagerService {
      */
     async updateLand(userId, landId, updates) {
         try {
-            return await this.dataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
-                const playerData = await this.dataService.getPlayer(userId);
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                const playerData = await dataService.getPlayer(userId);
 
                 if (!playerData) {
                     return {
@@ -238,12 +237,8 @@ class LandManagerService {
                 playerData.lands[landIndex] = updatedLand;
                 playerData.lastUpdated = Date.now();
 
-                // 保存到Redis
-                await this.dataService.updateMixedFields(
-                    userId,
-                    { lastUpdated: playerData.lastUpdated },
-                    { lands: playerData.lands }
-                );
+                // 保存数据
+                await dataService.savePlayer(userId, playerData);
 
                 logger.info(`[LandManagerService] 玩家 ${userId} 土地 ${landId} 更新成功`);
 

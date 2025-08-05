@@ -18,7 +18,7 @@
  */
 
 import fs from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import path, { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from 'yaml'
 
@@ -32,8 +32,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  */
 export class FileStorage {
   constructor(baseDir = 'data') {
-    this.baseDir = join(dirname(__dirname), baseDir)
-    this.init()
+    // 如果是绝对路径，直接使用；否则相对于项目根目录
+    if (path.isAbsolute(baseDir)) {
+      this.baseDir = baseDir;
+    } else {
+      this.baseDir = join(dirname(__dirname), baseDir);
+    }
+    // 不在构造函数中调用异步init，让测试控制初始化时机
   }
 
   /**
@@ -193,6 +198,24 @@ export class FileStorage {
     } catch (error) {
       logger.error('[FileStorage] 获取文件列表失败:', error)
       return []
+    }
+  }
+
+  /**
+   * 重命名文件
+   * @param {string} oldFilename 原文件名
+   * @param {string} newFilename 新文件名
+   * @returns {Promise<boolean>}
+   */
+  async rename(oldFilename, newFilename) {
+    try {
+      const oldPath = join(this.baseDir, oldFilename)
+      const newPath = join(this.baseDir, newFilename)
+      await fs.rename(oldPath, newPath)
+      return true
+    } catch (error) {
+      logger.error(`[FileStorage] 重命名文件失败 ${oldFilename} -> ${newFilename}:`, error)
+      throw new Error(`Failed to rename file ${oldFilename} to ${newFilename}: ${error.message}`, { cause: error })
     }
   }
 

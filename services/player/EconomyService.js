@@ -18,46 +18,57 @@ class EconomyService {
     }
 
     /**
+     * 通用金币变更接口 
+     * 正数 amount 代表增加，负数代表减少
+     * @param {string} userId
+     * @param {number} amount 变化量
+     */
+    async changeCoins(userId, amount) {
+        try {
+            return await this.dataService.executeWithTransaction(userId, async (dataService, uid) => {
+                const playerData = await dataService.getPlayer(uid);
+                if (!playerData) {
+                    throw new Error('玩家不存在');
+                }
+
+                // 复用内部原子更新工具，自动处理统计 + 边界
+                const actualChange = this._updateCoinsInTransaction(playerData, amount);
+
+                // 持久化数据
+                await dataService.savePlayer(uid, playerData);
+
+                logger.info(
+                    `[EconomyService] 玩家 ${uid} 金币变化: ${actualChange >= 0 ? '+' : ''}${actualChange
+                    }, 当前: ${playerData.coins}`
+                );
+                return playerData;
+            });
+        } catch (error) {
+            logger.error(`[EconomyService] 金币变更失败 [${userId}]: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
      * 添加金币
      * @param {string} userId 用户ID
      * @param {number} amount 金币数量（可为负数）
      * @returns {Object} 更新后的玩家数据
      */
     async addCoins(userId, amount) {
-        try {
-            return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayer(userId);
-
-                if (!playerData) {
-                    throw new Error('玩家不存在');
-                }
-
-                // 计算新的金币数量（确保不为负数）
-                const newCoins = Math.max(0, playerData.coins + amount);
-                const actualChange = newCoins - playerData.coins;
-
-                // 更新统计数据
-                if (actualChange > 0) {
-                    playerData.statistics.totalMoneyEarned += actualChange;
-                } else if (actualChange < 0) {
-                    playerData.statistics.totalMoneySpent += Math.abs(actualChange);
-                }
-
-                playerData.coins = newCoins;
-                playerData.lastUpdated = Date.now();
-
-                // 使用序列化器统一处理
-                const serializer = this.dataService.getSerializer();
-                multi.hSet(playerKey, serializer.serializeForHash(playerData));
-
-                logger.info(`[EconomyService] 玩家 ${userId} 金币变化: ${amount > 0 ? '+' : ''}${actualChange}, 当前: ${newCoins}`);
-                return playerData;
-            });
-        } catch (error) {
-            logger.error(`[EconomyService] 添加金币失败 [${userId}]: ${error.message}`);
-            throw error;
-        }
+        return this.changeCoins(userId, amount);
     }
+
+    /**
+     * 扣除金币
+     * @param {string} userId 用户ID
+     * @param {number} amount 扣除金币数量
+     * @returns {Object} 扣除结果
+     */
+    async deductCoins(userId, amount) {
+        return this.changeCoins(userId, -Math.abs(amount));
+    }
+
 
     /**
      * 添加经验值并处理升级
@@ -67,8 +78,8 @@ class EconomyService {
      */
     async addExp(userId, amount) {
         try {
-            return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayer(userId);
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                const playerData = await dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -93,9 +104,8 @@ class EconomyService {
                 playerData.level = newLevel;
                 playerData.lastUpdated = Date.now();
 
-                // 使用序列化器统一处理
-                const serializer = this.dataService.getSerializer();
-                multi.hSet(playerKey, serializer.serializeForHash(playerData));
+                // 保存更新后的数据
+                await dataService.savePlayer(userId, playerData);
 
                 logger.info(`[EconomyService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
 
@@ -202,77 +212,6 @@ class EconomyService {
     }
 
     /**
-     * 扣除金币（安全扣除，确保不会为负数）
-     *
-     * @deprecated 此方法存在事务嵌套问题，不推荐在新代码中使用
-     *
-     * **问题说明：**
-     * 该方法先调用 hasEnoughCoins 检查，然后调用 addCoins 扣款，
-     * 在高并发场景下可能导致竞态条件和事务嵌套问题。
-     *
-     * **推荐替代方案：**
-     * 在业务服务的事务中直接使用 _updateCoinsInTransaction 方法：
-     *
-     * ```javascript
-     * // 旧方式（不推荐）
-     * await this.economyService.deductCoins(userId, amount);
-     *
-     * // 新方式（推荐）
-     * return await this.playerDataService.executeWithTransaction(userId, async (multi, playerKey) => {
-     *   const playerData = await this.playerDataService.getPlayer(userId);
-     *
-     *   // 检查金币是否足够
-     *   if (playerData.coins < amount) {
-     *     throw new Error(`金币不足！需要 ${amount} 金币，当前拥有: ${playerData.coins}`);
-     *   }
-     *
-     *   // 扣除金币
-     *   const actualChange = this.economyService._updateCoinsInTransaction(playerData, -amount);
-     *
-     *   // 其他业务逻辑...
-     *
-     *   // 保存数据
-     *   const serializer = this.playerDataService.getSerializer();
-     *   multi.hSet(playerKey, serializer.serializeForHash(playerData));
-     * });
-     * ```
-     *
-     * @param {string} userId 用户ID
-     * @param {number} amount 扣除金币数量
-     * @returns {Object} 扣除结果
-     */
-    async deductCoins(userId, amount) {
-        // 开发环境警告
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[EconomyService] deductCoins方法已被标记为deprecated，请使用事务内的_updateCoinsInTransaction方法替代');
-        }
-
-        try {
-            const checkResult = await this.hasEnoughCoins(userId, amount);
-
-            if (!checkResult.hasEnough) {
-                return {
-                    success: false,
-                    message: `金币不足！需要 ${amount} 金币，当前拥有: ${checkResult.currentCoins}`,
-                    shortage: checkResult.shortage
-                };
-            }
-
-            const playerData = await this.addCoins(userId, -amount);
-
-            return {
-                success: true,
-                message: `成功扣除 ${amount} 金币`,
-                remainingCoins: playerData.coins,
-                deductedAmount: amount
-            };
-        } catch (error) {
-            logger.error(`[EconomyService] 扣除金币失败 [${userId}]: ${error.message}`);
-            throw error;
-        }
-    }
-
-    /**
      * 获取经验值来源配置
      * @returns {Object} 经验值来源配置
      */
@@ -329,8 +268,7 @@ class EconomyService {
     }
 
     /**
-     * 在事务上下文中更新金币和统计数据（内部方法）
-     * 该方法用于在已有事务中直接操作玩家数据，避免事务嵌套
+     * 更新金币数量
      * @param {Object} playerData 玩家数据对象
      * @param {number} amount 金币变化量（可为负数）
      * @returns {number} 实际变化量

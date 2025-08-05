@@ -9,15 +9,6 @@ import Land from '../../models/Land.js';
 class PlantingUtils {
     constructor(config) {
         this.config = config;
-        // 定义作物相关的简单字段（存储为Hash字段）
-        this.simpleFields = [
-            'lastUpdated'
-        ];
-
-        // 定义作物相关的复杂字段（JSON序列化后存储）
-        this.complexFields = [
-            'lands'
-        ];
     }
 
     // ==================== 验证功能（来自 PlantingValidator）====================
@@ -337,96 +328,6 @@ class PlantingUtils {
         return available;
     }
 
-    // ==================== 序列化功能（来自 PlantingSerializer）====================
-
-    /**
-     * 序列化作物数据为Redis Hash格式
-     * @param {Object} cropData 作物数据对象
-     * @returns {Object} Redis Hash格式的数据对象
-     */
-    serializeForHash(cropData) {
-        const hashData = {};
-
-        // 处理简单字段
-        for (const field of this.simpleFields) {
-            if (cropData[field] !== undefined) {
-                hashData[field] = cropData[field].toString();
-            }
-        }
-
-        // 处理复杂字段（JSON序列化）
-        for (const field of this.complexFields) {
-            if (cropData[field] !== undefined) {
-                hashData[field] = JSON.stringify(cropData[field]);
-            }
-        }
-
-        return hashData;
-    }
-
-    /**
-     * 从Redis Hash数据反序列化为作物数据对象
-     * @param {Object} hashData Redis Hash数据
-     * @returns {Object|null} 作物数据对象或null
-     */
-    deserializeFromHash(hashData) {
-        if (!hashData || Object.keys(hashData).length === 0) {
-            return null;
-        }
-
-        const cropData = {};
-
-        // 处理简单字段
-        for (const field of this.simpleFields) {
-            if (hashData[field] !== undefined) {
-                // 数值字段转换
-                if (['lastUpdated'].includes(field)) {
-                    cropData[field] = parseInt(hashData[field]) || 0;
-                } else {
-                    cropData[field] = hashData[field];
-                }
-            }
-        }
-
-        // 处理复杂字段（JSON反序列化）
-        for (const field of this.complexFields) {
-            if (hashData[field]) {
-                try {
-                    cropData[field] = JSON.parse(hashData[field]);
-                } catch (error) {
-                    console.warn(`[PlantingUtils] 解析复杂字段失败 [${field}]: ${error.message}`);
-                    cropData[field] = this._getDefaultComplexField(field);
-                }
-            } else {
-                cropData[field] = this._getDefaultComplexField(field);
-            }
-        }
-
-        return cropData;
-    }
-
-    /**
-     * 获取复杂字段的默认值
-     * @param {string} field 字段名
-     * @returns {any} 默认值
-     */
-    _getDefaultComplexField(field) {
-        const landConfig = this.config.land.default;
-
-        switch (field) {
-            case 'lands':
-                return new Array(landConfig.startingLands).fill(null).map((_, i) => ({
-                    id: i + 1,
-                    crop: null,
-                    quality: 'normal',
-                    plantTime: null,
-                    harvestTime: null,
-                    status: 'empty'
-                }));
-            default:
-                return {};
-        }
-    }
 
     /**
      * 验证作物数据

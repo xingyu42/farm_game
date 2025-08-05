@@ -7,10 +7,11 @@
 import { PlantingUtils } from './PlantingUtils.js';
 
 class PlantingDataService {
-    constructor(redisClient, config) {
+    constructor(redisClient, config, _logger = null, playerDataService = null) {
         this.redis = redisClient;
         this.config = config;
         this.serializer = new PlantingUtils(config);
+        this.playerDataService = playerDataService;
     }
 
     /**
@@ -20,38 +21,21 @@ class PlantingDataService {
      */
     async getCropData(userId) {
         try {
-            const playerKey = this.redis.generateKey('player', userId);
-
-            // 检查Hash是否存在
-            const exists = await this.redis.exists(playerKey);
-            if (!exists) {
-                return null;
+            if (!this.playerDataService) {
+                throw new Error('PlayerDataService not initialized');
             }
 
-            // 获取作物相关字段
-            const cropFields = ['lands', 'lastUpdated'];
-            const hashData = await this.redis.client.hmGet(playerKey, cropFields);
-
-            if (!hashData || hashData.every(field => field === null)) {
+            // 通过PlayerDataService获取玩家数据
+            const playerData = await this.playerDataService.getPlayer(userId);
+            if (!playerData) {
                 return null;
             }
 
             // 构建作物数据对象
-            const cropData = {};
-            cropFields.forEach((field, index) => {
-                if (hashData[index] !== null) {
-                    if (field === 'lands') {
-                        try {
-                            cropData[field] = JSON.parse(hashData[index]);
-                        } catch (error) {
-                            logger.warn(`[PlantingDataService] 解析${field}字段失败: ${error.message}`);
-                            cropData[field] = [];
-                        }
-                    } else {
-                        cropData[field] = parseInt(hashData[index]) || 0;
-                    }
-                }
-            });
+            const cropData = {
+                lands: playerData.lands || [],
+                lastUpdated: playerData.lastUpdated || null
+            };
 
             return cropData;
         } catch (error) {
@@ -94,20 +78,18 @@ class PlantingDataService {
      */
     async updateLandCropData(userId, landId, landData) {
         try {
-            const playerKey = this.redis.generateKey('player', userId);
+            if (!this.playerDataService) {
+                throw new Error('PlayerDataService not initialized');
+            }
+
+            // 通过PlayerDataService获取玩家数据
+            const playerData = await this.playerDataService.getPlayer(userId);
+            if (!playerData) {
+                throw new Error('玩家不存在');
+            }
 
             // 获取当前土地数据
-            const currentLandsData = await this.redis.client.hGet(playerKey, 'lands');
-            let lands = [];
-
-            if (currentLandsData) {
-                try {
-                    lands = JSON.parse(currentLandsData);
-                } catch (error) {
-                    logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
-                    lands = [];
-                }
-            }
+            let lands = playerData.lands || [];
 
             // 确保土地数组足够大
             const landIndex = landId - 1;
@@ -127,11 +109,11 @@ class PlantingDataService {
 
             // 保存更新后的数据
             const updates = {
-                lands: JSON.stringify(lands),
-                lastUpdated: Date.now().toString()
+                lands: lands,
+                lastUpdated: Date.now()
             };
 
-            await this.redis.client.hSet(playerKey, updates);
+            await this.playerDataService.updateFields(userId, updates);
         } catch (error) {
             logger.error(`[PlantingDataService] 更新土地作物数据失败 [${userId}][${landId}]: ${error.message}`);
             throw error;
@@ -145,20 +127,18 @@ class PlantingDataService {
      */
     async updateMultipleLands(userId, landUpdates) {
         try {
-            const playerKey = this.redis.generateKey('player', userId);
+            if (!this.playerDataService) {
+                throw new Error('PlayerDataService not initialized');
+            }
+
+            // 通过PlayerDataService获取玩家数据
+            const playerData = await this.playerDataService.getPlayer(userId);
+            if (!playerData) {
+                throw new Error('玩家不存在');
+            }
 
             // 获取当前土地数据
-            const currentLandsData = await this.redis.client.hGet(playerKey, 'lands');
-            let lands = [];
-
-            if (currentLandsData) {
-                try {
-                    lands = JSON.parse(currentLandsData);
-                } catch (error) {
-                    logger.warn(`[PlantingDataService] 解析lands字段失败: ${error.message}`);
-                    lands = [];
-                }
-            }
+            let lands = playerData.lands || [];
 
             // 批量更新土地
             for (const [landId, landData] of Object.entries(landUpdates)) {
@@ -181,11 +161,11 @@ class PlantingDataService {
 
             // 保存更新后的数据
             const updates = {
-                lands: JSON.stringify(lands),
-                lastUpdated: Date.now().toString()
+                lands: lands,
+                lastUpdated: Date.now()
             };
 
-            await this.redis.client.hSet(playerKey, updates);
+            await this.playerDataService.updateFields(userId, updates);
         } catch (error) {
             logger.error(`[PlantingDataService] 批量更新土地数据失败 [${userId}]: ${error.message}`);
             throw error;
@@ -193,18 +173,19 @@ class PlantingDataService {
     }
 
     /**
-     * 使用事务执行操作
+     * 使用事务执行操作 (兼容性方法)
      * @param {string} userId 用户ID
-     * @param {Function} operation 操作函数
+     * @param {Function} operation 操作函数，接收(dataService, userId)参数
      * @returns {any} 操作结果
      */
     async executeWithTransaction(userId, operation) {
         try {
-            const playerKey = this.redis.generateKey('player', userId);
-            return await this.redis.transaction(async (multi) => {
-                const result = await operation(multi, playerKey);
-                return result;
-            });
+            if (!this.playerDataService) {
+                throw new Error('PlayerDataService not initialized');
+            }
+
+            // 使用PlayerDataService的锁机制来确保数据一致性
+            return await this.playerDataService.executeWithTransaction(userId, operation);
         } catch (error) {
             logger.error(`[PlantingDataService] 事务执行失败 [${userId}]: ${error.message}`);
             throw error;
@@ -218,8 +199,13 @@ class PlantingDataService {
      */
     async playerExists(userId) {
         try {
-            const playerKey = this.redis.generateKey('player', userId);
-            return await this.redis.exists(playerKey);
+            if (!this.playerDataService) {
+                throw new Error('PlayerDataService not initialized');
+            }
+
+            // 通过PlayerDataService检查玩家是否存在
+            const player = await this.playerDataService.getPlayer(userId);
+            return !!player;
         } catch (error) {
             logger.error(`[PlantingDataService] 检查玩家存在失败 [${userId}]: ${error.message}`);
             return false;
@@ -243,23 +229,7 @@ class PlantingDataService {
         return this.serializer.validateCropData(cropData);
     }
 
-    /**
-     * 序列化作物数据为Hash格式
-     * @param {Object} cropData 作物数据
-     * @returns {Object} Hash格式数据
-     */
-    serializeCropData(cropData) {
-        return this.serializer.serializeForHash(cropData);
-    }
 
-    /**
-     * 从Hash数据反序列化作物数据
-     * @param {Object} hashData Hash数据
-     * @returns {Object} 作物数据
-     */
-    deserializeCropData(hashData) {
-        return this.serializer.deserializeFromHash(hashData);
-    }
 }
 
 export default PlantingDataService; 

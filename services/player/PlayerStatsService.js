@@ -20,8 +20,8 @@ class PlayerStatsService {
      */
     async updateStatistics(userId, stats) {
         try {
-            return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayer(userId);
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                const playerData = await dataService.getPlayer(userId);
 
                 if (!playerData) {
                     throw new Error('玩家不存在');
@@ -37,9 +37,8 @@ class PlayerStatsService {
                 playerData.lastUpdated = Date.now();
                 playerData.lastActiveTime = Date.now();
 
-                // 使用序列化器统一处理
-                const serializer = this.dataService.getSerializer();
-                multi.hSet(playerKey, serializer.serializeForHash(playerData));
+                // 保存更新后的数据
+                await dataService.savePlayer(userId, playerData);
 
                 return playerData;
             });

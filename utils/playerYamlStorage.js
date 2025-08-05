@@ -33,6 +33,34 @@ export class PlayerYamlStorage {
     }
 
     /**
+     * 原子性写入玩家数据（临时文件+重命名）
+     * @param {string} userId 用户ID
+     * @param {Object} data 玩家数据对象
+     * @returns {Promise<boolean>} 写入是否成功
+     */
+    async writePlayerAtomic(userId, data) {
+        const filename = `${userId}.yaml`
+        const tempFilename = `${userId}.yaml.tmp.${Date.now()}`
+        
+        try {
+            // 写入临时文件
+            await this.fileStorage.writeYAML(tempFilename, data)
+            // 原子性重命名
+            await this.fileStorage.rename(tempFilename, filename)
+            return true
+        } catch (error) {
+            // 清理临时文件
+            try {
+                await this.fileStorage.deleteFile(tempFilename)
+            } catch (cleanupError) {
+                logger.warn(`[PlayerYamlStorage] 清理临时文件失败 [${tempFilename}]:`, cleanupError)
+            }
+            logger.error(`[PlayerYamlStorage] 原子写入玩家数据失败 [${userId}]:`, error)
+            throw new Error(`Failed to atomically write player YAML data for ${userId}: ${error.message}`, { cause: error })
+        }
+    }
+
+    /**
      * 写入玩家 YAML 数据
      * @param {string} userId 用户ID
      * @param {Object} data 玩家数据对象

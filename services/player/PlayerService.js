@@ -153,7 +153,6 @@ class PlayerService {
 
     /**
      * 扣除金币（安全扣除，确保不会为负数）
-     * @deprecated 此方法存在事务嵌套问题，不推荐在新代码中使用
      * @param {string} userId 用户ID
      * @param {number} amount 扣除金币数量
      * @returns {Object} 扣除结果
@@ -536,44 +535,9 @@ class PlayerService {
         }
     }
 
-    /**
-     * 智能序列化玩家数据为Redis Hash格式（向后兼容）
-     * @param {Object|Player} playerData 玩家数据对象或Player实例
-     * @returns {Object} Redis Hash格式的数据对象
-     */
-    _serializePlayerForHash(playerData) {
-        return this.dataService.serializer.serializeForHash(playerData);
-    }
 
-    /**
-     * 从Redis Hash读取玩家数据（向后兼容）
-     * @param {string} playerKey Redis Key
-     * @returns {Player|null} Player实例或null
-     */
-    async _getPlayer(playerKey) {
-        // 从playerKey提取userId
-        const userId = playerKey.split(':').pop();
-        return await this.dataService.getPlayer(userId);
-    }
 
-    /**
-     * 将玩家数据保存到Redis Hash（向后兼容）
-     * @param {string} playerKey Redis Key
-     * @param {Object|Player} playerData 玩家数据或Player实例
-     */
-    async _savePlayer(playerKey, playerData) {
-        // 从playerKey提取userId
-        const userId = playerKey.split(':').pop();
-        return await this.dataService.savePlayer(userId, playerData);
-    }
 
-    /**
-     * 创建新玩家数据（向后兼容）
-     * @returns {Player} Player实例
-     */
-    _createNewPlayer() {
-        return this.dataService.createNewPlayerData();
-    }
 
     // ==================== 服务访问器（向后兼容）====================
 

@@ -20,8 +20,8 @@ class SignInService {
      */
     async signIn(userId) {
         try {
-            return await this.dataService.executeWithTransaction(userId, async (multi, playerKey) => {
-                const playerData = await this.dataService.getPlayer(userId);
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                const playerData = await dataService.getPlayer(userId);
                 if (!playerData) {
                     throw new Error('玩家不存在');
                 }
@@ -59,9 +59,8 @@ class SignInService {
 
                 playerData.lastUpdated = Date.now();
 
-                // 使用序列化器统一处理
-                const serializer = this.dataService.getSerializer();
-                multi.hSet(playerKey, serializer.serializeForHash(playerData));
+                // 保存更新后的数据
+                await dataService.savePlayer(userId, playerData);
 
                 logger.info(`[SignInService] 玩家 ${userId} 签到成功，连续 ${playerData.signIn.consecutiveDays} 天`);
 

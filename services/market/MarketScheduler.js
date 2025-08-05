@@ -9,7 +9,6 @@
  */
 
 import { TaskScheduler } from './taskScheduler.js';
-import { RedisLock } from '../../utils/RedisLock.js';
 
 export class MarketScheduler {
   constructor(marketService, redisClient, config) {
@@ -20,10 +19,9 @@ export class MarketScheduler {
     this.isRunning = false;
 
     // 组装新架构组件
-    this.lockManager = new RedisLock(redisClient);
     this.scheduler = new TaskScheduler({
       marketService,
-      lockManager: this.lockManager,
+      lockManager: redisClient, // 直接使用 redisClient，它有 withLock 方法
       rawConfig: config
     });
   }

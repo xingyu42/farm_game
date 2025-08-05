@@ -93,7 +93,12 @@ class ServiceContainer {
       );
 
       // 实例化InventoryService
-      this.services.inventoryService = new InventoryService(redisClient, config);
+      this.services.inventoryService = new InventoryService(
+        redisClient,
+        config,
+        null, // logger使用默认值
+        this.services.playerService.dataService // 注入playerDataService
+      );
 
       // 实例化LandService (需要依赖PlayerService)
       this.services.landService = new LandService(
@@ -106,7 +111,8 @@ class ServiceContainer {
       this.services.plantingDataService = new PlantingDataService(
         redisClient,
         config,
-        null // logger使用默认值
+        null, // logger使用默认值
+        this.services.playerService.dataService // 注入playerDataService
       );
 
       // 实例化PlantingService（需要依赖多个服务）
@@ -163,12 +169,12 @@ class ServiceContainer {
 
       // 实例化市场专门服务（新架构）
       this.services.priceCalculator = new PriceCalculator(config);
-      
+
       this.services.marketDataManager = new MarketDataManager(
         redisClient,
         config
       );
-      
+
       this.services.transactionManager = new TransactionManager(
         redisClient,
         config

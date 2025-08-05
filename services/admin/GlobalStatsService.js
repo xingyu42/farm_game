@@ -1,11 +1,14 @@
 // services/StatisticsService.js
 
+import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';
+
 const CACHE_KEY = 'farm_game:stats:cache';
 const CACHE_TTL = 3600; // 1 hour in seconds
 
 class GlobalStatsService {
   constructor(redisClient) {
     this.redis = redisClient;
+    this.playerYamlStorage = new PlayerYamlStorage();
   }
 
   /**
@@ -17,9 +20,9 @@ class GlobalStatsService {
       const cachedData = await this.redis.get(CACHE_KEY);
       if (cachedData) {
         logger.info('[StatisticsService] 从缓存中获取经济数据。');
-        return { ...JSON.parse(cachedData), fromCache: true };
+        return { ...cachedData, fromCache: true };
       }
-      
+
       logger.info('[StatisticsService] 缓存未命中，正在重新计算经济数据。');
       return this.rebuildAndCacheStats();
     } catch (error) {
@@ -35,7 +38,7 @@ class GlobalStatsService {
   async rebuildAndCacheStats() {
     try {
       const stats = await this._calculateEconomyStats();
-      await this.redis.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(stats));
+      await this.redis.set(CACHE_KEY, stats, CACHE_TTL);
       logger.info('[StatisticsService] 经济数据已成功计算并缓存。');
       return { ...stats, fromCache: false };
     } catch (error) {
@@ -45,54 +48,64 @@ class GlobalStatsService {
   }
 
   /**
-   * 使用 SCAN 命令计算经济统计数据
+   * 从YAML文件计算经济统计数据
    * @returns {Object} 统计数据
    * @private
    */
   async _calculateEconomyStats() {
-    let cursor = '0';
-    const playerKeys = [];
-    const pattern = 'farm_game:player:*';
+    try {
+      // 获取所有玩家ID列表
+      const playerIds = await this.playerYamlStorage.listAllPlayers();
 
-    do {
-      const reply = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-      cursor = reply[0];
-      playerKeys.push(...reply[1]);
-    } while (cursor !== '0');
+      if (playerIds.length === 0) {
+        return this._getEmptyStats();
+      }
 
-    if (playerKeys.length === 0) {
+      // 批量读取玩家数据
+      const playersData = [];
+      for (const playerId of playerIds) {
+        try {
+          const playerData = await this.playerYamlStorage.readPlayer(playerId);
+          if (playerData) {
+            playersData.push(playerData);
+          }
+        } catch (error) {
+          logger.warn(`[GlobalStatsService] 读取玩家数据失败 [${playerId}]: ${error.message}`);
+          // 继续处理其他玩家，不中断统计
+        }
+      }
+
+      const totalPlayers = playersData.length;
+      let totalCoins = 0;
+      let totalLandCount = 0;
+      const levelDistribution = {};
+
+      for (const player of playersData) {
+        if (player.coins !== undefined) {
+          totalCoins += parseInt(player.coins, 10) || 0;
+        }
+        if (player.landCount !== undefined) {
+          totalLandCount += parseInt(player.landCount, 10) || 0;
+        }
+        if (player.level !== undefined) {
+          const level = parseInt(player.level, 10) || 1;
+          levelDistribution[level] = (levelDistribution[level] || 0) + 1;
+        }
+      }
+
+      return {
+        totalPlayers,
+        totalCoins,
+        averageCoins: totalPlayers > 0 ? Math.round(totalCoins / totalPlayers) : 0,
+        totalLandCount,
+        averageLandCount: totalPlayers > 0 ? (totalLandCount / totalPlayers).toFixed(2) : 0,
+        levelDistribution,
+        updatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      logger.error(`[GlobalStatsService] 计算经济统计失败: ${error.message}`);
       return this._getEmptyStats();
     }
-
-    const playersData = await Promise.all(playerKeys.map(key => this.redis.hgetall(key)));
-
-    const totalPlayers = playersData.length;
-    let totalCoins = 0;
-    let totalLandCount = 0;
-    const levelDistribution = {};
-
-    for (const player of playersData) {
-      if (player.coins) {
-        totalCoins += parseInt(player.coins, 10) || 0;
-      }
-      if (player.landCount) {
-        totalLandCount += parseInt(player.landCount, 10) || 0;
-      }
-      if (player.level) {
-        const level = parseInt(player.level, 10) || 1;
-        levelDistribution[level] = (levelDistribution[level] || 0) + 1;
-      }
-    }
-
-    return {
-      totalPlayers,
-      totalCoins,
-      averageCoins: totalPlayers > 0 ? Math.round(totalCoins / totalPlayers) : 0,
-      totalLandCount,
-      averageLandCount: totalPlayers > 0 ? (totalLandCount / totalPlayers).toFixed(2) : 0,
-      levelDistribution,
-      updatedAt: new Date().toISOString()
-    };
   }
 
   /**

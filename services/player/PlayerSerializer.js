@@ -1,6 +1,6 @@
 /**
  * 玩家数据序列化工具
- * 负责玩家数据在Redis Hash格式和对象格式之间的转换
+ * 负责玩家数据在YAML格式和对象格式之间的转换
  */
 
 import Player from '../../models/Player.js';
@@ -9,106 +9,40 @@ class PlayerSerializer {
     constructor(config) {
         this.config = config;
 
-        // 定义简单字段（存储为Hash字段）
-        this.simpleFields = [
-            'name', 'level', 'experience', 'coins', 'landCount', 'maxLandCount',
-            'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-            'createdAt', 'lastUpdated', 'lastActiveTime'
-        ];
-
-        // 定义复杂字段（JSON序列化后存储）
-        this.complexFields = [
-            'lands', 'inventory', 'stats', 'signIn', 'protection', 'stealing', 'statistics'
-        ];
     }
 
     /**
-     * 智能序列化玩家数据为Redis Hash格式
-     * 统一处理Player实例和普通对象的序列化逻辑，确保数据一致性
+     * 序列化玩家数据为YAML格式
      * @param {Object|Player} playerData 玩家数据对象或Player实例
-     * @returns {Object} Redis Hash格式的数据对象
+     * @returns {Object} YAML数据对象
      */
-    serializeForHash(playerData) {
+    serialize(playerData) {
         if (playerData instanceof Player) {
-            // 如果是Player实例，使用其toHashData方法
-            return playerData.toHashData();
+            // 如果是Player实例，转换为普通对象
+            return playerData.toJSON();
         } else {
-            // 如果是普通对象，使用手动构建逻辑
-            const hashData = {};
-
-            // 处理简单字段
-            for (const field of this.simpleFields) {
-                if (playerData[field] !== undefined) {
-                    hashData[field] = playerData[field].toString();
-                }
-            }
-
-            // 处理复杂字段（JSON序列化）
-            for (const field of this.complexFields) {
-                if (playerData[field] !== undefined) {
-                    hashData[field] = JSON.stringify(playerData[field]);
-                }
-            }
-
-            return hashData;
+            // 如果是普通对象，直接返回
+            return playerData;
         }
     }
 
     /**
-     * 从Redis Hash数据反序列化为玩家对象
-     * @param {Object} hashData Redis Hash数据
-     * @returns {Player|Object} Player实例或普通对象
+     * 反序列化YAML数据为Player实例
+     * @param {Object} yamlData YAML数据对象
+     * @returns {Player|null} Player实例
      */
-    deserializeFromHash(hashData) {
-        if (!hashData || Object.keys(hashData).length === 0) {
+    deserialize(yamlData) {
+        if (!yamlData || Object.keys(yamlData).length === 0) {
             return null;
         }
 
-        // 优先尝试使用Player.fromRawData创建Player实例
+        // 使用Player.fromObjectData创建Player实例（适用于YAML数据）
         try {
-            const playerInstance = Player.fromRawData(hashData, this.config);
+            const playerInstance = Player.fromObjectData(yamlData, this.config);
             return playerInstance;
         } catch (playerError) {
-            console.warn(`[PlayerSerializer] Player.fromRawData失败，回退到传统方法: ${playerError.message}`);
-
-            // 回退到原来的数据处理方式
-            const playerData = {};
-
-            // 处理简单字段
-            for (const field of this.simpleFields) {
-                if (hashData[field] !== undefined) {
-                    // 数值字段转换
-                    if (['level', 'experience', 'coins', 'landCount', 'maxLandCount',
-                        'inventoryCapacity', 'inventory_capacity', 'maxInventoryCapacity',
-                        'createdAt', 'lastUpdated', 'lastActiveTime'].includes(field)) {
-                        playerData[field] = parseInt(hashData[field]);
-                    } else {
-                        playerData[field] = hashData[field];
-                    }
-                }
-            }
-
-            // 处理复杂字段（JSON反序列化）
-            for (const field of this.complexFields) {
-                if (hashData[field]) {
-                    try {
-                        playerData[field] = JSON.parse(hashData[field]);
-                    } catch (error) {
-                        console.warn(`[PlayerSerializer] 解析复杂字段失败 [${field}]: ${error.message}`);
-                        playerData[field] = this._getDefaultComplexField(field);
-                    }
-                } else {
-                    playerData[field] = this._getDefaultComplexField(field);
-                }
-            }
-
-            // 向后兼容：gold属性
-            Object.defineProperty(playerData, 'gold', {
-                get: function () { return this.coins; },
-                set: function (value) { this.coins = value; }
-            });
-
-            return playerData;
+            logger.error(`[PlayerSerializer] 反序列化YAML数据失败: ${playerError.message}`);
+            throw new Error(`玩家数据格式错误，无法反序列化: ${playerError.message}`);
         }
     }
 
@@ -122,7 +56,7 @@ class PlayerSerializer {
 
         switch (field) {
             case 'lands':
-                return new Array(landConfig.startingLands).fill(null).map((_, i) => ({
+                return new Array(landConfig?.startingLands || 3).fill(null).map((_, i) => ({
                     id: i + 1,
                     crop: null,
                     quality: 'normal',
@@ -215,4 +149,4 @@ class PlayerSerializer {
     }
 }
 
-export default PlayerSerializer; 
+export default PlayerSerializer;
