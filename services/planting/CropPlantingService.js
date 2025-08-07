@@ -13,6 +13,8 @@ class CropPlantingService {
     this.inventoryService = inventoryService;
     this.landService = landService;
     this.cropMonitorService = cropMonitorService;
+    // 为了兼容性，同时设置 cropScheduleService 别名
+    this.cropScheduleService = cropMonitorService;
     this.config = config;
     // 初始化依赖组件
     this.calculator = new Calculator(config);
@@ -46,8 +48,8 @@ class CropPlantingService {
 
         // 3. 验证土地状态
         const landValidation = this.validator.validateLandForPlanting(landData);
-        if (!landValidation.success) {
-          throw new Error(landValidation.error.message);
+        if (landValidation) {  // 如果返回值不是 null，说明验证失败
+          throw new Error(landValidation.message);
         }
 
         // 4. 验证种子库存
@@ -132,8 +134,8 @@ class CropPlantingService {
           }
 
           const landValidation = this.validator.validateLandForPlanting(landData);
-          if (!landValidation.success) {
-            throw new Error(`土地 ${landId}: ${landValidation.error.message}`);
+          if (landValidation) {  // 如果返回值不是 null，说明验证失败
+            throw new Error(`土地 ${landId}: ${landValidation.message}`);
           }
 
           // 累计种子需求
@@ -232,8 +234,8 @@ class CropPlantingService {
       }
 
       const landValidation = this.validator.validateLandForPlanting(landData);
-      if (!landValidation.success) {
-        return landValidation;
+      if (landValidation) {  // 如果返回值不是 null，说明验证失败
+        return { success: false, message: landValidation.message };
       }
 
       // 3. 检查种子库存

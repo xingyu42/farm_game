@@ -32,12 +32,12 @@ class PlayerDataService {
         logger.warn(`[PlayerDataService] 获取锁失败 [${userId}] ${operationType}: ${error.message}`);
         throw new Error(`操作繁忙，请稍后重试 (${operationType})`);
       }
-      
+
       if (error.message.includes('锁已过期') || error.message.includes('lock expired')) {
         logger.warn(`[PlayerDataService] 锁过期 [${userId}] ${operationType}: ${error.message}`);
         throw new Error(`操作超时，请重新尝试 (${operationType})`);
       }
-      
+
       // 其他锁相关错误
       logger.error(`[PlayerDataService] 锁操作失败 [${userId}] ${operationType}: ${error.message}`);
       throw error;
@@ -54,7 +54,7 @@ class PlayerDataService {
       try {
         // 从YAML文件读取数据
         const yamlData = await this.yamlStorage.readPlayer(userId);
-        
+
         if (!yamlData) {
           return null;
         }
@@ -93,17 +93,17 @@ class PlayerDataService {
           logger.error(`[PlayerDataService] 磁盘空间不足 [${userId}]: ${error.message}`);
           throw new Error('系统存储空间不足，请联系管理员');
         }
-        
+
         if (error.code === 'EACCES' || error.code === 'EPERM') {
           logger.error(`[PlayerDataService] 文件权限错误 [${userId}]: ${error.message}`);
           throw new Error('系统文件权限错误，请联系管理员');
         }
-        
+
         if (error.code === 'EMFILE' || error.code === 'ENFILE') {
           logger.error(`[PlayerDataService] 文件句柄不足 [${userId}]: ${error.message}`);
           throw new Error('系统资源不足，请稍后重试');
         }
-        
+
         logger.error(`[PlayerDataService] 保存玩家数据失败 [${userId}]: ${error.message}`);
         throw new Error(`数据保存失败: ${error.message}`);
       }
@@ -125,7 +125,7 @@ class PlayerDataService {
 
         // 读取现有数据
         const existingData = await this.yamlStorage.readPlayer(userId, {});
-        
+
         // 合并更新
         const updatedData = {
           ...existingData,

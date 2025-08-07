@@ -2,13 +2,12 @@
 
 import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';
 
-const CACHE_KEY = 'farm_game:stats:cache';
-const CACHE_TTL = 3600; // 1 hour in seconds
-
 class GlobalStatsService {
   constructor(redisClient) {
-    this.redis = redisClient;
+    this.redis = redisClient; // 保留用于向后兼容
     this.playerYamlStorage = new PlayerYamlStorage();
+    this.cache = new Map(); // 内存缓存
+    this.cacheTimeout = 3600000; // 1小时（毫秒）
   }
 
   /**
@@ -17,10 +16,10 @@ class GlobalStatsService {
    */
   async getEconomyStatus() {
     try {
-      const cachedData = await this.redis.get(CACHE_KEY);
-      if (cachedData) {
-        logger.info('[StatisticsService] 从缓存中获取经济数据。');
-        return { ...cachedData, fromCache: true };
+      const cached = this.cache.get('stats');
+      if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+        logger.info('[StatisticsService] 从内存缓存中获取经济数据。');
+        return { ...cached.data, fromCache: true };
       }
 
       logger.info('[StatisticsService] 缓存未命中，正在重新计算经济数据。');
@@ -38,8 +37,8 @@ class GlobalStatsService {
   async rebuildAndCacheStats() {
     try {
       const stats = await this._calculateEconomyStats();
-      await this.redis.set(CACHE_KEY, stats, CACHE_TTL);
-      logger.info('[StatisticsService] 经济数据已成功计算并缓存。');
+      this.cache.set('stats', { data: stats, timestamp: Date.now() });
+      logger.info('[StatisticsService] 经济数据已成功计算并缓存到内存。');
       return { ...stats, fromCache: false };
     } catch (error) {
       logger.error(`[StatisticsService] 重建统计缓存失败: ${error.message}`);
@@ -122,6 +121,29 @@ class GlobalStatsService {
       averageLandCount: 0,
       levelDistribution: {},
       updatedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * 清理内存缓存
+   */
+  clearCache() {
+    this.cache.clear();
+    logger.info('[StatisticsService] 内存缓存已清理');
+  }
+
+  /**
+   * 获取缓存统计信息
+   * @returns {Object} 缓存统计
+   */
+  getCacheStats() {
+    const cached = this.cache.get('stats');
+    return {
+      size: this.cache.size,
+      hasData: !!cached,
+      lastUpdated: cached ? new Date(cached.timestamp).toISOString() : null,
+      cacheAge: cached ? Date.now() - cached.timestamp : null,
+      isExpired: cached ? Date.now() - cached.timestamp > this.cacheTimeout : true
     };
   }
 }

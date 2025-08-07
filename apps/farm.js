@@ -50,10 +50,10 @@ export class farm extends plugin {
           fnc: 'harvestAllCrops'
         }
       ],
-      // 添加定时任务，每分钟检查作物状态
+      // 添加定时任务，检查作物状态
       task: [
         {
-          cron: '0 0 * * * *',  // 每小时执行一次
+          cron: '0 0 * * * *',  // 每分钟执行一次
           name: '更新作物状态',
           fnc: () => this.updateCropsStatus()
         }

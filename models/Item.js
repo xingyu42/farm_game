@@ -339,8 +339,7 @@ class Item {
       sellPrice: this.sellPrice,
       totalBuyValue: this.buyPrice * this.quantity,
       totalSellValue: this.sellPrice * this.quantity,
-      canSell: this.canSell(),
-      canTrade: this.canTrade()
+      canSell: this.canSell()
     };
   }
 

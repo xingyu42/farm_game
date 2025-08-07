@@ -229,7 +229,7 @@ export class StealService {
    */
   async getStealCooldownStatus(userId) {
     try {
-      const key = `steal_cooldown:${userId}`;
+      const key = this.redisClient.generateKey('steal_cooldown', userId);
       const cooldownEnd = await this.redisClient.get(key);
 
       if (!cooldownEnd) {
@@ -468,7 +468,7 @@ export class StealService {
       const cooldownMs = cooldownMinutes * 60 * 1000;
       const cooldownEnd = Date.now() + cooldownMs;
 
-      const key = `steal_cooldown:${userId}`;
+      const key = this.redisClient.generateKey('steal_cooldown', userId);
       await this.redisClient.setex(key, Math.ceil(cooldownMs / 1000), cooldownEnd.toString());
 
       logger.debug(`[StealService] 设置偷窃冷却 [${userId}]: ${cooldownMinutes} 分钟`);
@@ -495,7 +495,7 @@ export class StealService {
       const today = new Date(now).toDateString();
 
       // 检查对同一目标的冷却
-      const cooldownKey = `steal_target_cooldown:${attackerId}:${targetId}`;
+      const cooldownKey = this.redisClient.generateKey('steal_target_cooldown', `${attackerId}:${targetId}`);
       const lastAttemptTime = await this.redisClient.get(cooldownKey);
 
       if (lastAttemptTime) {
@@ -512,7 +512,7 @@ export class StealService {
       }
 
       // 检查今日尝试次数
-      const attemptsKey = `steal_attempts:${attackerId}:${targetId}:${today}`;
+      const attemptsKey = this.redisClient.generateKey('steal_attempts', `${attackerId}:${targetId}:${today}`);
       const attemptCount = parseInt(await this.redisClient.get(attemptsKey));
 
       if (attemptCount >= maxAttempts) {
@@ -544,12 +544,12 @@ export class StealService {
       const today = new Date(now).toDateString();
 
       // 更新目标冷却时间
-      const cooldownKey = `steal_target_cooldown:${attackerId}:${targetId}`;
+      const cooldownKey = this.redisClient.generateKey('steal_target_cooldown', `${attackerId}:${targetId}`);
       const cooldownMinutes = this.stealConfig.antiRepeat.sameTargetCooldownMinutes;
       await this.redisClient.setex(cooldownKey, cooldownMinutes * 60, now.toString());
 
       // 更新今日尝试次数
-      const attemptsKey = `steal_attempts:${attackerId}:${targetId}:${today}`;
+      const attemptsKey = this.redisClient.generateKey('steal_attempts', `${attackerId}:${targetId}:${today}`);
       await this.redisClient.incr(attemptsKey);
       await this.redisClient.expire(attemptsKey, 24 * 60 * 60); // 24小时过期
 
@@ -655,7 +655,7 @@ export class StealService {
       const cooldownStatus = await this.getStealCooldownStatus(userId);
 
       // 获取今日偷窃次数（所有目标）
-      const pattern = `steal_attempts:${userId}:*:${today}`;
+      const pattern = `${this.redisClient.keyPrefix}:steal_attempts:${userId}:*:${today}`;
       const keys = await this.redisClient.keys(pattern);
       let totalAttemptsToday = 0;
 
@@ -686,9 +686,9 @@ export class StealService {
   async cleanupExpiredData() {
     try {
       const patterns = [
-        'steal_cooldown:*',
-        'steal_target_cooldown:*',
-        'steal_attempts:*'
+        `${this.redisClient.keyPrefix}:steal_cooldown:*`,
+        `${this.redisClient.keyPrefix}:steal_target_cooldown:*`,
+        `${this.redisClient.keyPrefix}:steal_attempts:*`
       ];
 
       let totalCleaned = 0;

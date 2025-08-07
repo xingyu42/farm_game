@@ -419,11 +419,57 @@ export class InventoryService {
   async getItemQuantity(userId, itemId) {
     try {
       const inventory = await this.getInventory(userId);
-      return inventory.items[itemId].quantity;
+      return inventory.items[itemId] ? inventory.items[itemId].quantity : 0;
     } catch (error) {
       logger.error(`检查物品数量失败 [${userId}]: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * 检查是否有足够的物品数量
+   * @param {string} userId 用户ID
+   * @param {string} itemId 物品ID
+   * @param {number} requiredQuantity 需要的数量
+   * @returns {Object} 检查结果 {success: boolean, available: number, message?: string}
+   */
+  async hasItem(userId, itemId, requiredQuantity) {
+    try {
+      const inventory = await this.getInventory(userId);
+      const item = inventory.items[itemId];
+
+      if (!item) {
+        return {
+          success: false,
+          available: 0,
+          message: `仓库中没有 ${itemId}`
+        };
+      }
+
+      const available = item.quantity;
+      const hasEnough = available >= requiredQuantity;
+
+      return {
+        success: hasEnough,
+        available: available,
+        message: hasEnough ?
+          `有足够的 ${item.name}` :
+          `${item.name} 数量不足，需要 ${requiredQuantity} 个，仓库中有 ${available} 个`
+      };
+    } catch (error) {
+      logger.error(`检查物品是否足够失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取物品数量（别名方法，兼容性）
+   * @param {string} userId 用户ID
+   * @param {string} itemId 物品ID
+   * @returns {number} 物品数量
+   */
+  async getItemCount(userId, itemId) {
+    return await this.getItemQuantity(userId, itemId);
   }
 
   /**

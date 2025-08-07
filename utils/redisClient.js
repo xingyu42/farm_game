@@ -267,6 +267,48 @@ class RedisClient {
     }
   }
 
+  /**
+   * 原子性递增（增加1）
+   * @param {string} key Redis Key
+   * @returns {Promise<number>} 增加后的值
+   */
+  async incr(key) {
+    try {
+      return await this.client.incr(key);
+    } catch (error) {
+      throw new Error(`Increment failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 设置键值和过期时间（秒）
+   * @param {string} key Redis Key
+   * @param {number} seconds 过期时间（秒）
+   * @param {string} value 值
+   * @returns {Promise<string>} 设置结果
+   */
+  async setex(key, seconds, value) {
+    try {
+      return await this.client.setEx(key, seconds, value);
+    } catch (error) {
+      throw new Error(`Setex failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 设置键的过期时间
+   * @param {string} key Redis Key
+   * @param {number} seconds 过期时间（秒）
+   * @returns {Promise<number>} 设置结果（1成功，0失败）
+   */
+  async expire(key, seconds) {
+    try {
+      return await this.client.expire(key, seconds);
+    } catch (error) {
+      throw new Error(`Expire failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
   // ==========================================
   // Hash操作方法 - 仅用于非玩家数据的临时状态管理
   // 适用场景：市场统计、全局计数器、临时状态等
@@ -362,6 +404,26 @@ class RedisClient {
       // 保留原始错误堆栈跟踪
       throw new Error(`TTL check failed for key ${key}: ${error.message}`, { cause: error });
     }
+  }
+
+  /**
+   * 创建Pipeline/Multi事务
+   * @returns {Object} Pipeline对象
+   */
+  multi() {
+    try {
+      return this.client.multi();
+    } catch (error) {
+      throw new Error(`Multi/Pipeline creation failed: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 创建Pipeline（multi的别名）
+   * @returns {Object} Pipeline对象
+   */
+  pipeline() {
+    return this.multi();
   }
 
 

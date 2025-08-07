@@ -182,14 +182,14 @@ export class TransactionManager {
     try {
       const deadlocks = [];
       const lockPattern = `${this.redis.keyPrefix}:lock:*`;
-      const lockKeys = await this.redis.client.keys(lockPattern);
+      const lockKeys = await this.redis.keys(lockPattern);
 
       if (lockKeys.length === 0) {
         return deadlocks;
       }
 
       // 获取所有锁的信息
-      const pipeline = this.redis.client.pipeline();
+      const pipeline = this.redis.pipeline();
       for (const key of lockKeys) {
         pipeline.get(key);
         pipeline.ttl(key);
@@ -290,7 +290,7 @@ export class TransactionManager {
    * @private
    */
   async _performBatchOperations(operations, transactionId) {
-    const multi = this.redis.client.pipeline();
+    const multi = this.redis.pipeline();
     let successCount = 0;
     const errors = [];
 
