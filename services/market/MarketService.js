@@ -24,18 +24,18 @@ export class MarketService {
     const marketConfig = this.config.market;
     this.batchSize = marketConfig.batch_size;
     this.maxBatchSize = marketConfig.performance.max_batch_size;
-    
+
     // TODO: 实现缓存功能 - 为性能优化预留的配置项
     this.cacheEnabled = marketConfig.performance.cache_enabled; // 未使用
     this.cacheTTL = marketConfig.performance.cache_ttl; // 未使用
-    
+
     // TODO: 实现连接池功能 - 为大规模数据处理预留的配置项
     this.connectionPoolSize = marketConfig.performance.connection_pool_size; // 未使用
-    
+
     // TODO: 实现性能监控功能 - 为性能告警预留的配置项
     this.maxTotalDuration = marketConfig.performance.max_total_duration; // 未使用
     this.maxAvgTimePerItem = marketConfig.performance.max_avg_time_per_item; // 未使用
-    
+
     // TODO: 实现告警冷却功能 - 为监控系统完善预留的配置项
     this.alertCooldown = marketConfig.monitoring?.alert_cooldown; // 未使用
 
@@ -96,7 +96,7 @@ export class MarketService {
 
       // 从MarketDataManager获取统计数据
       const stats = await this.dataManager.getMarketStats(itemId);
-      
+
       if (stats && !stats.error) {
         const price = priceType === 'buy' ? stats.currentPrice : stats.currentSellPrice;
         if (price !== undefined && !isNaN(price)) {
@@ -393,7 +393,7 @@ export class MarketService {
     try {
       // 获取所有物品的统计数据
       const allStats = await this.dataManager.getMarketStats(floatingItems);
-      
+
       // 批量计算新价格
       const priceUpdates = [];
       for (const stats of allStats) {
@@ -449,7 +449,7 @@ export class MarketService {
       if (priceUpdates.length > 0) {
         const transactionResult = await this.transactionManager.executeBatchUpdate(priceUpdates);
         updatedCount = transactionResult.successCount;
-        
+
         if (transactionResult.errors && transactionResult.errors.length > 0) {
           errors.push(...transactionResult.errors);
         }
@@ -475,10 +475,10 @@ export class MarketService {
 
     try {
       const operations = [];
-      
+
       // 获取所有统计数据并准备更新操作
       const allStats = await this.dataManager.getMarketStats(floatingItems);
-      
+
       for (const stats of allStats) {
         if (!stats.error) {
           try {
@@ -532,7 +532,7 @@ export class MarketService {
       if (operations.length > 0) {
         const result = await this.transactionManager.executeBatchUpdate(operations);
         updatedCount = result.successCount;
-        
+
         if (result.errors && result.errors.length > 0) {
           errors.push(...result.errors);
         }
@@ -555,10 +555,11 @@ export class MarketService {
       const floatingItems = new Set();
 
       // 从配置获取所有物品
-      const itemsConfig = this.config.items;
+      const itemsConfig = this.config.items
 
-      // 方法1: 扫描所有物品的is_dynamic_price标识
-      for (const [_category, items] of Object.entries(itemsConfig)) {
+      // 方法1: 扫描所有物品的is_dynamic_price标识（不包含crops类别）
+      for (const [category, items] of Object.entries(itemsConfig)) {
+        if (category === 'crops') continue;
         if (typeof items === 'object' && items !== null) {
           for (const [itemId, itemInfo] of Object.entries(items)) {
             if (itemInfo && itemInfo.is_dynamic_price === true) {
@@ -568,12 +569,24 @@ export class MarketService {
         }
       }
 
+      // 从 crops.yaml 扫描动态定价标记
+      const cropsConfig = this.config.crops
+      for (const [cropId, cropInfo] of Object.entries(cropsConfig)) {
+        if (cropInfo && cropInfo.is_dynamic_price === true) {
+          floatingItems.add(cropId);
+        }
+      }
+
       // 方法2: 根据类别添加物品
       const marketConfig = this.config.market;
       const floatingCategories = marketConfig.floating_items.categories;
 
       for (const category of floatingCategories) {
-        if (itemsConfig[category]) {
+        if (category === 'crops') {
+          for (const itemId of Object.keys(cropsConfig)) {
+            floatingItems.add(itemId);
+          }
+        } else if (itemsConfig[category]) {
           for (const itemId of Object.keys(itemsConfig[category])) {
             floatingItems.add(itemId);
           }

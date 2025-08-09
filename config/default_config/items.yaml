@@ -177,29 +177,6 @@ landMaterials:
     description: "用于土地品质进阶的神话材料"
     requiredLevel: 20
     maxStack: 3
-# 作物产出配置
-crops:
-  carrot:
-    name: "胡萝卜"
-    price: 16 # 市场基准买价（通常是sellPrice的2倍）
-    sellPrice: 8
-    category: "crops"
-    is_dynamic_price: true # 启用动态定价
-    baseExp: 5
-  tomato:
-    name: "西红柿"
-    price: 24 # 市场基准买价（通常是sellPrice的2倍）
-    sellPrice: 12
-    category: "crops"
-    is_dynamic_price: true # 启用动态定价
-    baseExp: 8
-  wheat:
-    name: "小麦"
-    price: 10 # 市场基准买价（通常是sellPrice的2倍）
-    sellPrice: 5
-    category: "crops"
-    is_dynamic_price: true # 启用动态定价
-    baseExp: 3
 # 商店分类显示
 shop:
   categories:

@@ -14,7 +14,7 @@ class LevelCalculator {
      * @returns {Object} 等级信息
      */
     calculateLevel(experience) {
-        const levels = this.config?.levels?.levels?.requirements;
+        const levels = this.config.levels.requirements;
 
         if (!levels) {
             console.warn('[LevelCalculator] 等级配置不存在，返回默认等级1');
@@ -43,7 +43,7 @@ class LevelCalculator {
      * @returns {Object} 奖励信息
      */
     getLevelUpRewards(oldLevel, newLevel) {
-        const levelUpRewards = this.config.levels.levels.rewards.levelUp;
+        const levelUpRewards = this.config.levels.rewards.levelUp;
         const coinsPerLevel = levelUpRewards.coins;
 
         const levelsGained = newLevel - oldLevel;
@@ -62,7 +62,7 @@ class LevelCalculator {
      * @returns {Array} 解锁的物品列表
      */
     getUnlockedItems(oldLevel, newLevel) {
-        const levels = this.config?.levels?.levels?.requirements;
+        const levels = this.config.levels.requirements;
         const unlockedItems = [];
 
         if (!levels) {
@@ -86,7 +86,7 @@ class LevelCalculator {
      * @returns {Object} 等级信息
      */
     getPlayerLevelInfo(currentLevel, currentExp) {
-        const levels = this.config?.levels?.levels?.requirements;
+        const levels = this.config.levels.requirements;
 
         if (!levels) {
             return {
@@ -119,7 +119,7 @@ class LevelCalculator {
      * @returns {Object|null} 等级信息
      */
     getLevelInfo(level) {
-        const levels = this.config?.levels?.levels?.requirements;
+        const levels = this.config.levels.requirements;
 
         if (!levels) {
             return null;
@@ -173,7 +173,7 @@ class LevelCalculator {
      * @returns {Object} 计算结果
      */
     getExpToLevel(currentExp, targetLevel) {
-        const levels = this.config.levels.levels.requirements;
+        const levels = this.config.levels.requirements;
 
         if (!levels[targetLevel]) {
             return {
@@ -200,7 +200,7 @@ class LevelCalculator {
      * @returns {Object} 经验值来源配置
      */
     getExperienceSources() {
-        return this.config.levels.levels.experienceSources;
+        return this.config.levels.experienceSources;
     }
 }
 

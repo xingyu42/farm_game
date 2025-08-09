@@ -50,6 +50,15 @@ class DataBackupService {
             return;
         }
 
+        // 确保备份目录已创建
+        try {
+            await this.backupStorage.init();
+        } catch (error) {
+            logger.error(`[DataBackupService] 初始化备份目录失败: ${error.message}`);
+            // 初始化失败则直接返回，避免后续反复报错
+            return;
+        }
+
         logger.info(`[DataBackupService] 启动备份服务，间隔: ${this.backupConfig.interval}ms`);
 
         this.isRunning = true;
@@ -113,6 +122,8 @@ class DataBackupService {
                 };
 
                 // 4. 写入备份文件
+                // 保障目录存在（双保险）
+                await this.backupStorage.init();
                 await this.backupStorage.writeJSON(filename, backupData);
 
                 // 5. 清理旧备份

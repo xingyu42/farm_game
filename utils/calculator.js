@@ -56,6 +56,18 @@ class Calculator {
   }
 
   /**
+   * 获取土地品质对应的产量加成倍数
+   * 与 calculateYield 中的品质加成逻辑保持一致
+   * @param {string} landQuality 土地品质
+   * @returns {number} 倍数（例如 1.2 表示 +20%）
+   */
+  getQualityMultiplier(landQuality = 'normal') {
+    const qualityConfig = this._getLandQualityConfig(landQuality) || { productionBonus: 0 };
+    const productionBonus = Number(qualityConfig.productionBonus) || 0;
+    return 1 + (productionBonus / 100);
+  }
+
+  /**
    * 计算作物经验值
    * @param {string} cropType 作物类型
    * @param {number} quantity 收获数量

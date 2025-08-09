@@ -25,7 +25,6 @@ class Item {
 
     // 扩展属性
     this.icon = data.icon;
-    this.requiredLevel = data.requiredLevel;
     this.expiryTime = data.expiryTime;
     this.metadata = data.metadata || {};
   }
@@ -57,10 +56,9 @@ class Item {
       category: itemConfig.category,
       name: itemConfig.name,
       description: itemConfig.description,
-      buyPrice: itemConfig.buyPrice,
+      buyPrice: itemConfig.buyPrice ?? itemConfig.price,
       sellPrice: itemConfig.sellPrice,
       icon: itemConfig.icon,
-      requiredLevel: itemConfig.requiredLevel,
       maxStack: itemConfig.maxStack,
       metadata: itemConfig.metadata
     }, config);
@@ -145,10 +143,6 @@ class Item {
       errors.push('物品价格不能为负数');
     }
 
-    // 验证等级要求
-    if (!Number.isInteger(this.requiredLevel) || this.requiredLevel < 1) {
-      errors.push('需要等级必须是正整数');
-    }
 
     // 验证过期时间
     if (this.expiryTime && (!Number.isInteger(this.expiryTime) || this.expiryTime < 0)) {
@@ -358,7 +352,6 @@ class Item {
       buyPrice: this.buyPrice,
       sellPrice: this.sellPrice,
       icon: this.icon,
-      requiredLevel: this.requiredLevel,
       expiryTime: this.expiryTime,
       metadata: this.metadata
     };

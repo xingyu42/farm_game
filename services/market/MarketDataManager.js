@@ -393,6 +393,7 @@ export class MarketDataManager {
 
       // 方法1: 扫描所有物品的is_dynamic_price标识
       for (const [category, items] of Object.entries(itemsConfig)) {
+        if (category === 'crops') continue;
         if (typeof items === 'object' && items !== null) {
           for (const [itemId, itemInfo] of Object.entries(items)) {
             if (itemInfo && itemInfo.is_dynamic_price === true) {
@@ -402,10 +403,22 @@ export class MarketDataManager {
         }
       }
 
+      // 从 crops.yaml 读取动态定价标记（若存在）
+      const cropsConfig = this.config.crops
+      for (const [cropId, cropInfo] of Object.entries(cropsConfig)) {
+        if (cropInfo && cropInfo.is_dynamic_price === true) {
+          floatingItems.add(cropId);
+        }
+      }
+
       // 方法2: 根据类别添加物品
       const floatingCategories = this.marketConfig.floating_items?.categories || [];
       for (const category of floatingCategories) {
-        if (itemsConfig[category]) {
+        if (category === 'crops') {
+          for (const cropId of Object.keys(this.config.crops)) {
+            floatingItems.add(cropId);
+          }
+        } else if (itemsConfig[category]) {
           const itemIds = Object.keys(itemsConfig[category]);
           for (const itemId of itemIds) {
             floatingItems.add(itemId);

@@ -162,7 +162,7 @@ export class InventoryService {
       targetItem.metadata.lastUpdated = Date.now();
 
       // 保存到Redis
-      logger.info(`[InventoryService] 保存仓库数据到Redis [${userId}]`);
+      logger.info(`[InventoryService] 保存仓库数据 [${userId}]`);
       await this._saveInventoryToRedis(userId, inventory);
 
       logger.info(`玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
@@ -489,6 +489,32 @@ export class InventoryService {
   }
 
   /**
+   * 检查仓库空间（兼容调用）
+   * @param {string} userId 用户ID
+   * @param {number} additionalItems 预计新增的物品数量
+   * @returns {Object} { success, currentUsage, capacity, needed, available }
+   */
+  async checkSpaceForItems(userId, additionalItems) {
+    try {
+      const inventory = await this.getInventory(userId);
+      const currentUsage = inventory.usage;
+      const capacity = inventory.capacity;
+      const hasEnough = currentUsage + additionalItems <= capacity;
+
+      return {
+        success: hasEnough,
+        currentUsage,
+        capacity,
+        needed: additionalItems,
+        available: Math.max(0, capacity - currentUsage)
+      };
+    } catch (error) {
+      logger.error(`检查仓库空间失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * 获取格式化的仓库显示 - 使用Item模型
    * @param {string} userId 用户ID
    * @returns {Array} 格式化的物品列表
@@ -520,6 +546,10 @@ export class InventoryService {
           groupedItems[category] = [];
         }
 
+        // 从配置解析展示所需的等级（模型不再持有 requiredLevel）
+        const cfg = this.itemResolver.findItemById(itemId);
+        const requiredLevel = cfg?.requiredLevel ?? 1;
+
         groupedItems[category].push({
           id: itemId,
           name: displayInfo.name,
@@ -534,7 +564,7 @@ export class InventoryService {
           isExpired: displayInfo.isExpired,
           locked: Boolean(item.metadata.locked),
           description: displayInfo.description,
-          requiredLevel: item.requiredLevel
+          requiredLevel
         });
       }
 

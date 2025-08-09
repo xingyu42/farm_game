@@ -4,29 +4,29 @@
 # 胡萝卜 - 快速作物
 carrot:
   name: "胡萝卜"
-  price: 10 # 种子价格
-  sellPrice: 25 # 收获后售价
+  price: 16 # 作物购买价格（商店/市场基准价）
+  sellPrice: 8 # 作物出售基准价
+  is_dynamic_price: true # 启用动态定价
   growTime: 300 # 生长时间（秒）
   experience: 5 # 获得经验
-  requiredLevel: 1 # 所需等级
   description: "营养丰富的胡萝卜，生长速度快"
 
 # 西红柿 - 中等作物
 tomato:
   name: "西红柿"
-  price: 25 # 种子价格
-  sellPrice: 60 # 收获后售价
+  price: 24 # 作物购买价格（商店/市场基准价）
+  sellPrice: 12 # 作物出售基准价
+  is_dynamic_price: true # 启用动态定价
   growTime: 900 # 生长时间（秒）
   experience: 12 # 获得经验
-  requiredLevel: 3 # 所需等级
   description: "酸甜可口的西红柿，深受喜爱"
 
 # 小麦 - 粮食作物
 wheat:
   name: "小麦"
-  price: 15 # 种子价格
-  sellPrice: 35 # 收获后售价
+  price: 10 # 作物购买价格（商店/市场基准价）
+  sellPrice: 5 # 作物出售基准价
+  is_dynamic_price: true # 启用动态定价
   growTime: 600 # 生长时间（秒）
   experience: 8 # 获得经验
-  requiredLevel: 2 # 所需等级
   description: "基础粮食作物，用途广泛"

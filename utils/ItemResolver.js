@@ -33,10 +33,21 @@ class ItemResolver {
    * @returns {Object|null} 物品配置对象，包含category字段
    */
   findItemById(itemId) {
-    const itemsConfig = this.config.items;
+    const itemsConfig = this.config.items
 
     for (const category of this.categories) {
-      if (itemsConfig[category] && itemsConfig[category][itemId]) {
+      if (category === 'crops') {
+        const cropsConfig = this.config.crops
+        if (cropsConfig[itemId]) {
+          const itemConfig = cropsConfig[itemId];
+          return {
+            ...itemConfig,
+            id: itemId,
+            category: 'crops',
+            originalCategory: 'crops'
+          };
+        }
+      } else if (itemsConfig[category] && itemsConfig[category][itemId]) {
         const itemConfig = itemsConfig[category][itemId];
 
         return {
@@ -57,12 +68,19 @@ class ItemResolver {
    * @returns {string|null} 物品ID
    */
   findItemByName(itemName) {
-    const itemsConfig = this.config.items;
+    const itemsConfig = this.config.items
 
     for (const category of this.categories) {
-      if (itemsConfig[category]) {
+      if (category === 'crops') {
+        const cropsConfig = this.config.crops
+        for (const [itemId, itemInfo] of Object.entries(cropsConfig)) {
+          if (itemInfo?.name === itemName) {
+            return itemId;
+          }
+        }
+      } else if (itemsConfig[category]) {
         for (const [itemId, itemInfo] of Object.entries(itemsConfig[category])) {
-          if (itemInfo.name === itemName) {
+          if (itemInfo?.name === itemName) {
             return itemId;
           }
         }
@@ -88,10 +106,13 @@ class ItemResolver {
    * @returns {Object|null} 物品信息
    */
   getItemInfo(itemId) {
-    const itemsConfig = this.config.items;
+    const itemsConfig = this.config.items
 
     for (const category of this.categories) {
-      if (itemsConfig[category] && itemsConfig[category][itemId]) {
+      if (category === 'crops') {
+        const cropsConfig = this.config.crops
+        if (cropsConfig[itemId]) return cropsConfig[itemId];
+      } else if (itemsConfig[category] && itemsConfig[category][itemId]) {
         return itemsConfig[category][itemId];
       }
     }
@@ -115,7 +136,7 @@ class ItemResolver {
    */
   getItemSellPrice(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig.sellPrice;
+    return itemConfig?.sellPrice ?? 0;
   }
 
   /**
@@ -125,7 +146,7 @@ class ItemResolver {
    */
   getItemPrice(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig.price;
+    return itemConfig?.price ?? 0;
   }
 
   /**
@@ -143,13 +164,23 @@ class ItemResolver {
    * @returns {Array} 物品列表
    */
   getItemsByCategory(category) {
-    const itemsConfig = this.config.items;
-    const categoryItems = itemsConfig[category];
+    if (category === 'crops') {
+      const cropsConfig = this.config.crops
+      return Object.entries(cropsConfig).map(([itemId, itemInfo]) => ({
+        id: itemId,
+        ...itemInfo,
+        category: 'crops',
+        originalCategory: 'crops'
+      }));
+    }
+
+    const itemsConfig = this.config.items
+    const categoryItems = itemsConfig[category]
 
     return Object.entries(categoryItems).map(([itemId, itemInfo]) => ({
       id: itemId,
       ...itemInfo,
-      category: this.categoryNormalization[category],
+      category: this.categoryNormalization[category] || category,
       originalCategory: category
     }));
   }
@@ -181,18 +212,30 @@ class ItemResolver {
    * @returns {Array} 匹配的物品列表
    */
   searchItems(searchTerm, category = null) {
-    const itemsConfig = this.config.items;
+    const itemsConfig = this.config.items
     const searchCategories = category ? [category] : this.categories;
     const results = [];
 
     for (const cat of searchCategories) {
-      if (itemsConfig[cat]) {
-        for (const [itemId, itemInfo] of Object.entries(itemsConfig[cat])) {
-          if (itemInfo.name?.includes(searchTerm) || itemId.includes(searchTerm)) {
+      if (cat === 'crops') {
+        const cropsConfig = this.config.crops
+        for (const [itemId, itemInfo] of Object.entries(cropsConfig)) {
+          if (itemInfo?.name?.includes(searchTerm) || itemId.includes(searchTerm)) {
             results.push({
               id: itemId,
               ...itemInfo,
-              category: this.categoryNormalization[cat],
+              category: 'crops',
+              originalCategory: 'crops'
+            });
+          }
+        }
+      } else if (itemsConfig[cat]) {
+        for (const [itemId, itemInfo] of Object.entries(itemsConfig[cat])) {
+          if (itemInfo?.name?.includes(searchTerm) || itemId.includes(searchTerm)) {
+            results.push({
+              id: itemId,
+              ...itemInfo,
+              category: this.categoryNormalization[cat] || cat,
               originalCategory: cat
             });
           }

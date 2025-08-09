@@ -284,6 +284,16 @@ export class ShopService {
         };
       }
 
+      // 验证玩家等级是否满足物品购买要求
+      const requiredLevel = itemInfo.requiredLevel ?? 1;
+      logger.info(`[ShopService] 等级验证 [${userId}]: 需要=${requiredLevel}, 当前=${player.level}`);
+      if (player.level < requiredLevel) {
+        return {
+          success: false,
+          message: `等级不足，购买 ${itemInfo.name} 需要 ${requiredLevel} 级，当前等级 ${player.level}`
+        };
+      }
+
       // 验证金币是否足够
       logger.info(`[ShopService] 金币验证 [${userId}]: 需要=${totalCost}, 拥有=${player.coins}`);
       if (player.coins < totalCost) {
