@@ -425,6 +425,394 @@ export class ShopService {
       };
     }
   }
+
+  /**
+   * 出售物品
+   *
+   * @param {string} userId 用户ID
+   * @param {string} itemName 物品名称
+   * @param {number} quantity 出售数量
+   * @returns {Object} 出售结果
+   */
+  async sellItem(userId, itemName, quantity = 1) {
+    const startTime = Date.now();
+
+    logger.info(`[ShopService] 开始出售流程 [${userId}]: ${itemName} x${quantity}`);
+
+    try {
+      // 参数验证
+      CommonUtils.validateQuantity(quantity, 'sellItem quantity');
+      logger.info(`[ShopService] 参数验证通过 [${userId}]: quantity=${quantity}`);
+
+      // 查找物品ID
+      const itemId = this.itemResolver.findItemByName(itemName);
+      logger.info(`[ShopService] 物品ID查找结果 [${userId}]: ${itemName} -> ${itemId || 'NOT_FOUND'}`);
+
+      if (!itemId) {
+        return {
+          success: false,
+          message: `商店中没有找到 "${itemName}"，请检查物品名称`
+        };
+      }
+
+      const itemInfo = this.itemResolver.getItemInfo(itemId);
+      logger.info(`[ShopService] 物品信息获取 [${userId}]:`, {
+        itemId,
+        hasInfo: !!itemInfo,
+        hasSellPrice: itemInfo?.sellPrice !== undefined
+      });
+
+      if (!itemInfo) {
+        return {
+          success: false,
+          message: `物品 "${itemName}" 信息不完整`
+        };
+      }
+
+      // 检查物品是否可以出售
+      if (itemInfo.sellPrice === undefined || itemInfo.sellPrice <= 0) {
+        return {
+          success: false,
+          message: `物品 "${itemName}" 不可出售`
+        };
+      }
+
+      // 获取当前出售价格
+      const unitPrice = await this._getItemPrice(itemId, 'sell');
+      const totalValue = unitPrice * quantity;
+      logger.info(`[ShopService] 价格计算 [${userId}]: 单价=${unitPrice}, 总价=${totalValue}`);
+
+      // 获取玩家数据
+      const player = await this.playerService.getPlayer(userId);
+      logger.info(`[ShopService] 玩家数据获取 [${userId}]:`, {
+        exists: !!player,
+        coins: player?.coins
+      });
+
+      if (!player) {
+        return {
+          success: false,
+          message: '玩家不存在'
+        };
+      }
+
+      // 验证玩家是否拥有足够的物品
+      logger.info(`[ShopService] 检查物品数量 [${userId}]: 需要 ${quantity} 个 ${itemName}`);
+      const hasItemResult = await this.inventoryService.hasItem(userId, itemId, quantity);
+      logger.info(`[ShopService] 物品数量检查结果 [${userId}]:`, hasItemResult);
+
+      if (!hasItemResult.success) {
+        return {
+          success: false,
+          message: hasItemResult.message
+        };
+      }
+
+      // 执行出售事务：移除物品 + 增加金币
+      logger.info(`[ShopService] 开始出售事务 [${userId}]: ${itemName} x${quantity}, 总价 ${totalValue} 金币`);
+
+      return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+        logger.info(`[ShopService] 事务内部 - 移除物品前 [${userId}]`);
+
+        // 使用 InventoryService 移除物品
+        logger.info(`[ShopService] 调用 InventoryService.removeItem [${userId}]: ${itemId} x${quantity}`);
+        const removeResult = await this.inventoryService.removeItem(userId, itemId, quantity);
+        logger.info(`[ShopService] InventoryService.removeItem 结果 [${userId}]:`, {
+          success: removeResult.success,
+          message: removeResult.message,
+          remaining: removeResult.remaining
+        });
+
+        if (!removeResult.success) {
+          logger.error(`[ShopService] 移除物品失败，回滚事务 [${userId}]: ${removeResult.message}`);
+          // 如果移除物品失败，通过抛出错误让事务回滚
+          throw new Error(`移除物品失败: ${removeResult.message}`);
+        }
+
+        // 获取 EconomyService 实例
+        const economyService = this.playerService.getEconomyService();
+        
+        // 增加金币
+        logger.info(`[ShopService] 事务内部 - 增加金币前 [${userId}]: 当前金币 ${player.coins}`);
+        await economyService.addCoins(userId, totalValue);
+        
+        // 获取更新后的玩家数据
+        const updatedPlayer = await this.playerService.getPlayer(userId);
+        logger.info(`[ShopService] 事务内部 - 增加金币后 [${userId}]: 新金币数量 ${updatedPlayer.coins}`);
+
+        // 更新统计数据
+        if (updatedPlayer.statistics) {
+          updatedPlayer.statistics.totalMoneyEarned += totalValue;
+          logger.info(`[ShopService] 更新统计数据 [${userId}]: 总收入 ${updatedPlayer.statistics.totalMoneyEarned}`);
+        }
+
+        // 记录交易统计（不影响主流程）
+        await this._recordTransactionSafely(itemId, quantity, 'sell');
+
+        const duration = Date.now() - startTime;
+        logger.info(`出售商品完成: ${itemName} x${quantity}, 耗时: ${duration}ms`);
+
+        // 更新交易统计
+        this._updateTransactionStats(totalValue, duration);
+
+        logger.info('出售交易成功', {
+          userId,
+          itemName,
+          itemId,
+          quantity,
+          unitPrice: CommonUtils.formatNumber(unitPrice),
+          totalValue: CommonUtils.formatNumber(totalValue),
+          remainingItems: removeResult.remaining,
+          newCoins: CommonUtils.formatNumber(updatedPlayer.coins),
+          duration: `${duration}ms`
+        });
+
+        // 获取仓库数据计算使用率
+        logger.info(`[ShopService] 获取仓库数据 [${userId}]`);
+        const inventoryData = await this.inventoryService.getInventory(userId);
+
+        logger.info(`[ShopService] 仓库数据获取 [${userId}]:`, {
+          usage: inventoryData.usage,
+          capacity: inventoryData.capacity,
+          totalItems: Object.keys(inventoryData.items).length
+        });
+
+        const result = {
+          success: true,
+          message: `成功出售 ${quantity} 个 ${itemInfo.name}，获得 ${CommonUtils.formatNumber(totalValue)} 金币`,
+          remainingCoins: CommonUtils.formatNumber(updatedPlayer.coins),
+          remainingItems: removeResult.remaining,
+          transaction: {
+            itemId,
+            itemName: itemInfo.name,
+            quantity,
+            unitPrice,
+            totalValue,
+            remainingCoins: updatedPlayer.coins,
+            remainingItems: removeResult.remaining
+          }
+        };
+
+        logger.info(`[ShopService] 出售事务完成 [${userId}]:`, {
+          success: result.success,
+          itemId,
+          quantity,
+          totalValue,
+          remainingCoins: updatedPlayer.coins,
+          remainingItems: removeResult.remaining
+        });
+
+        return result;
+      });
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      logger.error('出售交易失败', {
+        userId,
+        itemName,
+        quantity,
+        error: error.message,
+        duration: `${duration}ms`,
+        stack: error.stack
+      });
+
+      return {
+        success: false,
+        message: `出售失败: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * 批量出售所有作物
+   *
+   * @param {string} userId 用户ID
+   * @returns {Object} 出售结果
+   */
+  async sellAllCrops(userId) {
+    const startTime = Date.now();
+
+    logger.info(`[ShopService] 开始批量出售作物流程 [${userId}]`);
+
+    try {
+      // 获取玩家数据
+      const player = await this.playerService.getPlayer(userId);
+      logger.info(`[ShopService] 玩家数据获取 [${userId}]:`, {
+        exists: !!player,
+        coins: player?.coins
+      });
+
+      if (!player) {
+        return {
+          success: false,
+          message: '玩家不存在'
+        };
+      }
+
+      // 获取玩家仓库数据
+      logger.info(`[ShopService] 获取仓库数据 [${userId}]`);
+      const inventoryData = await this.inventoryService.getInventory(userId);
+      logger.info(`[ShopService] 仓库数据获取 [${userId}]:`, {
+        usage: inventoryData.usage,
+        capacity: inventoryData.capacity,
+        totalItems: Object.keys(inventoryData.items).length
+      });
+
+      // 筛选出所有作物物品（类别为 'crops'）
+      const cropItems = [];
+      for (const [itemId, item] of Object.entries(inventoryData.items)) {
+        if (item.category === 'crops' && item.quantity > 0) {
+          // 检查物品是否可以出售
+          const economicInfo = item.getEconomicInfo();
+          if (economicInfo.canSell && economicInfo.sellPrice > 0) {
+            cropItems.push({
+              itemId,
+              item,
+              quantity: item.quantity,
+              unitPrice: await this._getItemPrice(itemId, 'sell')
+            });
+          }
+        }
+      }
+
+      logger.info(`[ShopService] 筛选出可出售作物 [${userId}]:`, {
+        totalCropItems: cropItems.length,
+        totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0)
+      });
+
+      // 检查是否有作物可以出售
+      if (cropItems.length === 0) {
+        return {
+          success: false,
+          message: '仓库中没有可以出售的作物'
+        };
+      }
+
+      // 计算总价值
+      const totalValue = cropItems.reduce((sum, crop) => sum + (crop.unitPrice * crop.quantity), 0);
+      logger.info(`[ShopService] 计算总价值 [${userId}]: ${totalValue} 金币`);
+
+      // 执行批量出售事务：移除所有作物 + 增加金币
+      logger.info(`[ShopService] 开始批量出售事务 [${userId}]: ${cropItems.length} 种作物, 总价 ${totalValue} 金币`);
+
+      return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+        logger.info(`[ShopService] 事务内部 - 开始批量移除作物 [${userId}]`);
+
+        // 获取 EconomyService 实例
+        const economyService = this.playerService.getEconomyService();
+
+        // 批量移除作物并记录每种作物的出售详情
+        const soldDetails = [];
+        for (const crop of cropItems) {
+          logger.info(`[ShopService] 事务内部 - 移除作物 [${userId}]: ${crop.itemId} x${crop.quantity}`);
+
+          // 使用 InventoryService 移除物品
+          const removeResult = await this.inventoryService.removeItem(userId, crop.itemId, crop.quantity);
+          
+          if (!removeResult.success) {
+            logger.error(`[ShopService] 移除作物失败，回滚事务 [${userId}]: ${crop.itemId} - ${removeResult.message}`);
+            // 如果移除物品失败，通过抛出错误让事务回滚
+            throw new Error(`移除作物失败: ${crop.itemId} - ${removeResult.message}`);
+          }
+
+          // 记录出售详情
+          const itemInfo = this.itemResolver.getItemInfo(crop.itemId);
+          soldDetails.push({
+            itemId: crop.itemId,
+            itemName: itemInfo.name,
+            quantity: crop.quantity,
+            unitPrice: crop.unitPrice,
+            totalValue: crop.unitPrice * crop.quantity
+          });
+
+          // 记录交易统计（不影响主流程）
+          await this._recordTransactionSafely(crop.itemId, crop.quantity, 'sell');
+        }
+
+        // 增加金币
+        logger.info(`[ShopService] 事务内部 - 增加金币前 [${userId}]: 当前金币 ${player.coins}`);
+        await economyService.addCoins(userId, totalValue);
+        
+        // 获取更新后的玩家数据
+        const updatedPlayer = await this.playerService.getPlayer(userId);
+        logger.info(`[ShopService] 事务内部 - 增加金币后 [${userId}]: 新金币数量 ${updatedPlayer.coins}`);
+
+        // 更新统计数据
+        if (updatedPlayer.statistics) {
+          updatedPlayer.statistics.totalMoneyEarned += totalValue;
+          logger.info(`[ShopService] 更新统计数据 [${userId}]: 总收入 ${updatedPlayer.statistics.totalMoneyEarned}`);
+        }
+
+        const duration = Date.now() - startTime;
+        logger.info(`批量出售作物完成: ${cropItems.length} 种作物, 耗时: ${duration}ms`);
+
+        // 更新交易统计
+        this._updateTransactionStats(totalValue, duration);
+
+        logger.info('批量出售作物成功', {
+          userId,
+          cropCount: cropItems.length,
+          totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0),
+          totalValue: CommonUtils.formatNumber(totalValue),
+          newCoins: CommonUtils.formatNumber(updatedPlayer.coins),
+          duration: `${duration}ms`
+        });
+
+        // 获取仓库数据计算使用率
+        logger.info(`[ShopService] 获取更新后的仓库数据 [${userId}]`);
+        const updatedInventoryData = await this.inventoryService.getInventory(userId);
+
+        logger.info(`[ShopService] 更新后的仓库数据 [${userId}]:`, {
+          usage: updatedInventoryData.usage,
+          capacity: updatedInventoryData.capacity,
+          totalItems: Object.keys(updatedInventoryData.items).length
+        });
+
+        const result = {
+          success: true,
+          message: `成功出售 ${cropItems.length} 种作物，获得 ${CommonUtils.formatNumber(totalValue)} 金币`,
+          remainingCoins: CommonUtils.formatNumber(updatedPlayer.coins),
+          soldDetails: soldDetails,
+          totalValue: totalValue,
+          inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
+          transaction: {
+            cropCount: cropItems.length,
+            totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0),
+            totalValue: totalValue,
+            remainingCoins: updatedPlayer.coins,
+            inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
+            soldDetails: soldDetails
+          }
+        };
+
+        logger.info(`[ShopService] 批量出售事务完成 [${userId}]:`, {
+          success: result.success,
+          cropCount: cropItems.length,
+          totalValue: totalValue,
+          remainingCoins: updatedPlayer.coins,
+          inventoryUsage: result.inventoryUsage
+        });
+
+        return result;
+      });
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      logger.error('批量出售作物失败', {
+        userId,
+        error: error.message,
+        duration: `${duration}ms`,
+        stack: error.stack
+      });
+
+      return {
+        success: false,
+        message: `批量出售作物失败: ${error.message}`
+      };
+    }
+  }
 }
 
 export default ShopService;

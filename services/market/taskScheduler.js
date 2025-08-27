@@ -146,7 +146,7 @@ export class TaskScheduler {
      * @private
      */
     async _execute(taskName, timeout) {
-        const lockKey = this.lockManager.generateKey('scheduler', taskName);
+        const lockKey = `farm_game:scheduler:${taskName}`;
         return await this.lockManager.withLock(lockKey, async () => {
             logger.info(`[TaskScheduler] 开始执行任务: ${taskName}`);
             const startTime = this._getCurrentTime();

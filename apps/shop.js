@@ -30,13 +30,14 @@ export class ShopCommands extends plugin {
           fnc: 'buyItem'
         },
         {
-          reg: '^#(nc)?出售(.+?)(\\d+)?$',
-          fnc: 'sellItem'
-        },
-        {
           reg: '^#(nc)?出售全部$',
           fnc: 'sellAllCrops'
+        },
+        {
+          reg: '^#(nc)?出售(.+?)(\\d+)?$',
+          fnc: 'sellItem'
         }
+
       ]
     });
 
@@ -262,11 +263,12 @@ export class ShopCommands extends plugin {
         let message = `✅ ${result.message}\n`;
         message += '📦 出售详情:\n';
 
-        for (const item of result.items) {
-          message += `   ${item.name} x${item.quantity} = ${item.earnings}金币\n`;
+        // 使用 soldDetails 而不是 items
+        for (const item of result.soldDetails) {
+          message += `   ${item.itemName} x${item.quantity} = ${item.totalValue}金币\n`;
         }
 
-        message += `💰 总收入: ${result.totalEarnings}金币`;
+        message += `💰 总收入: ${result.totalValue}金币`;
 
         await e.reply(message);
       } else {

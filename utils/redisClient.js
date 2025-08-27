@@ -5,16 +5,37 @@
  * Hash操作使用说明：
  * - 仅用于非玩家数据的临时状态管理（如市场统计、全局计数器）
  * - 禁止用于玩家核心数据（资产、状态等），玩家数据请使用YAML存储
+ *
+ * 锁系统功能：
+ * - 可重入锁：同一调用链内对同一用户的重复加锁会被检测并跳过
+ * - 批量锁：支持对多个用户按固定顺序批量获取锁，避免死锁
+ * - 锁续租：长耗时操作自动续租，避免锁过期
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+// 为了通过 ESLint 且兼容 Node 全局：从 globalThis 读取 AbortController 引用
+const AbortController = globalThis.AbortController;
 
 class RedisClient {
   constructor() {
     // 直接使用Miao-Yunzai框架提供的Redis连接
     this.client = global.redis;
-    this.keyPrefix = 'farm_game';
-    this.lockPrefix = 'lock';
-    this.defaultLockTTL = 30; // 默认锁30秒过期
+    this.defaultLockTTL = 60; // 默认锁60秒过期（增加以支持长链路）
+
+    // 可重入锁上下文存储
+    this.lockContext = new AsyncLocalStorage();
+
+    // 续租任务管理
+    this.renewalTasks = new Map(); // lockKey -> { timer, abortController }
+
+    // 锁统计指标（可扩展为完整监控）
+    this.lockStats = {
+      acquired: 0,
+      released: 0,
+      renewed: 0,
+      failed: 0,
+      reentrant: 0
+    };
   }
 
   /**
@@ -23,18 +44,6 @@ class RedisClient {
    */
   isConnected() {
     return this.client && this.client.isReady;
-  }
-
-  /**
-   * 生成标准化的Redis Key
-   * @param {string} type 数据类型 (player, land, inventory等)
-   * @param {string} id 唯一标识符
-   * @param {string} field 可选字段
-   * @returns {string} 格式化的Key
-   */
-  generateKey(type, id, field = null) {
-    const baseKey = `${this.keyPrefix}:${type}:${id}`;
-    return field ? `${baseKey}:${field}` : baseKey;
   }
 
   /**
@@ -128,11 +137,70 @@ class RedisClient {
   /**
    * 生成分布式锁Key
    * @param {string} userId 用户ID
-   * @param {string} operation 操作类型（可选）
+   * @param {string} operation 操作类型（用于统计，但不影响互斥域）
    * @returns {string} 锁Key
    */
-  generateLockKey(userId, operation = 'general') {
-    return `${this.keyPrefix}:${this.lockPrefix}:${userId}:${operation}`;
+  generateLockKey(userId, _operation = 'general') {
+    // 统一使用用户ID作为互斥域，避免多把锁冲突
+    return `farm_game:lock:user:${userId}`;
+  }
+
+  /**
+   * 获取当前锁上下文
+   * @returns {Object|null} 锁上下文
+   */
+  _getLockContext() {
+    return this.lockContext.getStore();
+  }
+
+  /**
+   * 检查是否已持有指定用户的锁（可重入检查）
+   * @param {string} userId 用户ID
+   * @returns {boolean} 是否已持锁
+   */
+  _isLockHeld(userId) {
+    const context = this._getLockContext();
+    return context && context.heldLocks && context.heldLocks.has(userId);
+  }
+
+  /**
+   * 在上下文中标记锁已持有
+   * @param {string} userId 用户ID
+   */
+  _markLockHeld(userId) {
+    const context = this._getLockContext();
+    if (context && context.heldLocks) {
+      context.heldLocks.add(userId);
+    }
+  }
+
+  /**
+   * 在上下文中标记锁已释放
+   * @param {string} userId 用户ID
+   */
+  _markLockReleased(userId) {
+    const context = this._getLockContext();
+    if (context && context.heldLocks) {
+      context.heldLocks.delete(userId);
+    }
+  }
+
+  /**
+   * 确保锁上下文存在，如不存在则创建
+   */
+  _ensureLockContext() {
+    let context = this._getLockContext();
+    if (!context) {
+      // 创建新的上下文并运行
+      context = {
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        heldLocks: new Set(),
+        startTime: Date.now()
+      };
+      logger.debug('[RedisClient] 检测到缺失锁上下文，已自动创建');
+      return this.lockContext.run(context, () => context);
+    }
+    return context;
   }
 
   /**
@@ -200,6 +268,83 @@ class RedisClient {
   }
 
   /**
+   * 续租分布式锁
+   * @param {string} lockKey 锁Key
+   * @param {string} lockValue 锁值
+   * @param {number} extendSeconds 延长时间（秒）
+   * @returns {Promise<boolean>} 续租结果
+   */
+  async extendLock(lockKey, lockValue, extendSeconds) {
+    try {
+      // 使用Lua脚本确保原子性续租
+      const luaScript = `
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("expire", KEYS[1], ARGV[2])
+        else
+          return 0
+        end
+      `;
+
+      const result = await this.client.eval(luaScript, { keys: [lockKey], arguments: [lockValue, extendSeconds] });
+      const success = result === 1;
+
+      if (success) {
+        this.lockStats.renewed++;
+      }
+
+      return success;
+    } catch (error) {
+      logger.warn(`[RedisClient] 续租锁失败 ${lockKey}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * 启动锁续租看门狗
+   * @param {string} lockKey 锁Key
+   * @param {string} lockValue 锁值
+   * @param {number} ttl 锁TTL（秒）
+   * @private
+   */
+  _startLockRenewal(lockKey, lockValue, ttl) {
+    // 在TTL的50%时开始续租，添加抖动避免惊群
+    const renewalInterval = (ttl * 0.5 + Math.random() * ttl * 0.1) * 1000;
+    const abortController = new AbortController();
+
+    const timer = setTimeout(async () => {
+      if (abortController.signal.aborted) return;
+
+      try {
+        const success = await this.extendLock(lockKey, lockValue, ttl);
+        if (success && !abortController.signal.aborted) {
+          // 续租成功，继续下一轮
+          this._startLockRenewal(lockKey, lockValue, ttl);
+        } else if (!success) {
+          logger.warn(`[RedisClient] 锁续租失败，可能已被释放: ${lockKey}`);
+        }
+      } catch (error) {
+        logger.error(`[RedisClient] 锁续租异常: ${error.message}`);
+      }
+    }, renewalInterval);
+
+    this.renewalTasks.set(lockKey, { timer, abortController });
+  }
+
+  /**
+   * 停止锁续租看门狗
+   * @param {string} lockKey 锁Key
+   * @private
+   */
+  _stopLockRenewal(lockKey) {
+    const task = this.renewalTasks.get(lockKey);
+    if (task) {
+      task.abortController.abort();
+      clearTimeout(task.timer);
+      this.renewalTasks.delete(lockKey);
+    }
+  }
+
+  /**
    * 释放分布式锁
    * @param {string} lockKey 锁Key
    * @param {string} lockValue 锁值
@@ -207,6 +352,9 @@ class RedisClient {
    */
   async releaseLock(lockKey, lockValue) {
     try {
+      // 停止续租
+      this._stopLockRenewal(lockKey);
+
       // 使用Lua脚本确保原子性释放锁
       const luaScript = `
         if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -217,15 +365,22 @@ class RedisClient {
       `;
 
       const result = await this.client.eval(luaScript, { keys: [lockKey], arguments: [lockValue] });
-      return result === 1;
+      const success = result === 1;
+
+      if (success) {
+        this.lockStats.released++;
+      }
+
+      return success;
     } catch (error) {
-      // 保留原始错误堆栈跟踪
-      throw new Error(`Failed to release lock ${lockKey}: ${error.message}`, { cause: error });
+      // 改进：释放失败仅记录告警，不抛出异常覆盖业务错误
+      logger.error(`[RedisClient] 释放锁失败 ${lockKey}: ${error.message}`);
+      return false;
     }
   }
 
   /**
-   * 使用分布式锁执行操作
+   * 使用分布式锁执行操作（支持可重入）
    * @param {string} userId 用户ID
    * @param {Function} operation 要执行的操作函数
    * @param {string} operationType 操作类型
@@ -233,24 +388,207 @@ class RedisClient {
    * @returns {Promise<any>} 操作结果
    */
   async withLock(userId, operation, operationType = 'general', lockTTL = this.defaultLockTTL) {
-    const lockResult = await this.acquireLock(userId, operationType, lockTTL);
-
-    if (!lockResult.success) {
-      throw new Error(`无法获取锁: ${lockResult.error}`);
+    // 当外层未建立锁上下文时，这里自动创建并在该上下文中重新进入 withLock
+    const existingContext = this._getLockContext();
+    if (!existingContext) {
+      const context = {
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        heldLocks: new Set(),
+        startTime: Date.now()
+      };
+      return this.lockContext.run(context, async () => {
+        return await this.withLock(userId, operation, operationType, lockTTL);
+      });
     }
 
+    const startTime = Date.now();
+    let success = false;
+
     try {
-      // 执行操作
-      const result = await operation();
-      return result;
+      // 确保上下文存在
+      this._ensureLockContext();
+
+      // 检查可重入：如果已持有该用户的锁，直接执行操作
+      if (this._isLockHeld(userId)) {
+        this.lockStats.reentrant++;
+        logger.debug(`[RedisClient] 可重入锁检测: ${userId}, 操作: ${operationType}`);
+        const result = await operation();
+        success = true;
+        return result;
+      }
+
+      const lockResult = await this.acquireLock(userId, operationType, lockTTL);
+
+      if (!lockResult.success) {
+        this.lockStats.failed++;
+        throw new Error(`无法获取锁: ${lockResult.error}`);
+      }
+
+      // 标记锁已持有
+      this._markLockHeld(userId);
+      this.lockStats.acquired++;
+
+      // 启动续租看门狗（TTL >= 30s 时启用）
+      if (lockTTL >= 30) {
+        this._startLockRenewal(lockResult.lockKey, lockResult.lockValue, lockTTL);
+      }
+
+      try {
+        // 执行操作
+        const result = await operation();
+        success = true;
+        return result;
+      } finally {
+        // 标记锁已释放
+        this._markLockReleased(userId);
+
+        // 释放锁（内部已处理续租停止）
+        const released = await this.releaseLock(lockResult.lockKey, lockResult.lockValue);
+        if (!released) {
+          logger.warn(`[RedisClient] 锁释放失败但不影响业务: ${lockResult.lockKey}`);
+        }
+      }
     } finally {
-      // 确保锁被释放
-      await this.releaseLock(lockResult.lockKey, lockResult.lockValue);
+      // 记录性能指标
+      const duration = Date.now() - startTime;
+      this._recordMetrics(`withLock_${operationType}`, duration, success);
     }
   }
 
+  /**
+   * 批量获取多个用户的锁（按固定顺序，避免死锁）
+   * @param {Array<string>} userIds 用户ID数组
+   * @param {Function} operation 要执行的操作函数
+   * @param {string} operationType 操作类型
+   * @param {number} lockTTL 锁过期时间
+   * @returns {Promise<any>} 操作结果
+   */
+  async withUserLocks(userIds, operation, operationType = 'batch_operation', lockTTL = this.defaultLockTTL) {
+    // 当外层未建立锁上下文时，这里自动创建并在该上下文中重新进入 withUserLocks
+    const existingContext = this._getLockContext();
+    if (!existingContext) {
+      const context = {
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        heldLocks: new Set(),
+        startTime: Date.now()
+      };
+      return this.lockContext.run(context, async () => {
+        return await this.withUserLocks(userIds, operation, operationType, lockTTL);
+      });
+    }
 
+    const startTime = Date.now();
+    let success = false;
 
+    try {
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        throw new Error('用户ID数组不能为空');
+      }
+
+      // 确保上下文存在
+      this._ensureLockContext();
+
+      // 去重并排序，确保锁获取顺序一致
+      const uniqueUserIds = [...new Set(userIds)].sort();
+      const acquiredLocks = [];
+      const alreadyHeld = [];
+
+      try {
+        // 按顺序获取锁
+        for (const userId of uniqueUserIds) {
+          if (this._isLockHeld(userId)) {
+            // 已持有的锁，记录但不重复获取
+            alreadyHeld.push(userId);
+            this.lockStats.reentrant++;
+            continue;
+          }
+
+          const lockResult = await this.acquireLock(userId, operationType, lockTTL);
+          if (!lockResult.success) {
+            this.lockStats.failed++;
+            throw new Error(`无法获取用户 ${userId} 的锁: ${lockResult.error}`);
+          }
+
+          // 标记锁已持有并记录
+          this._markLockHeld(userId);
+          acquiredLocks.push({
+            userId,
+            lockKey: lockResult.lockKey,
+            lockValue: lockResult.lockValue,
+            ttl: lockTTL
+          });
+          this.lockStats.acquired++;
+
+          // 启动续租（TTL >= 30s 时）
+          if (lockTTL >= 30) {
+            this._startLockRenewal(lockResult.lockKey, lockResult.lockValue, lockTTL);
+          }
+        }
+
+        logger.debug(`[RedisClient] 批量锁获取完成: 新获取${acquiredLocks.length}个, 重入${alreadyHeld.length}个`);
+
+        // 执行操作
+        const result = await operation();
+        success = true;
+        return result;
+
+      } catch (error) {
+        // 获取锁失败时，释放已获取的锁
+        logger.error(`[RedisClient] 批量锁获取失败: ${error.message}`);
+        throw error;
+      } finally {
+        // 释放所有新获取的锁（逆序释放）
+        for (let i = acquiredLocks.length - 1; i >= 0; i--) {
+          const lock = acquiredLocks[i];
+          this._markLockReleased(lock.userId);
+
+          const released = await this.releaseLock(lock.lockKey, lock.lockValue);
+          if (!released) {
+            logger.warn(`[RedisClient] 批量释放锁失败但不影响业务: ${lock.lockKey}`);
+          }
+        }
+      }
+    } finally {
+      // 记录性能指标
+      const duration = Date.now() - startTime;
+      this._recordMetrics(`withUserLocks_${operationType}`, duration, success);
+    }
+  }
+
+  /**
+   * 在锁上下文中运行操作（业务入口使用）
+   * @param {Function} operation 要执行的操作函数
+   * @param {Object} options 选项
+   * @returns {Promise<any>} 操作结果
+   */
+  async runWithLockContext(operation, options = {}) {
+    const context = {
+      sessionId: options.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      heldLocks: new Set(),
+      startTime: Date.now()
+    };
+
+    return this.lockContext.run(context, operation);
+  }
+
+  /**
+   * 记录锁性能指标（可扩展对接监控系统）
+   * @param {string} operation 操作类型
+   * @param {number} duration 耗时(ms)
+   * @param {boolean} success 是否成功
+   * @private
+   */
+  _recordMetrics(operation, duration, success) {
+    // 基础日志记录
+    if (duration > 1000) { // 超过1秒的操作记录告警
+      logger.warn(`[RedisClient] 锁操作耗时过长: ${operation}, 耗时: ${duration}ms, 成功: ${success}`);
+    }
+
+    // 这里可以扩展对接Prometheus、StatsD等监控系统
+    // 例如:
+    // prometheus.histogram('lock_operation_duration', { operation, success }).observe(duration);
+    // statsd.timing('lock.operation.duration', duration, { operation, success });
+  }
 
   /**
    * 原子性增加数值

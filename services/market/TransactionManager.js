@@ -30,7 +30,7 @@ export class TransactionManager {
    */
   async executeBatchUpdate(operations, options = {}) {
     const transactionId = this._generateTransactionId();
-    const lockKey = options.lockKey || `market:batch:${transactionId}`;
+    const lockKey = options.lockKey || `farm_game:market:batch:${transactionId}`;
     const timeout = options.timeout || this.lockTimeout;
 
     let lockAcquired = false;
@@ -181,7 +181,7 @@ export class TransactionManager {
   async detectDeadlocks() {
     try {
       const deadlocks = [];
-      const lockPattern = `${this.redis.keyPrefix}:lock:*`;
+      const lockPattern = `farm_game:lock:*`;
       const lockKeys = await this.redis.keys(lockPattern);
 
       if (lockKeys.length === 0) {

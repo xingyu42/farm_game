@@ -50,17 +50,14 @@ export class StealService {
 
     logger.info(`[StealService] 玩家 ${attackerId} 尝试偷窃 ${targetId}`);
 
-    // 双重分布式锁：确保操作原子性
-    const lockKeys = [attackerId, targetId].sort(); // 按字母序排序防止死锁
+    // 使用批量锁：确保操作原子性，避免嵌套锁冲突
     const lockTimeout = Math.ceil(this.stealConfig.locks.timeout / 1000); // 转换为秒
 
     try {
-      // 嵌套获取双重锁，按排序顺序避免死锁
-      return await this.redisClient.withLock(lockKeys[0], async () => {
-        return await this.redisClient.withLock(lockKeys[1], async () => {
-          // 执行偷窃核心逻辑
-          return await this._executeStealCore(attackerId, targetId);
-        }, 'steal_operation', lockTimeout);
+      // 批量获取双用户锁，内部已按排序顺序避免死锁
+      return await this.redisClient.withUserLocks([attackerId, targetId], async () => {
+        // 执行偷窃核心逻辑
+        return await this._executeStealCore(attackerId, targetId);
       }, 'steal_operation', lockTimeout);
 
     } catch (error) {
@@ -229,7 +226,7 @@ export class StealService {
    */
   async getStealCooldownStatus(userId) {
     try {
-      const key = this.redisClient.generateKey('steal_cooldown', userId);
+      const key = `farm_game:steal_cooldown:${userId}`;
       const cooldownEnd = await this.redisClient.get(key);
 
       if (!cooldownEnd) {
@@ -468,7 +465,7 @@ export class StealService {
       const cooldownMs = cooldownMinutes * 60 * 1000;
       const cooldownEnd = Date.now() + cooldownMs;
 
-      const key = this.redisClient.generateKey('steal_cooldown', userId);
+      const key = `farm_game:steal_cooldown:${userId}`;
       await this.redisClient.setex(key, Math.ceil(cooldownMs / 1000), cooldownEnd.toString());
 
       logger.debug(`[StealService] 设置偷窃冷却 [${userId}]: ${cooldownMinutes} 分钟`);
@@ -495,7 +492,7 @@ export class StealService {
       const today = new Date(now).toDateString();
 
       // 检查对同一目标的冷却
-      const cooldownKey = this.redisClient.generateKey('steal_target_cooldown', `${attackerId}:${targetId}`);
+      const cooldownKey = `farm_game:steal_target_cooldown:${attackerId}:${targetId}`;
       const lastAttemptTime = await this.redisClient.get(cooldownKey);
 
       if (lastAttemptTime) {
@@ -512,7 +509,7 @@ export class StealService {
       }
 
       // 检查今日尝试次数
-      const attemptsKey = this.redisClient.generateKey('steal_attempts', `${attackerId}:${targetId}:${today}`);
+      const attemptsKey = `farm_game:steal_attempts:${attackerId}:${targetId}:${today}`;
       const attemptCount = parseInt(await this.redisClient.get(attemptsKey));
 
       if (attemptCount >= maxAttempts) {
@@ -544,12 +541,12 @@ export class StealService {
       const today = new Date(now).toDateString();
 
       // 更新目标冷却时间
-      const cooldownKey = this.redisClient.generateKey('steal_target_cooldown', `${attackerId}:${targetId}`);
+      const cooldownKey = `farm_game:steal_target_cooldown:${attackerId}:${targetId}`;
       const cooldownMinutes = this.stealConfig.antiRepeat.sameTargetCooldownMinutes;
       await this.redisClient.setex(cooldownKey, cooldownMinutes * 60, now.toString());
 
       // 更新今日尝试次数
-      const attemptsKey = this.redisClient.generateKey('steal_attempts', `${attackerId}:${targetId}:${today}`);
+      const attemptsKey = `farm_game:steal_attempts:${attackerId}:${targetId}:${today}`;
       await this.redisClient.incr(attemptsKey);
       await this.redisClient.expire(attemptsKey, 24 * 60 * 60); // 24小时过期
 
@@ -655,7 +652,7 @@ export class StealService {
       const cooldownStatus = await this.getStealCooldownStatus(userId);
 
       // 获取今日偷窃次数（所有目标）
-      const pattern = `${this.redisClient.keyPrefix}:steal_attempts:${userId}:*:${today}`;
+      const pattern = `farm_game:steal_attempts:${userId}:*:${today}`;
       const keys = await this.redisClient.keys(pattern);
       let totalAttemptsToday = 0;
 
@@ -686,9 +683,9 @@ export class StealService {
   async cleanupExpiredData() {
     try {
       const patterns = [
-        `${this.redisClient.keyPrefix}:steal_cooldown:*`,
-        `${this.redisClient.keyPrefix}:steal_target_cooldown:*`,
-        `${this.redisClient.keyPrefix}:steal_attempts:*`
+        `farm_game:steal_cooldown:*`,
+        `farm_game:steal_target_cooldown:*`,
+        `farm_game:steal_attempts:*`
       ];
 
       let totalCleaned = 0;

@@ -16,7 +16,7 @@ class CropMonitorService {
         this.validator = new PlantingUtils(config, logger);
 
         // Redis ZSet 键名（调度功能）
-        this.scheduleKey = this.redis.generateKey('schedule', 'harvest');
+        this.scheduleKey = `farm_game:schedule:harvest`;
     }
 
     // ==================== 状态监控功能（来自 CropStatusService）====================
@@ -296,7 +296,7 @@ class CropMonitorService {
     }
 
     /**
-     * 清理枯萎的作物
+     * 清理枯萎的作物 //TODO:不在计划内后续移除
      * @param {string} userId 用户ID
      * @returns {Object} 清理结果
      */
@@ -459,9 +459,19 @@ class CropMonitorService {
                 return 0;
             }
 
-            const result = await this.redis.client.zRem(this.scheduleKey, members);
+            // 验证参数类型
+            if (!Array.isArray(members)) {
+                throw new Error('members must be an array');
+            }
 
-            logger.debug(`[CropMonitorService] 批量移除收获计划: ${members.length} 个，实际移除: ${result} 个`);
+            // 确保所有成员都是字符串
+            const validMembers = members.map(member =>
+                typeof member === 'string' ? member : String(member)
+            );
+
+            const result = await this.redis.client.zRem(this.scheduleKey, validMembers);
+
+            logger.debug(`[CropMonitorService] 批量移除收获计划: ${validMembers.length} 个，实际移除: ${result} 个`);
             return result;
 
         } catch (error) {

@@ -34,7 +34,7 @@ export class MarketDataManager {
 
       for (const itemId of floatingItems) {
         try {
-          const statsKey = this.redis.generateKey('market:stats', itemId);
+          const statsKey = `farm_game:market:stats:${itemId}`;
           const exists = await this.redis.exists(statsKey);
 
           if (!exists) {
@@ -101,7 +101,7 @@ export class MarketDataManager {
         return false; // 固定价格物品不记录统计
       }
 
-      const statsKey = this.redis.generateKey('market:stats', itemId);
+      const statsKey = `farm_game:market:stats:${itemId}`;
       const field = transactionType === 'buy' ? 'demand_24h' : 'supply_24h';
 
       // 使用Redis事务确保原子性
@@ -135,7 +135,7 @@ export class MarketDataManager {
       // 批量获取统计数据
       const pipeline = this.redis.pipeline();
       for (const itemId of ids) {
-        pipeline.hGetAll(this.redis.generateKey('market:stats', itemId));
+        pipeline.hGetAll(`farm_game:market:stats:${itemId}`);
       }
 
       const results = await pipeline.exec();
@@ -264,7 +264,7 @@ export class MarketDataManager {
 
       for (const itemId of floatingItems) {
         try {
-          pipeline.hSet(this.redis.generateKey('market:stats', itemId), {
+          pipeline.hSet(`farm_game:market:stats:${itemId}`, {
             demand_24h: '0',
             supply_24h: '0',
             last_reset: resetTime
@@ -279,7 +279,7 @@ export class MarketDataManager {
       await pipeline.exec();
 
       // 更新全局统计
-      await this.redis.hSet(this.redis.generateKey('market:global', 'stats'), {
+      await this.redis.hSet(`farm_game:market:global:stats`, {
         last_reset: resetTime,
         last_reset_count: resetCount.toString()
       });
@@ -328,7 +328,7 @@ export class MarketDataManager {
       for (const update of updates) {
         try {
           if (this._validateUpdateData(update)) {
-            pipeline.hSet(this.redis.generateKey('market:stats', update.itemId), update.data);
+            pipeline.hSet(`farm_game:market:stats:${update.itemId}`, update.data);
             validUpdates++;
           } else {
             errors.push(`无效的更新数据: ${update.itemId}`);
@@ -534,7 +534,7 @@ export class MarketDataManager {
         last_reset: Date.now().toString(),
       };
 
-      await this.redis.hSet(this.redis.generateKey('market:global', 'stats'), globalStats);
+      await this.redis.hSet(`farm_game:market:global:stats`, globalStats);
     } catch (error) {
       logger.error(`[MarketDataManager] 初始化全局统计失败: ${error.message}`);
     }

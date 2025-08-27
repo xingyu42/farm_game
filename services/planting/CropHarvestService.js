@@ -144,7 +144,9 @@ class CropHarvestService {
 
         // 5. 从收获计划中移除
         const harvestedLandIds = harvestedCrops.map(crop => crop.landId);
-        await this.cropScheduleService.batchRemoveHarvestSchedules(harvestedLandIds);
+        // 将土地ID数组转换为正确的格式：["userId:landId", ...]
+        const scheduleMembers = harvestedLandIds.map(landId => `${userId}:${landId}`);
+        await this.cropScheduleService.batchRemoveHarvestSchedules(scheduleMembers);
 
         logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}块土地的作物`);
 

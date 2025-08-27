@@ -415,7 +415,7 @@ export class MarketService {
 
               priceUpdates.push({
                 type: 'hset',
-                key: `market:stats:${stats.itemId}`,
+                key: `farm_game:market:stats:${stats.itemId}`,
                 data: {
                   current_price: priceResult.buyPrice.toString(),
                   current_sell_price: priceResult.sellPrice.toString(),
@@ -498,7 +498,7 @@ export class MarketService {
 
               operations.push({
                 type: 'hset',
-                key: `market:stats:${stats.itemId}`,
+                key: `farm_game:market:stats:${stats.itemId}`,
                 data: {
                   current_price: priceResult.buyPrice.toString(),
                   current_sell_price: priceResult.sellPrice.toString(),

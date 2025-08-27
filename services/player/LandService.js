@@ -365,7 +365,7 @@ class LandService {
       }
 
       // 执行进阶（Redis事务）
-      const playerKey = this.redis.generateKey('player', userId);
+      const playerKey = `farm_game:player:${userId}`;
 
       // 获取当前玩家数据进行二次验证
       const playerData = await this.redis.get(playerKey);
