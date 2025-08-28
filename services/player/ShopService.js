@@ -151,22 +151,27 @@ export class ShopService {
     try {
       const itemsConfig = this.config.items;
 
-      const shopConfig = itemsConfig.shop.categories;
+      // 从新结构 items.categories 读取分类；传入的 category 既可为 key 也可为显示名
+      const categories = Array.isArray(itemsConfig.categories) ? itemsConfig.categories : [];
+      const items = [];
 
-      let items = [];
+      for (const cat of categories) {
+        const catKey = cat.key;
+        const catName = cat.name;
 
-      for (const categoryInfo of shopConfig) {
-        // 如果指定了类别且不匹配，跳过
-        if (category && categoryInfo.name !== category) {
+        // 过滤：如果指定了类别，仅当键或显示名匹配时处理
+        if (category && !(category === catKey || category === catName)) {
           continue;
         }
 
+        // 通过解析器按类别收集所有可售（有 price）的物品
+        const allInCategory = this.itemResolver.getItemsByCategory(catKey);
         const categoryItems = [];
 
-        for (const itemId of categoryInfo.items) {
-          const itemInfo = this.itemResolver.getItemInfo(itemId);
+        for (const item of allInCategory) {
+          if (item && item.price !== undefined) {
+            const itemId = item.id;
 
-          if (itemInfo && itemInfo.price !== undefined) {
             // 获取当前价格（可能是动态价格）
             const currentPrice = await this._getItemPrice(itemId, 'buy');
             const currentSellPrice = await this._getItemPrice(itemId, 'sell');
@@ -193,22 +198,22 @@ export class ShopService {
 
             categoryItems.push({
               id: itemId,
-              name: itemInfo.name,
+              name: item.name,
               price: currentPrice,
               sellPrice: currentSellPrice,
-              basePrice: itemInfo.price, // 原始基准价格
+              basePrice: item.price,
               isDynamic,
               priceTrend,
-              description: itemInfo.description,
-              category: categoryInfo.name,
-              requiredLevel: itemInfo.requiredLevel
+              description: item.description,
+              category: catName,
+              requiredLevel: item.requiredLevel
             });
           }
         }
 
         if (categoryItems.length > 0) {
           items.push({
-            category: categoryInfo.name,
+            category: catName,
             items: categoryItems.sort((a, b) => a.price - b.price)
           });
         }
@@ -531,11 +536,11 @@ export class ShopService {
 
         // 获取 EconomyService 实例
         const economyService = this.playerService.getEconomyService();
-        
+
         // 增加金币
         logger.info(`[ShopService] 事务内部 - 增加金币前 [${userId}]: 当前金币 ${player.coins}`);
         await economyService.addCoins(userId, totalValue);
-        
+
         // 获取更新后的玩家数据
         const updatedPlayer = await this.playerService.getPlayer(userId);
         logger.info(`[ShopService] 事务内部 - 增加金币后 [${userId}]: 新金币数量 ${updatedPlayer.coins}`);
@@ -709,7 +714,7 @@ export class ShopService {
 
           // 使用 InventoryService 移除物品
           const removeResult = await this.inventoryService.removeItem(userId, crop.itemId, crop.quantity);
-          
+
           if (!removeResult.success) {
             logger.error(`[ShopService] 移除作物失败，回滚事务 [${userId}]: ${crop.itemId} - ${removeResult.message}`);
             // 如果移除物品失败，通过抛出错误让事务回滚
@@ -733,7 +738,7 @@ export class ShopService {
         // 增加金币
         logger.info(`[ShopService] 事务内部 - 增加金币前 [${userId}]: 当前金币 ${player.coins}`);
         await economyService.addCoins(userId, totalValue);
-        
+
         // 获取更新后的玩家数据
         const updatedPlayer = await this.playerService.getPlayer(userId);
         logger.info(`[ShopService] 事务内部 - 增加金币后 [${userId}]: 新金币数量 ${updatedPlayer.coins}`);

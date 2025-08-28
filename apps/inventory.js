@@ -222,15 +222,12 @@ export class InventoryCommands extends plugin {
       let message = `🔒 锁定物品列表 (${lockedData.count} 个)\n`;
       message += '━━━━━━━━━━━━━━━━━━━━\n';
 
-      // 按类别分组显示
-      const categories = {
-        seeds: '种子',
-        crops: '作物',
-        fertilizer: '肥料',
-        defense: '防御',
-        materials: '材料',
-        unknown: '其他'
-      };
+      // 使用 ItemResolver 和配置提供的分类显示
+      const categoriesList = Array.isArray(this.itemResolver.config?.items?.categories)
+        ? this.itemResolver.config.items.categories
+        : [];
+      const categories = categoriesList.reduce((acc, c) => { acc[c.key] = c.name; return acc; }, {});
+      categories.unknown = '其他';
 
       const groupedItems = {};
       for (const item of lockedData.items) {
@@ -241,7 +238,9 @@ export class InventoryCommands extends plugin {
         groupedItems[category].push(item);
       }
 
-      for (const [categoryKey, categoryName] of Object.entries(categories)) {
+      for (const c of categoriesList) {
+        const categoryKey = c.key;
+        const categoryName = c.name;
         if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
           message += `📦 ${categoryName}\n`;
           for (const item of groupedItems[categoryKey]) {
@@ -249,6 +248,15 @@ export class InventoryCommands extends plugin {
           }
           message += '\n';
         }
+      }
+
+      // 附加 unknown 类别（如有）
+      if (groupedItems.unknown && groupedItems.unknown.length > 0) {
+        message += `📦 ${categories.unknown}\n`;
+        for (const item of groupedItems.unknown) {
+          message += `   🔒${item.name} x${item.quantity}\n`;
+        }
+        message += '\n';
       }
 
       message += '━━━━━━━━━━━━━━━━━━━━\n';

@@ -524,15 +524,11 @@ export class InventoryService {
       const inventory = await this.getInventory(userId);
       const items = [];
 
-      // 按类别分组物品
-      const categories = {
-        seeds: '种子',
-        crops: '作物',
-        fertilizer: '肥料',
-        defense: '防御',
-        materials: '材料',
-        unknown: '其他'
-      };
+      // 从配置驱动的类别与显示名
+      const categoriesList = Array.isArray(this.config.items?.categories) ? this.config.items.categories : [];
+      const categories = categoriesList.reduce((acc, c) => { acc[c.key] = c.name; return acc; }, {});
+      // 追加未知分类显示名
+      categories.unknown = '其他';
 
       const groupedItems = {};
 
@@ -568,8 +564,10 @@ export class InventoryService {
         });
       }
 
-      // 按类别顺序组织显示，按名称排序
-      for (const [categoryKey, categoryName] of Object.entries(categories)) {
+      // 按配置中的类别顺序组织显示，按名称排序
+      for (const c of categoriesList) {
+        const categoryKey = c.key;
+        const categoryName = c.name;
         if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
           const sortedItems = groupedItems[categoryKey].sort((a, b) => {
             // 按名称排序
@@ -584,6 +582,18 @@ export class InventoryService {
             totalValue: sortedItems.reduce((sum, item) => sum + item.totalSellValue, 0)
           });
         }
+      }
+
+      // 附加 unknown 类别（如有）
+      if (groupedItems.unknown && groupedItems.unknown.length > 0) {
+        const sortedItems = groupedItems.unknown.sort((a, b) => a.name.localeCompare(b.name));
+        items.push({
+          category: categories.unknown,
+          categoryKey: 'unknown',
+          items: sortedItems,
+          totalItems: sortedItems.length,
+          totalValue: sortedItems.reduce((sum, item) => sum + item.totalSellValue, 0)
+        });
       }
 
       return {

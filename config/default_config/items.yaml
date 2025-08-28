@@ -34,7 +34,7 @@ seeds:
     maxStack: 99
 
 # 肥料配置
-fertilizers:
+fertilizer:
   fertilizer_normal:
     name: "普通肥料"
     price: 10
@@ -69,7 +69,7 @@ fertilizers:
       speedBonus: 0.6 # 加速60%
 
 # 杀虫剂配置
-pesticides:
+pesticide:
   pesticide_basic:
     name: "基础杀虫剂"
     price: 8
@@ -82,7 +82,7 @@ pesticides:
       health: 15
 
 # 狗粮配置（防御系统）
-dogFood:
+defense:
   normal:
     name: "普通狗粮"
     price: 30
@@ -114,7 +114,7 @@ dogFood:
     defenseBonus: 50 # 防御加成50%
     duration: 120 # 持续120分钟
 # 偷菜工具配置（未来扩展）
-stealTools:
+tools:
   basic_lockpick:
     name: "基础开锁器"
     price: 100
@@ -152,7 +152,7 @@ stealTools:
       cooldownReduction: 20 # -20%冷却时间
       duration: 120 # 持续120分钟
 # 土地进阶材料
-landMaterials:
+materials:
   copper_essence:
     name: "铜质精华"
     price: 10000 # 商店价格（稀有）
@@ -177,21 +177,22 @@ landMaterials:
     description: "用于土地品质进阶的神话材料"
     requiredLevel: 20
     maxStack: 3
-# 商店分类显示
-shop:
-  categories:
-    - name: "种子"
-      items: ["carrot_seed", "tomato_seed", "wheat_seed"]
-    - name: "肥料"
-      items: ["fertilizer_normal", "fertilizer_premium", "fertilizer_deluxe"]
-    - name: "杀虫剂"
-      items: ["pesticide_basic"]
-    - name: "防御"
-      items: ["normal", "premium", "deluxe"]
-    - name: "工具"
-      items: ["basic_lockpick", "advanced_gloves", "master_toolkit"]
-    - name: "材料"
-      items: ["copper_essence", "silver_essence", "gold_essence"]
+# 分类定义
+categories:
+  - key: "seeds"
+    name: "种子"
+  - key: "fertilizer"
+    name: "肥料"
+  - key: "pesticide"
+    name: "杀虫剂"
+  - key: "defense"
+    name: "防御"
+  - key: "tools"
+    name: "工具"
+  - key: "materials"
+    name: "材料"
+  - key: "crops"
+    name: "作物"
 # 初始礼包配置
 initial_gift:
   - item_id: "wheat_seed"

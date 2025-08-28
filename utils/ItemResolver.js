@@ -7,24 +7,21 @@ class ItemResolver {
   constructor(config) {
     this.config = config;
 
-    // 物品类别配置
-    this.categories = ['seeds', 'fertilizers', 'dogFood', 'landMaterials', 'crops'];
+    // 已标准化，删除旧键兼容映射
 
-    // 类别显示名称映射
-    this.categoryDisplayNames = {
-      seeds: '种子',
-      fertilizers: '肥料',
-      dogFood: '防御',
-      landMaterials: '材料',
-      crops: '作物'
-    };
+    // 从配置生成类别与显示名
+    const itemsRoot = this.config.items || {};
+    const categoryList = Array.isArray(itemsRoot.categories) ? itemsRoot.categories : [];
 
-    // 类别标准化映射（用于统一不同服务的类别命名）
-    this.categoryNormalization = {
-      fertilizers: 'fertilizer',
-      dogFood: 'defense',
-      landMaterials: 'materials'
-    };
+    if (categoryList.length === 0) {
+      throw new Error('配置 items.categories 缺失，无法初始化物品类别');
+    }
+
+    this.categories = categoryList.map(c => c.key);
+    this.categoryDisplayNames = {};
+    for (const c of categoryList) {
+      this.categoryDisplayNames[c.key] = c.name;
+    }
   }
 
   /**
@@ -53,7 +50,7 @@ class ItemResolver {
         return {
           ...itemConfig,
           id: itemId,
-          category: this.categoryNormalization[category] || category,
+          category: category,
           originalCategory: category
         };
       }
@@ -126,7 +123,7 @@ class ItemResolver {
    * @returns {string} 显示名称
    */
   getCategoryDisplayName(category) {
-    return this.categoryDisplayNames[category];
+    return this.categoryDisplayNames[category] || category;
   }
 
   /**
@@ -175,12 +172,12 @@ class ItemResolver {
     }
 
     const itemsConfig = this.config.items
-    const categoryItems = itemsConfig[category]
+    const categoryItems = itemsConfig[category] || {};
 
     return Object.entries(categoryItems).map(([itemId, itemInfo]) => ({
       id: itemId,
       ...itemInfo,
-      category: this.categoryNormalization[category] || category,
+      category: category,
       originalCategory: category
     }));
   }
@@ -235,7 +232,7 @@ class ItemResolver {
             results.push({
               id: itemId,
               ...itemInfo,
-              category: this.categoryNormalization[cat] || cat,
+              category: cat,
               originalCategory: cat
             });
           }
