@@ -25,20 +25,6 @@ export class MarketService {
     this.batchSize = marketConfig.batch_size;
     this.maxBatchSize = marketConfig.performance.max_batch_size;
 
-    // TODO: 实现缓存功能 - 为性能优化预留的配置项
-    this.cacheEnabled = marketConfig.performance.cache_enabled; // 未使用
-    this.cacheTTL = marketConfig.performance.cache_ttl; // 未使用
-
-    // TODO: 实现连接池功能 - 为大规模数据处理预留的配置项
-    this.connectionPoolSize = marketConfig.performance.connection_pool_size; // 未使用
-
-    // TODO: 实现性能监控功能 - 为性能告警预留的配置项
-    this.maxTotalDuration = marketConfig.performance.max_total_duration; // 未使用
-    this.maxAvgTimePerItem = marketConfig.performance.max_avg_time_per_item; // 未使用
-
-    // TODO: 实现告警冷却功能 - 为监控系统完善预留的配置项
-    this.alertCooldown = marketConfig.monitoring?.alert_cooldown; // 未使用
-
     // 保持原有性能统计
     this.stats = {
       priceUpdates: 0,

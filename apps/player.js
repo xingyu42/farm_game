@@ -32,7 +32,7 @@ export class player extends plugin {
         }
       ]
     });
-    
+
     // 初始化服务
     this._initServices();
   }
@@ -89,7 +89,7 @@ export class player extends plugin {
         const dogFoodType = playerData.protection.dogFood.type;
         const defenseBonus = playerData.protection.dogFood.defenseBonus;
         const dogFoodName = this.itemResolver.getItemName(dogFoodType);
-  
+
         playerInfo.push(`🍖 狗粮防护: 激活中`);
         playerInfo.push(`   类型: ${dogFoodName}`);
         playerInfo.push(`   加成: +${defenseBonus}%`);
@@ -185,7 +185,7 @@ export class player extends plugin {
 
       // 格式化详细的签到奖励信息
       const detailedMessage = this._formatSignInRewards(signInResult);
-      
+
       await e.reply(detailedMessage);
       return true;
 
@@ -203,7 +203,7 @@ export class player extends plugin {
    */
   _formatSignInRewards(signInResult) {
     const { rewards, consecutiveDays, totalSignDays } = signInResult;
-    
+
     const messages = [
       `🎉 签到成功！连续签到 ${consecutiveDays} 天`,
       `━━━━━━━━━━━━━━━━━━`,
@@ -214,7 +214,7 @@ export class player extends plugin {
     if (rewards.coins > 0) {
       messages.push(`💰 金币: +${rewards.coins.toLocaleString()}`);
     }
-    
+
     if (rewards.experience > 0) {
       messages.push(`✨ 经验: +${rewards.experience}`);
     }
@@ -231,7 +231,7 @@ export class player extends plugin {
     // 里程碑奖励特殊展示
     if (rewards.milestone) {
       messages.push(``, `🏆 里程碑达成: ${rewards.milestone}!`);
-      
+
       // 根据连续签到天数显示特殊祝贺
       if (consecutiveDays === 7) {
         messages.push(`🌟 坚持一周签到，真不容易！`);
@@ -251,12 +251,12 @@ export class player extends plugin {
     try {
       const previewRewards = this.playerService.signInService.getSignInRewardsPreview(consecutiveDays);
       const nextDayReward = previewRewards.find(reward => reward.day === consecutiveDays + 1);
-      
+
       if (nextDayReward) {
         messages.push(``, `🔮 明日奖励预览:`);
         messages.push(`💰 金币: +${nextDayReward.coins.toLocaleString()}`);
         messages.push(`✨ 经验: +${nextDayReward.experience}`);
-        
+
         if (nextDayReward.milestone) {
           messages.push(`🏆 里程碑: ${nextDayReward.milestone}`);
         }

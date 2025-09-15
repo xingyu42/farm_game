@@ -9,11 +9,12 @@ import ItemResolver from '../../utils/ItemResolver.js';
  * 包含：物品添加、移除、查询、仓库扩容等功能
  */
 export class InventoryService {
-  constructor(redisClient, config, _logger = null, playerDataService = null) {
+  constructor(redisClient, config, _logger = null, playerDataService = null, economyService = null) {
     this.redis = redisClient;
     this.config = config;
     this.itemResolver = new ItemResolver(config);
     this.playerDataService = playerDataService;
+    this.economyService = economyService;
   }
 
   /**
@@ -58,8 +59,8 @@ export class InventoryService {
 
       return {
         items: itemInstances,
-        capacity: parseInt(playerData.inventory_capacity) || this.config.player.defaultInventoryCapacity,
-        maxCapacity: parseInt(playerData.maxInventoryCapacity) || this.config.player.maxInventoryCapacity,
+        capacity: parseInt(playerData.inventory_capacity) || this.config.items.inventory.startingCapacity,
+        maxCapacity: parseInt(playerData.maxInventoryCapacity) || this.config.items.inventory.maxCapacity,
         usage: this._calculateInventoryUsage(itemInstances)
       };
     } catch (error) {
@@ -962,6 +963,97 @@ export class InventoryService {
       };
     } catch (error) {
       logger.error(`获取锁定物品列表失败 [${userId}]: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 升级仓库容量
+   * @param {string} userId 用户ID
+   * @returns {Object} 升级结果
+   */
+  async upgradeInventory(userId) {
+    try {
+
+      // 2. 获取玩家数据
+      if (!this.playerDataService) {
+        throw new Error('PlayerDataService not initialized');
+      }
+
+      const playerData = await this.playerDataService.getPlayer(userId);
+      if (!playerData) {
+        return {
+          success: false,
+          message: '玩家不存在'
+        };
+      }
+
+      // 3. 获取当前容量信息
+      const inventory = await this.getInventory(userId);
+      const currentCapacity = inventory.capacity;
+      const maxCapacity = inventory.maxCapacity;
+
+      // 4. 从配置中查找下一个升级档位
+      const upgradeSteps = this.config.items.inventory.upgradeSteps;
+      if (!upgradeSteps || !Array.isArray(upgradeSteps)) {
+        return {
+          success: false,
+          message: '升级配置不存在'
+        };
+      }
+
+      // 查找第一个容量大于当前容量的升级步骤
+      const nextStep = upgradeSteps.find(step => step.capacity > currentCapacity);
+
+      // 5. 检查是否已达上限
+      if (!nextStep) {
+        return {
+          success: false,
+          message: `仓库已达到最大容量 ${maxCapacity}`,
+          currentCapacity: currentCapacity,
+          maxCapacity: maxCapacity
+        };
+      }
+
+      // 6. 检查金币是否足够
+      if (playerData.coins < nextStep.cost) {
+        return {
+          success: false,
+          message: `金币不足！升级需要 ${nextStep.cost} 金币，您只有 ${playerData.coins} 金币`,
+          requiredCoins: nextStep.cost,
+          currentCoins: playerData.coins
+        };
+      }
+
+      // 7. 扣除金币
+      if (!this.economyService) {
+        throw new Error('EconomyService not initialized');
+      }
+
+      const updatedPlayerData = await this.economyService.deductCoins(userId, nextStep.cost);
+      if (!updatedPlayerData) {
+        return {
+          success: false,
+          message: '扣费失败，请稍后再试'
+        };
+      }
+
+      // 8. 更新仓库容量
+      await this.playerDataService.updateSimpleField(userId, 'inventory_capacity', nextStep.capacity);
+
+      logger.info(`玩家 ${userId} 成功升级仓库: ${currentCapacity} -> ${nextStep.capacity}, 花费 ${nextStep.cost} 金币`);
+
+      return {
+        success: true,
+        message: `仓库升级成功！容量已提升至 ${nextStep.capacity}`,
+        oldCapacity: currentCapacity,
+        newCapacity: nextStep.capacity,
+        cost: nextStep.cost,
+        remainingCoins: updatedPlayerData.coins
+      };
+
+    } catch (error) {
+      logger.error(`升级仓库失败 [${userId}]: ${error.message}`);
       throw error;
     }
   }

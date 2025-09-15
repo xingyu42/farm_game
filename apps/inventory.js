@@ -21,6 +21,10 @@ export class InventoryCommands extends plugin {
           fnc: 'viewInventory'
         },
         {
+          reg: '^#(nc)?仓库升级$',
+          fnc: 'upgradeInventory'
+        },
+        {
           reg: '^#(nc)?锁定(.+)$',
           fnc: 'lockItem'
         },
@@ -268,6 +272,50 @@ export class InventoryCommands extends plugin {
     } catch (error) {
       logger.error(`[InventoryCommands] 查看锁定物品失败: ${error.message}`);
       await e.reply('❌ 查看锁定物品失败，请稍后再试');
+      return true;
+    }
+  }
+
+  /**
+   * 升级仓库容量
+   */
+  async upgradeInventory(e) {
+    try {
+      // 调用服务层方法进行仓库升级
+      const result = await this.inventoryService.upgradeInventory(e.user_id);
+
+      if (result.success) {
+        // 升级成功
+        const message = `✅ ${result.message}\n` +
+          `📦 容量变化: ${result.oldCapacity} → ${result.newCapacity}\n` +
+          `💰 花费金币: ${result.cost}\n` +
+          `💳 剩余金币: ${result.remainingCoins}`;
+
+        await e.reply(message);
+      } else {
+        // 升级失败，显示具体原因
+        let message = `❌ ${result.message}`;
+
+        // 根据不同的失败原因提供额外信息
+        if (result.requiredCoins && result.currentCoins) {
+          // 金币不足的情况
+          const shortfall = result.requiredCoins - result.currentCoins;
+          // 格式化小数点，保留最多2位小数
+          const formattedShortfall = Math.ceil(shortfall * 100) / 100;
+          message += `\n💰 还差 ${formattedShortfall} 金币`;
+        } else if (result.currentCapacity && result.maxCapacity) {
+          // 已达上限的情况
+          message += `\n📦 当前容量: ${result.currentCapacity}/${result.maxCapacity}`;
+        }
+
+        await e.reply(message);
+      }
+
+      return true;
+
+    } catch (error) {
+      logger.error(`[InventoryCommands] 升级仓库失败: ${error.message}`);
+      await e.reply('❌ 升级仓库失败，请稍后再试');
       return true;
     }
   }

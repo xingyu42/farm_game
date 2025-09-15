@@ -295,53 +295,6 @@ class CropMonitorService {
         }
     }
 
-    /**
-     * 清理枯萎的作物 //TODO:不在计划内后续移除
-     * @param {string} userId 用户ID
-     * @returns {Object} 清理结果
-     */
-    async cleanWitheredCrops(userId) {
-        try {
-            const allLands = await this.landService.getAllLands(userId);
-            if (!allLands || !allLands.success || !allLands.lands) {
-                return { success: false, message: '获取土地数据失败' };
-            }
-
-            const landUpdates = {};
-            let cleanedCount = 0;
-
-            for (const land of allLands.lands) {
-                if (land.status === 'withered') {
-                    landUpdates[land.id] = {
-                        crop: null,
-                        plantTime: null,
-                        harvestTime: null,
-                        status: 'empty',
-                        health: 100,
-                        needsWater: false,
-                        hasPests: false,
-                        stealable: false
-                    };
-                    cleanedCount++;
-                }
-            }
-
-            if (cleanedCount > 0) {
-                await this.plantingDataService.updateMultipleLands(userId, landUpdates);
-            }
-
-            return {
-                success: true,
-                cleanedCount: cleanedCount,
-                message: cleanedCount > 0 ? `清理了${cleanedCount}块枯萎的土地` : '没有需要清理的枯萎作物'
-            };
-
-        } catch (error) {
-            logger.error(`[CropMonitorService] 清理枯萎作物失败 [${userId}]: ${error.message}`);
-            return { success: false, message: error.message };
-        }
-    }
-
     // ==================== 调度管理功能（来自 CropScheduleService）====================
 
     /**

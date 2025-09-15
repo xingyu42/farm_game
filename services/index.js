@@ -20,6 +20,7 @@ import PlayerService from './player/PlayerService.js';
 import AdminService from './admin/AdminService.js';
 import GlobalStatsService from './admin/GlobalStatsService.js'; // 全局统计服务
 import PlayerStatsService from './player/PlayerStatsService.js'; // 玩家个人统计服务
+import EconomyService from './player/EconomyService.js'; // 经济服务
 import PlantingService from './planting/PlantingService.js';
 import InventoryService from './player/InventoryService.js';
 import ShopService from './player/ShopService.js';
@@ -92,12 +93,19 @@ class ServiceContainer {
         null // logger使用默认值
       );
 
+      // 实例化EconomyService
+      this.services.economyService = new EconomyService(
+        redisClient,
+        config
+      );
+
       // 实例化InventoryService
       this.services.inventoryService = new InventoryService(
         redisClient,
         config,
         null, // logger使用默认值
-        this.services.playerService.dataService // 注入playerDataService
+        this.services.playerService.dataService, // 注入playerDataService
+        this.services.economyService // 注入economyService
       );
 
       // 实例化LandService (需要依赖PlayerService)

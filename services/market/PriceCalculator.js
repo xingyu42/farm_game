@@ -186,8 +186,6 @@ export class PriceCalculator {
       // 获取最大记录数配置
       const maxRecords = this.config.market?.history?.max_records || 168;
       
-      // TODO: 实现基于时间的记录保留功能 - 为历史数据管理预留的配置项
-      const keepDays = this.config.market?.history?.keep_days; // 未使用
 
       // 清理过期记录（FIFO）
       if (history.length > maxRecords) {

@@ -16,13 +16,6 @@ pricing:
 
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小
-performance:
-  cache_enabled: true # 是否启用缓存 (TODO: 未实现)
-  cache_ttl: 300 # 缓存TTL（秒）(TODO: 未实现)
-  max_batch_size: 500 # 最大批次大小
-  connection_pool_size: 10 # Redis连接池大小 (TODO: 未实现)
-  max_total_duration: 60 # 总耗时告警阈值（秒）(TODO: 未实现)
-  max_avg_time_per_item: 0.1 # 单项平均耗时告警阈值（秒）(TODO: 未实现)
 
 # 浮动价格物品配置
 floating_items:
@@ -42,7 +35,6 @@ monitoring:
   enabled: true # 是否启用监控
   price_change_threshold: 0.3 # 价格变化超过30%时告警
   extreme_ratio_threshold: 2.0 # 供需比极端值告警阈值
-  alert_cooldown: 300 # 告警冷却时间（秒）(TODO: 未实现)
 
 # 任务调度器配置（增强版）
 scheduler:
@@ -82,5 +74,4 @@ transaction:
 
 # 价格历史
 history:
-  keep_days: 7 # 保留价格历史天数 (TODO: 未实现)
   max_records: 168 # 最大历史记录数（7天 * 24小时）
