@@ -33,6 +33,66 @@ seeds:
     requiredLevel: 2
     maxStack: 99
 
+  lettuce_seed:
+    name: "生菜种子"
+    price: 6
+    sellPrice: 2
+    category: "seeds"
+    is_dynamic_price: true
+    description: "生菜的播种用种子"
+    requiredLevel: 2
+    maxStack: 99
+
+  potato_seed:
+    name: "土豆种子"
+    price: 10
+    sellPrice: 4
+    category: "seeds"
+    is_dynamic_price: true
+    description: "土豆的播种用种子"
+    requiredLevel: 4
+    maxStack: 99
+
+  corn_seed:
+    name: "玉米种子"
+    price: 14
+    sellPrice: 5
+    category: "seeds"
+    is_dynamic_price: true
+    description: "玉米的播种用种子"
+    requiredLevel: 6
+    maxStack: 99
+
+  strawberry_seed:
+    name: "草莓种子"
+    price: 16
+    sellPrice: 6
+    category: "seeds"
+    is_dynamic_price: true
+    description: "草莓的播种用种子"
+    requiredLevel: 8
+    maxStack: 99
+
+  grape_seed:
+    name: "葡萄种子"
+    price: 28
+    sellPrice: 11
+    category: "seeds"
+    is_dynamic_price: true
+    description: "葡萄的播种用种子"
+    requiredLevel: 12
+    maxStack: 99
+
+  pumpkin_seed:
+    name: "南瓜种子"
+    price: 35
+    sellPrice: 13
+    category: "seeds"
+    is_dynamic_price: true
+    description: "南瓜的播种用种子"
+    requiredLevel: 14
+    maxStack: 99
+
 # 肥料配置
 fertilizer:
   fertilizer_normal:
