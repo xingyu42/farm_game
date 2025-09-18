@@ -20,11 +20,6 @@ export class MarketService {
     this.dataManager = marketDataManager;
     this.transactionManager = transactionManager;
 
-    // 保持原有配置兼容性
-    const marketConfig = this.config.market;
-    this.batchSize = marketConfig.batch_size;
-    this.maxBatchSize = marketConfig.performance.max_batch_size;
-
     // 保持原有性能统计
     this.stats = {
       priceUpdates: 0,
