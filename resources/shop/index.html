@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{pluResPath}}shop/index.css" />
+    <link rel="shortcut icon" href="#" />
+</head>
+
+<body>
+    <div class="container" id="container">
+        <!-- 商店招牌 -->
+        <div class="shop-sign">
+            <div class="sign-decoration left"></div>
+            <span class="sign-text">皮埃尔杂货店</span>
+            <div class="sign-decoration right"></div>
+        </div>
+
+        <!-- 玩家信息栏 -->
+        <div class="player-bar">
+            <div class="player-stat">
+                <span class="stat-icon">💰</span>
+                <span class="stat-value">{{playerCoins}}</span>
+            </div>
+            <div class="player-stat">
+                <span class="stat-icon">⭐</span>
+                <span class="stat-label">Lv.</span>
+                <span class="stat-value">{{playerLevel}}</span>
+            </div>
+        </div>
+
+        <!-- 商品区域 -->
+        <div class="shop-content">
+            {{each categories category}}
+            <div class="category-section">
+                <div class="category-title">
+                    <span class="category-icon">{{if category.key == 'seeds'}}🌱{{else if category.key == 'fertilizer'}}💊{{else if category.key == 'pesticide'}}🐛{{else if category.key == 'defense'}}🐕{{else if category.key == 'tools'}}🔧{{else if category.key == 'materials'}}💎{{else}}📦{{/if}}</span>
+                    <span>{{category.name}}</span>
+                </div>
+                <div class="items-grid">
+                    {{each category.items item}}
+                    <div class="item-slot {{if item.isLocked}}locked{{/if}}">
+                        {{if item.isLocked}}
+                        <div class="lock-badge">🔒</div>
+                        {{/if}}
+                        <div class="item-icon">{{item.icon}}</div>
+                        <div class="item-name">{{item.name}}</div>
+                        <div class="item-prices">
+                            <span class="buy-price">💰{{item.price}}</span>
+                            {{if item.sellPrice > 0}}
+                            <span class="sell-price">📤{{item.sellPrice}}</span>
+                            {{/if}}
+                        </div>
+                        {{if item.requiredLevel > 1}}
+                        <div class="level-req">Lv.{{item.requiredLevel}}</div>
+                        {{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="shop-footer">
+            <div class="tip-row">
+                <span class="tip-cmd">#nc购买 [物品] [数量]</span>
+                <span class="tip-desc">购买商品</span>
+            </div>
+            <div class="tip-row">
+                <span class="tip-cmd">#nc出售 [物品] [数量]</span>
+                <span class="tip-desc">出售物品</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

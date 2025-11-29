@@ -8,6 +8,7 @@
 // }}
 
 import serviceContainer from '../services/index.js';
+import { Puppeteer } from '../models/services.js';
 
 export class ShopCommands extends plugin {
   constructor() {
@@ -75,27 +76,17 @@ export class ShopCommands extends plugin {
         return true;
       }
 
-      // 构建商店显示
-      let message = `🏪 农场商店 (金币: ${playerData.coins})\n`;
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
+      // 构建渲染数据
+      const renderData = this._buildShopRenderData(shopItems, playerData);
 
-      for (const category of shopItems) {
-        message += `🏷️ ${category.category}\n`;
+      // 使用 Puppeteer 渲染图片
+      const result = await Puppeteer.render('shop/index', renderData, { e, scale: 2.0 });
 
-        for (const item of category.items) {
-          const levelText = item.requiredLevel > 1 ? ` [Lv.${item.requiredLevel}]` : '';
-          const availableText = playerData.level >= item.requiredLevel ? '✅' : '🔒';
-          message += `   ${availableText} ${item.name} - ${item.price}金币${levelText}\n`;
-        }
-
-        message += '\n';
+      if (!result) {
+        await e.reply('❌ 生成商店图片失败，请稍后再试');
+        return false;
       }
 
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-      message += '💡 使用 #nc购买 [物品名] [数量] 购买物品\n';
-      message += '💡 使用 #nc市场 查看出售价格';
-
-      await e.reply(message);
       return true;
 
     } catch (error) {
@@ -103,6 +94,64 @@ export class ShopCommands extends plugin {
       await e.reply('❌ 查看商店失败，请稍后再试');
       return true;
     }
+  }
+
+  /**
+   * 构建商店渲染数据
+   * @param {Array} shopItems 商店商品列表
+   * @param {Object} playerData 玩家数据
+   * @returns {Object} 渲染数据
+   * @private
+   */
+  _buildShopRenderData(shopItems, playerData) {
+    // 物品图标映射（根据物品名称关键字）
+    const itemIconMap = {
+      '胡萝卜': '🥕', '西红柿': '🍅', '小麦': '🌾', '生菜': '🥬',
+      '土豆': '🥔', '玉米': '🌽', '草莓': '🍓', '葡萄': '🍇',
+      '南瓜': '🎃', '肥料': '💊', '杀虫': '🐛', '狗粮': '🦴',
+      '锁': '🔐', '手套': '🧤', '工具': '🔧', '精华': '✨',
+      '铜': '🟤', '银': '⚪', '金': '🟡'
+    };
+
+    const categories = shopItems.map(cat => {
+      // 获取分类 key（从分类名反推）
+      const categoryKeyMap = {
+        '种子': 'seeds', '肥料': 'fertilizer', '杀虫剂': 'pesticide',
+        '防御': 'defense', '工具': 'tools', '材料': 'materials', '作物': 'crops'
+      };
+      const key = categoryKeyMap[cat.category] || 'unknown';
+
+      const items = cat.items.map(item => {
+        // 根据物品名称获取图标
+        let icon = '📦';
+        for (const [keyword, emoji] of Object.entries(itemIconMap)) {
+          if (item.name.includes(keyword)) {
+            icon = emoji;
+            break;
+          }
+        }
+        // 种子类别默认图标
+        if (icon === '📦' && key === 'seeds') icon = '🌱';
+
+        return {
+          ...item,
+          icon,
+          isLocked: playerData.level < (item.requiredLevel || 1)
+        };
+      });
+
+      return {
+        name: cat.category,
+        key,
+        items
+      };
+    });
+
+    return {
+      playerCoins: playerData.coins,
+      playerLevel: playerData.level,
+      categories
+    };
   }
 
   /**
