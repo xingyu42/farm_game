@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{pluResPath}}inventory/index.css" />
+    <link rel="shortcut icon" href="#" />
+    <style>
+        #container {
+            background: url("{{pluResPath}}help/bg.jpg") center !important;
+            background-size: cover !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="title">
+                <span class="title-icon">🎒</span>
+                我的仓库
+            </div>
+        </div>
+
+        <!-- 状态区 -->
+        <div class="status-panel">
+            <div class="capacity-wrapper">
+                <div class="capacity-label">
+                    <span>仓库容量</span>
+                    <span>{{usage}} / {{capacity}}</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar {{if usagePercentage > 85}}critical{{else if usagePercentage > 50}}warning{{/if}}" style="width: {{usagePercentage}}%;"></div>
+                </div>
+            </div>
+
+            {{if canUpgrade}}
+            <div class="upgrade-btn">
+                <span>⬆ 扩容</span>
+                <span class="upgrade-cost">({{upgradeCost}} 💰)</span>
+            </div>
+            {{/if}}
+        </div>
+
+        <!-- 内容列表 -->
+        <div class="content-area">
+            {{if isEmpty}}
+            <!-- 空仓库状态 -->
+            <div class="empty-box">
+                <div class="empty-icon">📦</div>
+                <div class="empty-text">仓库空空如也</div>
+                <div class="empty-tips">快去种植作物或购买物品吧！</div>
+            </div>
+            {{else}}
+            <!-- 分类物品列表 -->
+            {{each inventory category}}
+            <div class="category-group">
+                <div class="category-header">
+                    <span class="category-icon">{{if category.categoryKey == 'crops'}}🌾{{else if category.categoryKey == 'seeds'}}🌱{{else if category.categoryKey == 'fertilizer'}}💊{{else if category.categoryKey == 'tools'}}🔧{{else}}📦{{/if}}</span>
+                    <span>{{category.category}}</span>
+                </div>
+                <div class="item-grid">
+                    {{each category.items item}}
+                    <div class="item-card {{if item.locked}}locked{{/if}}">
+                        {{if item.locked}}
+                        <div class="lock-overlay">
+                            <div class="lock-icon">🔒</div>
+                        </div>
+                        {{/if}}
+                        <div class="item-badge">x{{item.quantity}}</div>
+                        <div class="item-icon">{{if item.icon}}{{item.icon}}{{else}}{{item.shortName || '?'}}{{/if}}</div>
+                        <div class="item-name">{{item.name}}</div>
+                        {{if item.sellPrice > 0}}
+                        <div class="item-price">💰 {{item.sellPrice}}</div>
+                        {{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/each}}
+            {{/if}}
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="footer">
+            <span>💡 提示：</span>
+            <span class="key-tip">#nc出售 [物品名] [数量]</span>
+            <span>换取金币</span>
+            <span class="key-tip">#nc仓库升级</span>
+            <span>升级容量</span>
+        </div>
+    </div>
+</body>
+
+</html>

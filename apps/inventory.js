@@ -8,6 +8,7 @@
 // }}
 
 import serviceContainer from '../services/index.js';
+import { Puppeteer } from '../models/services.js';
 export class InventoryCommands extends plugin {
   constructor() {
     super({
@@ -31,10 +32,6 @@ export class InventoryCommands extends plugin {
         {
           reg: '^#(nc)?解锁(.+)$',
           fnc: 'unlockItem'
-        },
-        {
-          reg: '^#(nc)?(查看锁定|锁定列表)$',
-          fnc: 'viewLockedItems'
         }
       ]
     });
@@ -62,38 +59,41 @@ export class InventoryCommands extends plugin {
       const userId = e.user_id.toString();
 
       // 确保玩家存在
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      if (!(await this.playerService.isPlayer(userId))) { await e.reply('您未注册，请先"#nc注册"'); return true; }
+
       // 获取格式化的仓库信息
       const inventoryData = await this.inventoryService.getFormattedInventory(userId);
 
-      if (inventoryData.isEmpty) {
-        await e.reply('🎒 你的仓库是空的，快去种植作物或购买物品吧！');
-        return true;
+      // 获取升级信息
+      const upgradeInfo = await this._getUpgradeInfo(userId);
+
+      // 计算容量百分比
+      const usagePercentage = inventoryData.capacity > 0
+        ? Math.round((inventoryData.usage / inventoryData.capacity) * 100)
+        : 0;
+
+      // 准备渲染数据
+      const renderData = {
+        usage: inventoryData.usage,
+        capacity: inventoryData.capacity,
+        usagePercentage: usagePercentage,
+        isEmpty: inventoryData.isEmpty,
+        inventory: inventoryData.inventory,
+        canUpgrade: upgradeInfo.canUpgrade,
+        upgradeCost: upgradeInfo.cost
+      };
+
+      // 使用Puppeteer渲染图片
+      const result = await Puppeteer.render('inventory/index', renderData, {
+        e,
+        scale: 2.0
+      });
+
+      if (!result) {
+        await e.reply('❌ 生成仓库图片失败，请稍后再试');
+        return false;
       }
 
-      // 构建仓库显示
-      let message = `🎒 仓库状态 (${inventoryData.usage}/${inventoryData.capacity})\n`;
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-
-      for (const category of inventoryData.inventory) {
-        message += `📦 ${category.category}\n`;
-
-        for (const item of category.items) {
-          const sellPriceText = item.sellPrice > 0 ? ` (售价: ${item.sellPrice}金币)` : '';
-          const lockIcon = item.locked ? '🔒' : '';
-          message += `   ${lockIcon}${item.name} x${item.quantity}${sellPriceText}\n`;
-        }
-
-        message += '\n';
-      }
-
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-      message += '💡 使用 #nc出售 [物品名] [数量] 出售物品\n';
-      message += '💡 使用 #nc锁定 [物品名] 锁定物品\n';
-      message += '💡 使用 #nc查看锁定 查看锁定的物品\n';
-      message += '💡 使用 #nc商店 查看可购买的物品';
-
-      await e.reply(message);
       return true;
 
     } catch (error) {
@@ -101,6 +101,74 @@ export class InventoryCommands extends plugin {
       await e.reply('❌ 查看仓库失败，请稍后再试');
       return true;
     }
+  }
+
+  /**
+   * 获取升级信息
+   * @param {string} userId 用户ID
+   * @returns {Object} 升级信息
+   */
+  async _getUpgradeInfo(userId) {
+    try {
+      // 获取当前玩家数据
+      const playerData = await this.playerService.getPlayer(userId);
+      if (!playerData) {
+        return { canUpgrade: false, cost: 0 };
+      }
+
+      // 获取配置
+      const config = this.inventoryService.config;
+      const upgradeSteps = config?.items?.inventory?.upgradeSteps || [];
+
+      if (upgradeSteps.length === 0) {
+        return { canUpgrade: false, cost: 0 };
+      }
+
+      const currentCapacity = playerData.inventory_capacity || config?.items?.inventory?.defaultCapacity || 20;
+
+      // 查找下一级升级
+      for (const step of upgradeSteps) {
+        if (step.capacity > currentCapacity) {
+          return {
+            canUpgrade: true,
+            cost: step.cost
+          };
+        }
+      }
+
+      // 已达最大容量
+      return { canUpgrade: false, cost: 0 };
+
+    } catch (error) {
+      logger.error(`[InventoryCommands] 获取升级信息失败: ${error.message}`);
+      return { canUpgrade: false, cost: 0 };
+    }
+  }
+
+  /**
+   * 渲染仓库图片（内部复用方法）
+   * @param {Object} e Miao-Yunzai事件对象
+   * @param {string} userId 用户ID
+   * @returns {boolean} 渲染是否成功
+   */
+  async _renderInventoryImage(e, userId) {
+    const inventoryData = await this.inventoryService.getFormattedInventory(userId);
+    const upgradeInfo = await this._getUpgradeInfo(userId);
+    const usagePercentage = inventoryData.capacity > 0
+      ? Math.round((inventoryData.usage / inventoryData.capacity) * 100)
+      : 0;
+
+    const renderData = {
+      usage: inventoryData.usage,
+      capacity: inventoryData.capacity,
+      usagePercentage: usagePercentage,
+      isEmpty: inventoryData.isEmpty,
+      inventory: inventoryData.inventory,
+      canUpgrade: upgradeInfo.canUpgrade,
+      upgradeCost: upgradeInfo.cost
+    };
+
+    return await Puppeteer.render('inventory/index', renderData, { e, scale: 2.0 });
   }
 
   /**
@@ -125,7 +193,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 确保玩家存在
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      if (!(await this.playerService.isPlayer(userId))) { await e.reply('您未注册，请先"#nc注册"'); return true; }
 
       // 查找物品ID
       const itemId = this.itemResolver.findItemByName(itemName);
@@ -139,7 +207,11 @@ export class InventoryCommands extends plugin {
       const result = await this.inventoryService.lockItem(userId, itemId);
 
       if (result.success) {
-        await e.reply(`🔒 ${result.message}`);
+        // 渲染仓库图片显示锁定状态
+        const rendered = await this._renderInventoryImage(e, userId);
+        if (!rendered) {
+          await e.reply(`🔒 ${result.message}`);
+        }
       } else {
         await e.reply(`❌ ${result.message}`);
       }
@@ -175,7 +247,7 @@ export class InventoryCommands extends plugin {
       }
 
       // 确保玩家存在
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"');
+      if (!(await this.playerService.isPlayer(userId))) { await e.reply('您未注册，请先"#nc注册"'); return true; }
 
       // 查找物品ID
       const itemId = this.itemResolver.findItemByName(itemName);
@@ -189,7 +261,11 @@ export class InventoryCommands extends plugin {
       const result = await this.inventoryService.unlockItem(userId, itemId);
 
       if (result.success) {
-        await e.reply(`🔓 ${result.message}`);
+        // 渲染仓库图片显示解锁状态
+        const rendered = await this._renderInventoryImage(e, userId);
+        if (!rendered) {
+          await e.reply(`🔓 ${result.message}`);
+        }
       } else {
         await e.reply(`❌ ${result.message}`);
       }
@@ -204,85 +280,17 @@ export class InventoryCommands extends plugin {
   }
 
   /**
-   * 查看锁定的物品
-   * @param {Object} e Miao-Yunzai事件对象
-   */
-  async viewLockedItems(e) {
-    try {
-      const userId = e.user_id.toString();
-
-      // 确保玩家存在
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
-
-      // 获取锁定物品列表
-      const lockedData = await this.inventoryService.getLockedItems(userId);
-
-      if (lockedData.isEmpty) {
-        await e.reply('🔓 你没有锁定任何物品\n💡 使用 #nc锁定 [物品名] 来锁定物品');
-        return true;
-      }
-
-      // 构建锁定物品显示
-      let message = `🔒 锁定物品列表 (${lockedData.count} 个)\n`;
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-
-      // 使用 ItemResolver 和配置提供的分类显示
-      const categoriesList = Array.isArray(this.itemResolver.config?.items?.categories)
-        ? this.itemResolver.config.items.categories
-        : [];
-      const categories = categoriesList.reduce((acc, c) => { acc[c.key] = c.name; return acc; }, {});
-      categories.unknown = '其他';
-
-      const groupedItems = {};
-      for (const item of lockedData.items) {
-        const category = item.category || 'unknown';
-        if (!groupedItems[category]) {
-          groupedItems[category] = [];
-        }
-        groupedItems[category].push(item);
-      }
-
-      for (const c of categoriesList) {
-        const categoryKey = c.key;
-        const categoryName = c.name;
-        if (groupedItems[categoryKey] && groupedItems[categoryKey].length > 0) {
-          message += `📦 ${categoryName}\n`;
-          for (const item of groupedItems[categoryKey]) {
-            message += `   🔒${item.name} x${item.quantity}\n`;
-          }
-          message += '\n';
-        }
-      }
-
-      // 附加 unknown 类别（如有）
-      if (groupedItems.unknown && groupedItems.unknown.length > 0) {
-        message += `📦 ${categories.unknown}\n`;
-        for (const item of groupedItems.unknown) {
-          message += `   🔒${item.name} x${item.quantity}\n`;
-        }
-        message += '\n';
-      }
-
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-      message += '💡 使用 #nc解锁 [物品名] 解锁物品';
-
-      await e.reply(message);
-      return true;
-
-    } catch (error) {
-      logger.error(`[InventoryCommands] 查看锁定物品失败: ${error.message}`);
-      await e.reply('❌ 查看锁定物品失败，请稍后再试');
-      return true;
-    }
-  }
-
-  /**
    * 升级仓库容量
    */
   async upgradeInventory(e) {
     try {
+      const userId = e.user_id.toString();
+
+      // 确保玩家存在
+      if (!(await this.playerService.isPlayer(userId))) { await e.reply('您未注册，请先"#nc注册"'); return true; }
+
       // 调用服务层方法进行仓库升级
-      const result = await this.inventoryService.upgradeInventory(e.user_id);
+      const result = await this.inventoryService.upgradeInventory(userId);
 
       if (result.success) {
         // 升级成功

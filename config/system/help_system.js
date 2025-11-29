@@ -90,10 +90,6 @@ export const helpList = [{
         icon: 22,
         title: '#nc解锁 [物品名称]',
         desc: '解锁指定物品，允许出售'
-    }, {
-        icon: 86,
-        title: '#nc查看锁定',
-        desc: '查看所有已锁定的物品'
     }]
 }, {
     group: '🏪 商店交易',

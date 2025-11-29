@@ -553,6 +553,7 @@ export class InventoryService {
           quantity: displayInfo.quantity,
           displayText: displayInfo.displayText,
           icon: displayInfo.icon,
+          shortName: displayInfo.name ? displayInfo.name[0] : '?',
 
           category: displayInfo.category,
           sellPrice: economicInfo.sellPrice,
