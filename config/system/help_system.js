@@ -132,10 +132,6 @@ export const helpList = [{
         icon: 24,
         title: '#nc土地品质 [土地编号]',
         desc: '查看指定土地的品质信息'
-    }, {
-        icon: 25,
-        title: '#nc强化土地 [土地编号]',
-        desc: '强化指定土地，提升产出效果'
     }]
 }, {
     group: '🛡️ 偷菜防御',

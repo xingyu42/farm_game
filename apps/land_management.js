@@ -1,6 +1,6 @@
 /**
  * 土地管理功能命令处理器 (Miao-Yunzai 插件)
- * 处理土地扩张、品质升级、强化等相关指令
+ * 处理土地扩张、品质升级等相关指令
  */
 import serviceContainer from '../services/index.js';
 import ItemResolver from '../utils/ItemResolver.js';
@@ -28,10 +28,6 @@ export class LandManagementCommands extends plugin {
         {
           reg: '^#(nc)?土地品质(\\d+)?$',
           fnc: 'viewLandQualityInfo'
-        },
-        {
-          reg: '^#(nc)?强化土地(\\d+)?$',
-          fnc: 'enhanceLand'
         }
       ]
     });
@@ -112,7 +108,7 @@ export class LandManagementCommands extends plugin {
             message += `   📈 需要升级至 ${landInfo.nextLevelRequired} 级\n`;
           }
           if (playerData.coins < landInfo.nextCost) {
-            message += `   💰 需要 ${landInfo.nextCost - playerData.coins} 更多金币\n`;
+            message += `   💰 需要 ${(landInfo.nextCost - playerData.coins).toFixed(2)} 更多金币\n`;
           }
         }
       } else {
@@ -245,32 +241,6 @@ export class LandManagementCommands extends plugin {
     } catch (error) {
       logger.error(`[LandManagementCommands] 查看土地品质信息失败: ${error.message}`);
       await e.reply('❌ 查看土地品质信息失败，请稍后再试');
-      return true;
-    }
-  }
-
-  async enhanceLand(e) {
-    try {
-      const userId = e.user_id.toString();
-      const match = e.msg.match(/^#(nc)?强化土地(\d+)?$/);
-
-      if (!match || !match[2]) {
-        await e.reply('请指定要强化的土地编号，例如：#nc强化土地1');
-        return true;
-      }
-
-      const landId = parseInt(match[2]);
-
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
-
-      const result = await this.landService.enhanceLand(userId, landId);
-
-      await e.reply(result.message);
-
-      return true;
-    } catch (error) {
-      logger.error(`[LandManagementCommands] 强化土地失败: ${error.message}`);
-      await e.reply('❌ 强化土地失败，请稍后再试');
       return true;
     }
   }
