@@ -4,6 +4,7 @@
 // {{START MODIFICATIONS}}
 
 import serviceContainer from '../services/index.js';
+import { Puppeteer } from '../models/services.js';
 
 
 /**
@@ -49,86 +50,83 @@ export class player extends plugin {
   }
 
   /**
-   * 显示玩家信息（核心功能）
-   * 首次交互时自动注册玩家
+   * 显示玩家信息（图片化展示）
    */
   async showPlayerInfo(e) {
     try {
       const userId = e.user_id.toString();
       const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
 
-      // 获取玩家数据
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+
       const playerData = await this.playerService.getPlayer(userId, userName);
-
       const levelInfo = await this.playerService.getLevelInfo(playerData.level);
-      const experienceToNext = levelInfo ? levelInfo.experienceRequired : 'Max';
-
-      // 获取当前防护加成
       const currentBonus = await this.protectionService.getProtectionBonus(userId);
-
-      // 获取偷菜统计信息
       const stealStats = await this.stealService.getStealStatistics(userId);
 
-      const playerInfo = [
-        `🌾 ${playerData.name || userName} 的农场`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `👤 等级: Lv.${playerData.level}`,
-        `✨ 经验: ${playerData.experience}/${experienceToNext}`,
-        `💰 金币: ${playerData.coins.toLocaleString()}`,
-        `🏞️ 土地: ${playerData.landCount}/${playerData.maxLandCount}`,
-        `📦 仓库: ${playerData.getInventoryInfo().usage}/${playerData.getInventoryInfo().capacity}`,
-        `━━━━━━━━━━━━━━━━━━`,
-        `🛡️ 当前防御: +${currentBonus}%`
-      ];
-
-      // 详细狗粮防护状态
-      const now = Date.now();
-      if (playerData.protection?.dogFood?.effectEndTime > now) {
-        const remainingTime = Math.ceil((playerData.protection.dogFood.effectEndTime - now) / (1000 * 60));
-        const dogFoodType = playerData.protection.dogFood.type;
-        const defenseBonus = playerData.protection.dogFood.defenseBonus;
-        const dogFoodName = this.itemResolver.getItemName(dogFoodType);
-
-        playerInfo.push(`🍖 狗粮防护: 激活中`);
-        playerInfo.push(`   类型: ${dogFoodName}`);
-        playerInfo.push(`   加成: +${defenseBonus}%`);
-        playerInfo.push(`   剩余: ${remainingTime}分钟`);
-      } else {
-        playerInfo.push(`🍖 狗粮防护: 未激活`);
-      }
-
-      // 详细偷菜状态信息
-      playerInfo.push(`🥷 偷菜状态:`);
-      if (stealStats.cooldownStatus.canSteal) {
-        playerInfo.push(`   状态: 可以偷菜`);
-      } else {
-        const remainingMinutes = Math.ceil(stealStats.cooldownStatus.remainingTime / 60000);
-        playerInfo.push(`   状态: 冷却中`);
-        playerInfo.push(`   剩余时间: ${remainingMinutes} 分钟`);
-      }
-      playerInfo.push(`   今日偷菜次数: ${stealStats.totalAttemptsToday}`);
-      playerInfo.push(`   基础成功率: ${stealStats.config.baseSuccessRate}%`);
-      playerInfo.push(`   每次最多偷取: ${stealStats.config.maxStealPerAttempt} 块土地`);
-
-      playerInfo.push(`━━━━━━━━━━━━━━━━━━`);
-      playerInfo.push(`📅 总签到: ${playerData.signIn.totalSignDays || 0} 天`);
-      playerInfo.push(`📈 连续签到: ${playerData.signIn.consecutiveDays || 0} 天`);
-
-      if (playerData.isNewPlayer()) {
-        playerInfo.push(``, `🎉 欢迎来到农场世界！`);
-        playerInfo.push(`💡 输入 #nc帮助 查看游戏指令`);
-      } else {
-        playerInfo.push(`💡 使用 #使用狗粮 激活防护`);
-      }
-
-      e.reply(playerInfo.join('\n'));
+      const renderData = this._buildPlayerRenderData(playerData, userName, levelInfo, currentBonus, stealStats);
+      await Puppeteer.render('player/index', renderData, { e, scale: 2.0 });
       return true;
     } catch (error) {
       logger.error('[农场游戏] 显示玩家信息失败:', error);
       e.reply('查看玩家信息失败，请稍后重试');
       return true;
     }
+  }
+
+  /**
+   * 构建玩家信息渲染数据
+   */
+  _buildPlayerRenderData(playerData, userName, levelInfo, currentBonus, stealStats) {
+    const now = Date.now();
+    const experienceToNext = levelInfo ? levelInfo.experienceRequired : playerData.experience;
+    const expPercentage = levelInfo ? Math.min((playerData.experience / experienceToNext) * 100, 100) : 100;
+    const inventoryInfo = playerData.getInventoryInfo();
+
+    // 狗粮防护状态
+    const dogFood = playerData.protection?.dogFood;
+    const dogFoodActive = dogFood?.effectEndTime > now;
+    let dogFoodName = '未激活';
+    let dogFoodBonus = 0;
+    let dogFoodRemaining = 0;
+
+    if (dogFoodActive) {
+      dogFoodName = this.itemResolver.getItemName(dogFood.type);
+      dogFoodBonus = dogFood.defenseBonus;
+      dogFoodRemaining = Math.ceil((dogFood.effectEndTime - now) / (1000 * 60));
+    }
+
+    // 偷菜状态
+    const canSteal = stealStats.cooldownStatus.canSteal;
+    const stealCooldown = canSteal ? 0 : Math.ceil(stealStats.cooldownStatus.remainingTime / 60000);
+
+    return {
+      saveId: `player_${playerData.userId}`,
+      playerName: playerData.name || userName,
+      oderId: playerData.oderId || playerData.oderId,
+      level: playerData.level,
+      experience: playerData.experience,
+      experienceToNext: levelInfo ? experienceToNext : 'Max',
+      expPercentage: Math.round(expPercentage),
+      coins: playerData.coins.toLocaleString(),
+      landCount: playerData.landCount,
+      maxLandCount: playerData.maxLandCount,
+      inventoryUsage: inventoryInfo.usage,
+      inventoryCapacity: inventoryInfo.capacity,
+      defenseBonus: currentBonus,
+      dogFoodActive,
+      dogFoodName,
+      dogFoodBonus,
+      dogFoodRemaining,
+      canSteal,
+      stealCooldown,
+      todayStealCount: stealStats.totalAttemptsToday,
+      stealRate: stealStats.config.baseSuccessRate,
+      maxStealPerAttempt: stealStats.config.maxStealPerAttempt,
+      totalSignDays: playerData.signIn.totalSignDays || 0,
+      consecutiveDays: playerData.signIn.consecutiveDays || 0,
+      isNewPlayer: playerData.isNewPlayer()
+    };
   }
 
   /**
@@ -153,7 +151,7 @@ export class player extends plugin {
         ``,
         `🌾 您已获得初始礼包，请查看仓库！`,
         `💡 发送 #nc我的信息 查看详细信息`,
-        `💡 发送 #nc帮助 查看游戏指令`
+        `💡 发送 #农场帮助 查看游戏指令`
       ];
 
       e.reply(welcomeMsg.join('\n'));

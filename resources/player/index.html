@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{pluResPath}}player/index.css" />
+    <link rel="shortcut icon" href="#" />
+    <style>
+        #container {
+            background: url("{{pluResPath}}help/bg.jpg") center !important;
+            background-size: cover !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+
+        <!-- Header -->
+        <div class="glass-panel header">
+            <div class="avatar-box">🌾</div>
+            <div class="header-info">
+                <div class="player-name">{{playerName}} 的农场</div>
+                <div class="player-uid">ID: {{oderId}}</div>
+            </div>
+            <div class="level-badge">Lv.{{level}}</div>
+        </div>
+
+        <!-- Core Stats -->
+        <div class="glass-panel level-section">
+            <div class="level-row">
+                <span class="exp-label">EXP</span>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: {{expPercentage}}%;"></div>
+                    <div class="progress-text">{{experience}} / {{experienceToNext}}</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-icon">💰</span>
+                    <span class="stat-value">{{coins}}</span>
+                    <span class="stat-label">金币</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🏞️</span>
+                    <span class="stat-value">{{landCount}} / {{maxLandCount}}</span>
+                    <span class="stat-label">土地</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">📦</span>
+                    <span class="stat-value">{{inventoryUsage}} / {{inventoryCapacity}}</span>
+                    <span class="stat-label">仓库</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Protection -->
+        <div class="glass-panel info-section">
+            <div class="section-header">
+                <span>🛡️ 农场防护</span>
+            </div>
+            <div class="protection-grid">
+                <div class="protection-card">
+                    <div class="detail-icon">🏰</div>
+                    <div class="detail-content">
+                        <span class="detail-title">基础防御</span>
+                        <span class="detail-value">+{{defenseBonus}}%</span>
+                    </div>
+                </div>
+                <div class="protection-card dog-card">
+                    <div class="detail-icon">🐕</div>
+                    <div class="detail-content">
+                        <span class="detail-title dog-title">看家萌宠</span>
+                        {{if dogFoodActive}}
+                        <span class="detail-value dog-value">{{dogFoodName}}</span>
+                        <span class="detail-sub">+{{dogFoodBonus}}% | 剩余 {{dogFoodRemaining}}分钟</span>
+                        {{else}}
+                        <span class="detail-value dog-value">未激活</span>
+                        <span class="detail-sub">使用狗粮激活防护</span>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Steal Status -->
+        <div class="glass-panel info-section">
+            <div class="section-header">
+                <span>🥷 偷菜情报</span>
+                {{if canSteal}}
+                <span class="status-tag ready">准备就绪</span>
+                {{else}}
+                <span class="status-tag cooldown">冷却中 {{stealCooldown}}分钟</span>
+                {{/if}}
+            </div>
+            <div class="steal-status">
+                <div class="steal-item">
+                    <span>📅 今日次数</span>
+                    <span class="steal-value">{{todayStealCount}}</span>
+                </div>
+                <div class="steal-item">
+                    <span>🎯 成功率</span>
+                    <span class="steal-value">{{stealRate}}%</span>
+                </div>
+                <div class="steal-item">
+                    <span>🌾 最多偷取</span>
+                    <span class="steal-value">{{maxStealPerAttempt}}块</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sign In -->
+        <div class="glass-panel info-section">
+            <div class="signin-row">
+                <div class="signin-item">
+                    <span class="signin-label">📅 总签到</span>
+                    <span class="signin-value total">{{totalSignDays}} 天</span>
+                </div>
+                <div class="signin-item">
+                    <span class="signin-label">📈 连续签到</span>
+                    <span class="signin-value consecutive">{{consecutiveDays}} 天</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        {{if isNewPlayer}}
+        <div class="glass-panel tips-section">
+            <div class="tips-title">🎉 欢迎来到农场世界！</div>
+            <div class="tips-content">💡 输入 #nc帮助 查看游戏指令</div>
+        </div>
+        {{else}}
+        <div class="glass-panel tips-section">
+            <div class="tips-content">💡 使用 #使用狗粮 激活防护</div>
+        </div>
+        {{/if}}
+
+        <div class="footer">
+            Generated by Miao-Yunzai Farm Plugin
+        </div>
+
+    </div>
+</body>
+
+</html>
