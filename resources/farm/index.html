@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{pluResPath}}farm/index.css" />
+    <link rel="shortcut icon" href="#" />
+    <style>
+        #container {
+            background: url("{{pluResPath}}help/bg.jpg") center !important;
+            background-size: cover !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">
+                <span class="title-icon">{{if isOwner}}🌾{{else}}👀{{/if}}</span>
+                {{if isOwner}}我的农场{{else}}{{playerName}} 的农场{{/if}}
+            </div>
+        </div>
+
+        <!-- Operation Result (conditional) -->
+        {{if operationResult}}
+        <div class="operation-result result-{{operationResult.type}}">
+            <div class="result-icon">{{operationResult.icon}}</div>
+            <div class="result-content">
+                <div class="result-title">{{operationResult.title}}</div>
+                <div class="result-details">
+                    {{each operationResult.details detail}}
+                    <span class="result-detail">{{detail}}</span>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Status Panel -->
+        <div class="status-panel">
+            <div class="user-info">
+                <div class="stat-box">
+                    <span class="stat-icon">👤</span>
+                    <div class="stat-content">
+                        <div class="stat-value">Lv.{{level}}</div>
+                        <div class="stat-label">等级</div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-icon">💰</span>
+                    <div class="stat-content">
+                        <div class="stat-value">{{gold}}</div>
+                        <div class="stat-label">金币</div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-icon">🏞️</span>
+                    <div class="stat-content">
+                        <div class="stat-value">{{landCount}} / {{maxLandCount}}</div>
+                        <div class="stat-label">土地</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Land Grid -->
+        <div class="land-grid">
+            {{each lands land}}
+            <div class="land-card quality-{{land.quality}}">
+                <div class="card-header">
+                    <span class="land-id">#{{land.id}}</span>
+                    <span class="quality-badge q-{{land.quality}}">{{land.qualityIcon}} {{land.qualityName}}</span>
+                </div>
+                <div class="card-body">
+                    {{if land.isEmpty}}
+                    <div class="crop-icon empty-state">🌱</div>
+                    <div class="crop-name empty-name">闲置中</div>
+                    {{else}}
+                    <div class="crop-icon">{{land.cropIcon}}</div>
+                    <div class="crop-name">{{land.cropName}}</div>
+                    {{if land.status == 'mature'}}
+                    <div class="progress-container">
+                        <div class="progress-fill fill-mature" style="width: 100%;"></div>
+                    </div>
+                    <span class="time-text mature">✅ 已成熟</span>
+                    {{else}}
+                    <div class="progress-container">
+                        <div class="progress-fill {{if land.hasPests || land.needsWater}}fill-danger{{else}}fill-growing{{/if}}" style="width: {{land.growthPercent}}%;"></div>
+                    </div>
+                    <span class="time-text">⏳ {{land.timeRemaining}}</span>
+                    {{/if}}
+                    {{/if}}
+                </div>
+                <div class="card-footer">
+                    {{if land.needsWater}}
+                    <span class="status-badge bg-water">💧 缺水</span>
+                    {{/if}}
+                    {{if land.hasPests}}
+                    <span class="status-badge bg-pest">🐛 害虫</span>
+                    {{/if}}
+                    {{if land.stealable && !isOwner}}
+                    <span class="status-badge bg-steal">🖐️ 可偷</span>
+                    {{/if}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span>💡 提示：</span>
+            <span class="key-tip">#nc种植[作物][地块]</span>
+            <span class="key-tip">#nc收获</span>
+            <span class="key-tip">#nc浇水全部</span>
+        </div>
+    </div>
+</body>
+
+</html>

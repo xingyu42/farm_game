@@ -666,8 +666,14 @@ export class ShopService {
 
       // 筛选出所有作物物品（类别为 'crops'）
       const cropItems = [];
+      const skippedLocked = [];
       for (const [itemId, item] of Object.entries(inventoryData.items)) {
         if (item.category === 'crops' && item.quantity > 0) {
+          // 跳过被锁定的物品
+          if (item.metadata?.locked) {
+            skippedLocked.push({ itemId, name: item.name, quantity: item.quantity });
+            continue;
+          }
           // 检查物品是否可以出售
           const economicInfo = item.getEconomicInfo();
           if (economicInfo.canSell && economicInfo.sellPrice > 0) {
@@ -683,14 +689,18 @@ export class ShopService {
 
       logger.info(`[ShopService] 筛选出可出售作物 [${userId}]:`, {
         totalCropItems: cropItems.length,
-        totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0)
+        totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0),
+        skippedLocked: skippedLocked.length
       });
 
       // 检查是否有作物可以出售
       if (cropItems.length === 0) {
+        const lockedMsg = skippedLocked.length > 0
+          ? `（${skippedLocked.length} 种作物已锁定）`
+          : '';
         return {
           success: false,
-          message: '仓库中没有可以出售的作物'
+          message: `仓库中没有可以出售的作物${lockedMsg}`
         };
       }
 
@@ -774,11 +784,15 @@ export class ShopService {
           totalItems: Object.keys(updatedInventoryData.items).length
         });
 
+        const lockedNote = skippedLocked.length > 0
+          ? `（跳过 ${skippedLocked.length} 种锁定作物）`
+          : '';
         const result = {
           success: true,
-          message: `成功出售 ${cropItems.length} 种作物，获得 ${CommonUtils.formatNumber(totalValue)} 金币`,
+          message: `成功出售 ${cropItems.length} 种作物，获得 ${CommonUtils.formatNumber(totalValue)} 金币${lockedNote}`,
           remainingCoins: CommonUtils.formatNumber(updatedPlayer.coins),
           soldDetails: soldDetails,
+          skippedLocked: skippedLocked,
           totalValue: totalValue,
           inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
           transaction: {
@@ -787,7 +801,8 @@ export class ShopService {
             totalValue: totalValue,
             remainingCoins: updatedPlayer.coins,
             inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
-            soldDetails: soldDetails
+            soldDetails: soldDetails,
+            skippedLocked: skippedLocked
           }
         };
 

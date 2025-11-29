@@ -230,8 +230,8 @@ export class ShopCommands extends plugin {
       const result = await this.shopService.sellItem(userId, itemName, quantity);
 
       if (result.success) {
-        const remainingText = result.remainingQuantity > 0 ? `\n📦 剩余数量: ${result.remainingQuantity}` : '';
-        await e.reply(`✅ ${result.message}${remainingText}\n💰 当前金币: ${result.newCoins}`);
+        const remainingText = result.remainingItems > 0 ? `\n📦 剩余数量: ${result.remainingItems}` : '';
+        await e.reply(`✅ ${result.message}${remainingText}\n💰 当前金币: ${result.remainingCoins}`);
       } else {
         await e.reply(`❌ ${result.message}`);
       }

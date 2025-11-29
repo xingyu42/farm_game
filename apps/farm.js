@@ -1,5 +1,27 @@
 import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
+import { Puppeteer } from '../models/services.js'
+
+// Crop emoji mapping
+const CROP_ICONS = {
+  carrot: '🥕',
+  tomato: '🍅',
+  wheat: '🌾',
+  lettuce: '🥬',
+  potato: '🥔',
+  corn: '🌽',
+  strawberry: '🍓',
+  grape: '🍇',
+  pumpkin: '🎃'
+}
+
+// Quality config
+const QUALITY_CONFIG = {
+  normal: { icon: '🟫', name: '普通' },
+  copper: { icon: '🟠', name: '红土' },
+  silver: { icon: '⚪', name: '黑土' },
+  gold: { icon: '🟡', name: '金土' }
+}
 
 /**
  * 农场管理功能模块
@@ -89,9 +111,9 @@ export class farm extends plugin {
 
       const playerData = await this.playerService.getPlayer(userId)
 
-      const farmDisplay = await this._buildFarmDisplay(playerData, true)
-
-      e.reply(farmDisplay)
+      // 构建渲染数据并渲染图片
+      const renderData = this._buildFarmRenderData(playerData, true)
+      await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
       logger.error('[农场游戏] 显示我的农场失败:', error)
@@ -118,8 +140,10 @@ export class farm extends plugin {
       if (!(await this.playerService.isPlayer(targetUserId))) return e.reply('该用户未注册，请先"#nc注册"')
 
       const targetPlayerData = await this.playerService.getPlayer(targetUserId)
-      const farmDisplay = await this._buildFarmDisplay(targetPlayerData, false)
-      e.reply(farmDisplay)
+
+      // 构建渲染数据并渲染图片
+      const renderData = this._buildFarmRenderData(targetPlayerData, false)
+      await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
       logger.error('[农场游戏] 显示他人农场失败:', error)
@@ -129,100 +153,96 @@ export class farm extends plugin {
   }
 
   /**
-   * 构建农场状态显示
+   * 构建农场渲染数据（用于图片渲染）
    * @param {Object} playerData 玩家数据
    * @param {boolean} isOwner 是否为农场主本人
-   * @returns {string} 农场状态显示文本
+   * @param {Object} operationResult 操作结果提示（可选）
+   * @returns {Object} 渲染数据
    */
-  async _buildFarmDisplay(playerData, isOwner = true) {
-    const ownerTitle = isOwner ? '我的农场' : `${playerData.name} 的农场`
-
-    // 农场基础信息
-    const farmInfo = [
-      `🌾 ${ownerTitle}`,
-      `━━━━━━━━━━━━━━━━━━`,
-      `👤 等级: ${playerData.level} | 💰 金币: ${playerData.gold}`,
-      `🏞️ 土地: ${playerData.lands.length}/${playerData.maxLandCount || 24}`,
-      `━━━━━━━━━━━━━━━━━━`
-    ]
-
-    // 获取作物配置
+  _buildFarmRenderData(playerData, isOwner = true, operationResult = null) {
     const cropsConfig = this.config.crops
-
-    // 显示每块土地的状态
-    for (let i = 0; i < playerData.lands.length; i++) {
-      const land = playerData.lands[i]
-      const landDisplay = this._formatLandStatus(land, cropsConfig)
-      farmInfo.push(landDisplay)
-    }
-
-    return farmInfo.join('\n')
-  }
-
-  /**
-   * @returns {string} 土地状态文本
-   */
-  _formatLandStatus(land, cropsConfig) {
-    const landId = land.id
-    const quality = land.quality || 'normal'
-
-    // 品质标识
-    const qualityIcon = this._getQualityIcon(quality)
-
-    if (!land.crop || land.status === 'empty') {
-      return `${qualityIcon}[${landId}]：空闲`
-    }
-
-    // 获取作物信息
-    const cropConfig = cropsConfig[land.crop]
-    const cropName = cropConfig.name
-
-    // 健康度
-    const health = land.health || 100
-    const healthDisplay = health === 100 ? '健康' : `${health}%`
-
-    // 成熟时间
-    let timeDisplay = ''
     const now = Date.now()
 
-    if (land.status === 'mature') {
-      timeDisplay = '已成熟'
-    } else if (land.harvestTime) {
-      const remainingTime = land.harvestTime - now
-      if (remainingTime > 0) {
-        timeDisplay = this._formatTimeRemaining(remainingTime)
-      } else {
-        timeDisplay = '已成熟'
+    // 处理土地数据
+    const lands = playerData.lands.map(land => {
+      const quality = land.quality || 'normal'
+      const qualityInfo = QUALITY_CONFIG[quality] || QUALITY_CONFIG.normal
+      const isEmpty = !land.crop || land.status === 'empty'
+
+      let landData = {
+        id: land.id,
+        quality,
+        qualityIcon: qualityInfo.icon,
+        qualityName: qualityInfo.name,
+        isEmpty,
+        needsWater: land.needsWater || false,
+        hasPests: land.hasPests || false,
+        stealable: land.status === 'mature' && land.stealable,
+        status: land.status || 'empty'
       }
-    } else {
-      timeDisplay = '生长中'
+
+      if (!isEmpty) {
+        const cropConfig = cropsConfig[land.crop]
+        landData.cropName = cropConfig?.name || land.crop
+        landData.cropIcon = CROP_ICONS[land.crop] || '🌱'
+
+        // 计算生长进度
+        if (land.status === 'mature') {
+          landData.growthPercent = 100
+          landData.timeRemaining = '已成熟'
+        } else if (land.harvestTime) {
+          const remainingTime = land.harvestTime - now
+
+          if (remainingTime <= 0) {
+            landData.growthPercent = 100
+            landData.timeRemaining = '已成熟'
+            landData.status = 'mature'
+          } else if (land.plantTime && land.harvestTime > land.plantTime) {
+            const totalTime = land.harvestTime - land.plantTime
+            const elapsedTime = now - land.plantTime
+            const rawPercent = Math.round((elapsedTime / totalTime) * 100)
+            landData.growthPercent = Math.max(0, Math.min(99, rawPercent))
+            landData.timeRemaining = this._formatTimeRemaining(remainingTime)
+          } else {
+            landData.growthPercent = 0
+            landData.timeRemaining = this._formatTimeRemaining(remainingTime)
+          }
+        } else {
+          landData.growthPercent = 0
+          landData.timeRemaining = '生长中'
+        }
+      }
+
+      return landData
+    })
+
+    const renderData = {
+      isOwner,
+      playerName: playerData.name,
+      level: playerData.level,
+      gold: playerData.gold,
+      landCount: playerData.lands.length,
+      maxLandCount: playerData.maxLandCount || 24,
+      lands
     }
 
-    // 负面状态
-    const negativeStates = []
-    if (land.needsWater) negativeStates.push('缺水')
-    if (land.hasPests) negativeStates.push('害虫')
-    const negativeDisplay = negativeStates.length > 0 ? `[${negativeStates.join(',')}]` : ''
+    if (operationResult) {
+      renderData.operationResult = operationResult
+    }
 
-    // 可偷窃状态
-    const stealableDisplay = (land.status === 'mature' && land.stealable) ? '[可偷]' : ''
-
-    return `${qualityIcon}[${landId}]：${cropName} ${healthDisplay} ${timeDisplay} ${negativeDisplay} ${stealableDisplay}`.trim()
+    return renderData
   }
 
   /**
-   * 获取品质图标
-   * @param {string} quality 品质类型
-   * @returns {string} 品质图标
+   * 渲染农场图片并附带操作结果
+   * @param {Object} e 消息事件
+   * @param {string} userId 用户ID
+   * @param {Object} operationResult 操作结果
    */
-  _getQualityIcon(quality) {
-    const qualityIcons = {
-      normal: '🟫',    // 普通土地 - 棕色
-      copper: '🟠',    // 铜质土地 - 橙色  
-      silver: '⚪',    // 银质土地 - 白色
-      gold: '🟡'       // 金质土地 - 黄色
-    }
-    return qualityIcons[quality] || qualityIcons.normal
+  async _renderFarmWithResult(e, userId, operationResult) {
+    const playerData = await this.playerService.getPlayer(userId)
+    const renderData = this._buildFarmRenderData(playerData, true, operationResult)
+    await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
   }
 
   /**
@@ -250,43 +270,48 @@ export class farm extends plugin {
    */
   async plantCrop(e) {
     try {
-      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(nc)?种植(.+)(\d+)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #种植[作物名称][土地编号]');
+        await e.reply('格式错误！使用: #种植[作物名称][土地编号]');
         return true;
       }
 
       const cropName = match[2];
       const landId = match[3];
-
-      // 输入验证增强
       const landIdNum = parseInt(landId);
+
       if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
+        await e.reply('土地编号必须为正整数');
         return true;
       }
 
       if (!cropName.trim()) {
-        await e.reply('❌ 作物名称不能为空');
+        await e.reply('作物名称不能为空');
         return true;
       }
-      const userId = e.user_id
 
-      // 确保玩家已注册
+      const userId = e.user_id
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 解析作物类型（支持中文名称）
       const cropType = await this._parseCropType(cropName)
       if (!cropType) {
         e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
         return true
       }
 
-      // 调用种植服务
       const result = await this.plantingService.plantCrop(userId, landIdNum, cropType)
 
-      e.reply(result.message)
+      if (result.success) {
+        const cropConfig = this.config.crops[cropType]
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '🌱',
+          title: '种植成功',
+          details: [`${cropConfig?.name || cropName} → #${landIdNum}`]
+        })
+      } else {
+        e.reply(result.message)
+      }
       return true
     } catch (error) {
       logger.error('[农场游戏] 种植作物失败:', error)
@@ -300,40 +325,39 @@ export class farm extends plugin {
    */
   async waterCrop(e) {
     try {
-      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(nc)?浇水(\d+|全部)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #浇水 [土地编号] 或 #浇水 全部');
+        await e.reply('格式错误！使用: #浇水[土地编号] 或 #浇水全部');
         return true;
       }
 
       const landParam = match[2];
       const userId = e.user_id;
 
-      // 确保玩家已注册
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 处理"全部"参数
       if (landParam === '全部') {
         return await this.handleSmartWaterAll(userId, e);
       }
 
-      // 处理单个土地
       const landIdNum = parseInt(landParam);
       if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
+        await e.reply('土地编号必须为正整数');
         return true;
       }
 
-      // 执行浇水
       const result = await this.plantingService.waterCrop(userId, landIdNum)
 
       if (result.success) {
-        await e.reply(result.message)
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '💧',
+          title: '浇水成功',
+          details: [`#${landIdNum}号土地已浇水`]
+        })
       } else {
-        await e.reply(result.message)
+        e.reply(result.message)
       }
-
       return true
     } catch (error) {
       logger.error('[农场游戏] 浇水失败:', error)
@@ -347,14 +371,9 @@ export class farm extends plugin {
    */
   async fertilizeCrop(e) {
     try {
-      // 支持多种格式：
-      // #施肥 1          -> 自动选择最好的肥料
-      // #施肥 1 普通肥料  -> 使用指定肥料
-      // #施肥 全部       -> 智能施肥所有生长中的作物
-      // #施肥 全部 普通肥料 -> 使用指定肥料智能施肥
       const match = e.msg.match(/^#(nc)?施肥(\d+|全部)(.+)?$/);
       if (!match) {
-        await e.reply('❌ 格式错误！\n使用方法：\n#施肥[土地编号] - 自动选择最好的肥料\n#施肥[土地编号][肥料名称] - 使用指定肥料\n#施肥全部 - 智能施肥所有生长中的作物\n#施肥全部[肥料名称] - 使用指定肥料智能施肥');
+        await e.reply('格式错误！使用: #施肥[土地编号] 或 #施肥全部');
         return true;
       }
 
@@ -362,40 +381,39 @@ export class farm extends plugin {
       const fertilizer = match[3];
       const userId = e.user_id;
 
-      // 确保玩家已注册
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 解析肥料类型（如果指定了）
       let fertilizerType = null;
       if (fertilizer) {
         fertilizerType = await this._parseFertilizerType(fertilizer.trim());
         if (!fertilizerType) {
-          await e.reply(`❌ 未知的肥料类型："${fertilizer}"\n可用肥料：普通肥料、高级肥料、顶级肥料`);
+          await e.reply(`未知的肥料类型："${fertilizer}"`);
           return true;
         }
       }
 
-      // 处理"全部"参数
       if (landParam === '全部') {
         return await this.handleSmartFertilize(userId, e, fertilizerType);
       }
 
-      // 处理单个土地
       const landIdNum = parseInt(landParam);
       if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
+        await e.reply('土地编号必须为正整数');
         return true;
       }
 
-      // 执行施肥
       const result = await this.plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
 
       if (result.success) {
-        await e.reply(result.message);
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '🧪',
+          title: '施肥成功',
+          details: [`#${landIdNum}号土地已施肥`]
+        })
       } else {
         await e.reply(result.message);
       }
-
       return true;
     } catch (error) {
       logger.error('[农场游戏] 施肥失败:', error);
@@ -409,40 +427,39 @@ export class farm extends plugin {
    */
   async pesticideCrop(e) {
     try {
-      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(nc)?除虫(\d+|全部)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #除虫 [土地编号] 或 #除虫 全部');
+        await e.reply('格式错误！使用: #除虫[土地编号] 或 #除虫全部');
         return true;
       }
 
       const landParam = match[2];
       const userId = e.user_id;
 
-      // 确保玩家已注册
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 处理"全部"参数
       if (landParam === '全部') {
         return await this.handleSmartPestControl(userId, e);
       }
 
-      // 处理单个土地
       const landIdNum = parseInt(landParam);
       if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
+        await e.reply('土地编号必须为正整数');
         return true;
       }
 
-      // 执行除虫
       const result = await this.plantingService.treatPests(userId, landIdNum)
 
       if (result.success) {
-        await e.reply(result.message)
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '🐛',
+          title: '除虫成功',
+          details: [`#${landIdNum}号土地已除虫`]
+        })
       } else {
         await e.reply(result.message)
       }
-
       return true
     } catch (error) {
       logger.error('[农场游戏] 除虫失败:', error)
@@ -506,30 +523,41 @@ export class farm extends plugin {
    */
   async harvestCrop(e) {
     try {
-      // 优化：使用更高效的正则匹配，避免重复解析
       const match = e.msg.match(/^#(nc)?收获(\d+)$/);
       if (!match) {
-        await e.reply('❌ 格式错误！使用: #收获[土地编号]');
+        await e.reply('格式错误！使用: #收获[土地编号]');
         return true;
       }
 
       const landId = match[2];
-
-      // 输入验证增强
       const landIdNum = parseInt(landId);
+
       if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('❌ 土地编号必须为正整数');
+        await e.reply('土地编号必须为正整数');
         return true;
       }
-      const userId = e.user_id
 
-      // 确保玩家已注册
+      const userId = e.user_id
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 调用收获服务
       const result = await this.plantingService.harvestCrop(userId, landIdNum)
 
-      e.reply(result.message)
+      if (result.success) {
+        const details = []
+        if (result.data?.cropName) details.push(`作物: ${result.data.cropName}`)
+        if (result.data?.quantity) details.push(`数量: ${result.data.quantity}`)
+        if (result.data?.gold) details.push(`金币: +${result.data.gold}`)
+        if (result.data?.exp) details.push(`经验: +${result.data.exp}`)
+
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '🎉',
+          title: '收获成功',
+          details: details.length > 0 ? details : [`#${landIdNum}号土地已收获`]
+        })
+      } else {
+        e.reply(result.message)
+      }
       return true
     } catch (error) {
       logger.error('[农场游戏] 收获作物失败:', error)
@@ -544,14 +572,25 @@ export class farm extends plugin {
   async harvestAllCrops(e) {
     try {
       const userId = e.user_id
-
-      // 确保玩家已注册
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 调用收获服务（不指定landId表示收获全部）
       const result = await this.plantingService.harvestCrop(userId)
 
-      e.reply(result.message)
+      if (result.success) {
+        const details = []
+        if (result.data?.totalCount) details.push(`收获: ${result.data.totalCount}块土地`)
+        if (result.data?.totalGold) details.push(`金币: +${result.data.totalGold}`)
+        if (result.data?.totalExp) details.push(`经验: +${result.data.totalExp}`)
+
+        await this._renderFarmWithResult(e, userId, {
+          type: 'success',
+          icon: '🎊',
+          title: '批量收获完成',
+          details: details.length > 0 ? details : ['所有成熟作物已收获']
+        })
+      } else {
+        e.reply(result.message)
+      }
       return true
     } catch (error) {
       logger.error('[农场游戏] 收获全部失败:', error)
@@ -629,218 +668,147 @@ export class farm extends plugin {
 
   /**
    * 处理智能浇水全部命令
-   * @param {string} userId 用户ID
-   * @param {Object} e 消息事件
-   * @returns {boolean} 处理结果
    */
   async handleSmartWaterAll(userId, e) {
     try {
-      // 1. 获取玩家作物状态
       const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
       if (!cropsStatusResult.success) {
-        await e.reply('❌ 获取农场状态失败，请稍后重试');
+        await e.reply('获取农场状态失败，请稍后重试');
         return true;
       }
 
-      const cropsStatus = cropsStatusResult.data;
-
-      // 2. 筛选需要浇水的土地
-      const waterTargets = cropsStatus.crops
+      const waterTargets = cropsStatusResult.data.crops
         .filter(crop => crop.needsWater)
         .map(crop => crop.landId);
 
-      // 3. 检查是否有需要浇水的土地
       if (waterTargets.length === 0) {
-        await e.reply('🌿 没有需要浇水的作物，您的农场很健康！');
+        await e.reply('没有需要浇水的作物，您的农场很健康！');
         return true;
       }
 
-      // 4. 执行批量浇水
       let successCount = 0;
-      let failCount = 0;
-      const results = [];
-
       for (const landId of waterTargets) {
         try {
           const result = await this.plantingService.waterCrop(userId, landId);
-          if (result.success) {
-            successCount++;
-          } else {
-            failCount++;
-            results.push(`土地${landId}: ${result.message}`);
-          }
+          if (result.success) successCount++;
         } catch (error) {
-          failCount++;
-          results.push(`土地${landId}: 浇水失败`);
           logger.error(`[农场游戏] 批量浇水失败 [${userId}][${landId}]:`, error);
         }
       }
 
-      // 5. 构建结果消息
-      let message = `🌿 智能浇水完成！\n`;
-      message += `✅ 成功: ${successCount}块土地\n`;
-      if (failCount > 0) {
-        message += `❌ 失败: ${failCount}块土地\n`;
-        if (results.length > 0) {
-          message += `详情:\n${results.slice(0, 3).join('\n')}`;
-          if (results.length > 3) {
-            message += `\n... 还有${results.length - 3}个`;
-          }
-        }
+      const details = [`成功: ${successCount}块土地`]
+      if (successCount < waterTargets.length) {
+        details.push(`失败: ${waterTargets.length - successCount}块`)
       }
 
-      await e.reply(message);
+      await this._renderFarmWithResult(e, userId, {
+        type: successCount > 0 ? 'success' : 'warning',
+        icon: '💧',
+        title: '批量浇水完成',
+        details
+      })
       return true;
-
     } catch (error) {
       logger.error('[农场游戏] 智能浇水失败:', error);
-      await e.reply('❌ 智能浇水失败，请稍后重试');
+      await e.reply('智能浇水失败，请稍后重试');
       return true;
     }
   }
 
   /**
    * 处理智能除虫全部命令
-   * @param {string} userId 用户ID
-   * @param {Object} e 消息事件
-   * @returns {boolean} 处理结果
    */
   async handleSmartPestControl(userId, e) {
     try {
-      // 1. 获取玩家作物状态
       const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
       if (!cropsStatusResult.success) {
-        await e.reply('❌ 获取农场状态失败，请稍后重试');
+        await e.reply('获取农场状态失败，请稍后重试');
         return true;
       }
 
-      const cropsStatus = cropsStatusResult.data;
-
-      // 2. 筛选有害虫的土地
-      const pestTargets = cropsStatus.crops
+      const pestTargets = cropsStatusResult.data.crops
         .filter(crop => crop.hasPests)
         .map(crop => crop.landId);
 
-      // 3. 检查是否有需要除虫的土地
       if (pestTargets.length === 0) {
-        await e.reply('🐛 没有发现害虫，您的作物很健康！');
+        await e.reply('没有发现害虫，您的作物很健康！');
         return true;
       }
 
-      // 4. 执行批量除虫
       let successCount = 0;
-      let failCount = 0;
-      const results = [];
-
       for (const landId of pestTargets) {
         try {
           const result = await this.plantingService.treatPests(userId, landId);
-          if (result.success) {
-            successCount++;
-          } else {
-            failCount++;
-            results.push(`土地${landId}: ${result.message}`);
-          }
+          if (result.success) successCount++;
         } catch (error) {
-          failCount++;
-          results.push(`土地${landId}: 除虫失败`);
           logger.error(`[农场游戏] 批量除虫失败 [${userId}][${landId}]:`, error);
         }
       }
 
-      // 5. 构建结果消息
-      let message = `🐛 智能除虫完成！\n`;
-      message += `✅ 成功: ${successCount}块土地\n`;
-      if (failCount > 0) {
-        message += `❌ 失败: ${failCount}块土地\n`;
-        if (results.length > 0) {
-          message += `详情:\n${results.slice(0, 3).join('\n')}`;
-          if (results.length > 3) {
-            message += `\n... 还有${results.length - 3}个`;
-          }
-        }
+      const details = [`成功: ${successCount}块土地`]
+      if (successCount < pestTargets.length) {
+        details.push(`失败: ${pestTargets.length - successCount}块`)
       }
 
-      await e.reply(message);
+      await this._renderFarmWithResult(e, userId, {
+        type: successCount > 0 ? 'success' : 'warning',
+        icon: '🐛',
+        title: '批量除虫完成',
+        details
+      })
       return true;
-
     } catch (error) {
       logger.error('[农场游戏] 智能除虫失败:', error);
-      await e.reply('❌ 智能除虫失败，请稍后重试');
+      await e.reply('智能除虫失败，请稍后重试');
       return true;
     }
   }
 
   /**
    * 处理智能施肥全部命令
-   * @param {string} userId 用户ID
-   * @param {Object} e 消息事件
-   * @param {string|null} fertilizerType 指定的肥料类型
-   * @returns {boolean} 处理结果
    */
   async handleSmartFertilize(userId, e, fertilizerType = null) {
     try {
-      // 1. 获取玩家作物状态
       const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
       if (!cropsStatusResult.success) {
-        await e.reply('❌ 获取农场状态失败，请稍后重试');
+        await e.reply('获取农场状态失败，请稍后重试');
         return true;
       }
 
-      const cropsStatus = cropsStatusResult.data;
-
-      // 2. 筛选生长中的作物
-      const fertilizeTargets = cropsStatus.crops
+      const fertilizeTargets = cropsStatusResult.data.crops
         .filter(crop => crop.status === 'growing')
         .map(crop => crop.landId);
 
-      // 3. 检查是否有可施肥的作物
       if (fertilizeTargets.length === 0) {
-        await e.reply('🌱 没有生长中的作物需要施肥！');
+        await e.reply('没有生长中的作物需要施肥！');
         return true;
       }
 
-      // 4. 执行批量施肥
       let successCount = 0;
-      let failCount = 0;
-      const results = [];
-
       for (const landId of fertilizeTargets) {
         try {
           const result = await this.plantingService.fertilizeCrop(userId, landId, fertilizerType);
-          if (result.success) {
-            successCount++;
-          } else {
-            failCount++;
-            results.push(`土地${landId}: ${result.message}`);
-          }
+          if (result.success) successCount++;
         } catch (error) {
-          failCount++;
-          results.push(`土地${landId}: 施肥失败`);
           logger.error(`[农场游戏] 批量施肥失败 [${userId}][${landId}]:`, error);
         }
       }
 
-      // 5. 构建结果消息
-      const fertilizerName = fertilizerType ? '指定肥料' : '自动选择肥料';
-      let message = `🌱 智能施肥完成（${fertilizerName}）！\n`;
-      message += `✅ 成功: ${successCount}块土地\n`;
-      if (failCount > 0) {
-        message += `❌ 失败: ${failCount}块土地\n`;
-        if (results.length > 0) {
-          message += `详情:\n${results.slice(0, 3).join('\n')}`;
-          if (results.length > 3) {
-            message += `\n... 还有${results.length - 3}个`;
-          }
-        }
+      const details = [`成功: ${successCount}块土地`]
+      if (successCount < fertilizeTargets.length) {
+        details.push(`失败: ${fertilizeTargets.length - successCount}块`)
       }
 
-      await e.reply(message);
+      await this._renderFarmWithResult(e, userId, {
+        type: successCount > 0 ? 'success' : 'warning',
+        icon: '🧪',
+        title: '批量施肥完成',
+        details
+      })
       return true;
-
     } catch (error) {
       logger.error('[农场游戏] 智能施肥失败:', error);
-      await e.reply('❌ 智能施肥失败，请稍后重试');
+      await e.reply('智能施肥失败，请稍后重试');
       return true;
     }
   }
@@ -936,44 +904,39 @@ export class farm extends plugin {
 
   /**
    * 智能选择作物进行批量种植
-   * @param {string} userId 用户ID
-   * @param {Object} e 消息事件对象
-   * @param {Array} emptyLands 空闲土地列表
-   * @returns {Promise<boolean>}
    */
   async plantWithSmartSelection(userId, e, emptyLands) {
     try {
-      // 获取玩家种子库存
       const inventory = await this.inventoryService.getInventory(userId);
       const seedInventory = {};
 
-      // 构建种子库存对象
       for (const [itemId, item] of Object.entries(inventory.items)) {
         if (itemId.endsWith('_seed')) {
           seedInventory[itemId] = item.quantity;
         }
       }
 
-      // 调用智能选择算法
       const selectedCrop = this.selectOptimalCrop(seedInventory);
 
-      // 处理无种子的边界情况
       if (!selectedCrop) {
-        return e.reply('❌ 您没有任何种子可以种植！请先到商店购买种子。');
+        return e.reply('您没有任何种子可以种植！请先到商店购买种子。');
       }
 
-      // 计算实际种植数量（库存和空地的最小值）
       const plantCount = Math.min(selectedCrop.inventory, emptyLands.length);
       const landIds = emptyLands.slice(0, plantCount);
-
-      // 调用批量种植执行方法
       const results = await this.executeBatchPlanting(userId, landIds, selectedCrop.cropType);
 
-      // 发送智能种植结果
-      await this.sendSmartPlantingResults(e, selectedCrop, results, plantCount, emptyLands.length);
+      const details = [`作物: ${selectedCrop.cropName}`, `成功: ${results.successCount}块土地`]
+      if (results.failCount > 0) details.push(`失败: ${results.failCount}块`)
+      if (plantCount < emptyLands.length) details.push(`剩余空地: ${emptyLands.length - plantCount}块`)
 
+      await this._renderFarmWithResult(e, userId, {
+        type: results.successCount > 0 ? 'success' : 'warning',
+        icon: '🌱',
+        title: '智能种植完成',
+        details
+      })
       return true;
-
     } catch (error) {
       logger.error('[农场游戏] 智能种植失败:', error);
       e.reply('智能种植失败，请稍后重试');
@@ -983,41 +946,38 @@ export class farm extends plugin {
 
   /**
    * 指定作物批量种植
-   * @param {string} userId 用户ID
-   * @param {Object} e 消息事件对象
-   * @param {Array} emptyLands 空闲土地列表
-   * @param {string} cropName 作物名称
-   * @returns {Promise<boolean>}
    */
   async plantSpecificCrop(userId, e, emptyLands, cropName) {
     try {
-      // 解析和验证作物名称（支持别名）
       const cropType = await this._parseCropType(cropName);
       if (!cropType) {
-        return e.reply(`❌ 未知的作物类型："${cropName}"\n请检查名称是否正确`);
+        return e.reply(`未知的作物类型："${cropName}"，请检查名称是否正确`);
       }
 
-      // 获取对应种子ID和库存数量
       const seedId = `${cropType}_seed`;
       const inventory = await this.inventoryService.getInventory(userId);
       const seedItem = inventory.items[seedId];
 
       if (!seedItem || seedItem.quantity <= 0) {
-        return e.reply(`❌ 您没有${cropName}的种子！请先到商店购买。`);
+        return e.reply(`您没有${cropName}的种子！请先到商店购买。`);
       }
 
-      // 计算实际种植数量（库存和空地的最小值）
       const plantCount = Math.min(seedItem.quantity, emptyLands.length);
       const landIds = emptyLands.slice(0, plantCount);
-
-      // 调用批量种植执行方法
       const results = await this.executeBatchPlanting(userId, landIds, cropType);
 
-      // 发送指定作物种植结果
-      await this.sendSpecificPlantingResults(e, cropName, results, plantCount, emptyLands.length);
+      const cropConfig = this.config.crops[cropType]
+      const details = [`作物: ${cropConfig?.name || cropName}`, `成功: ${results.successCount}块土地`]
+      if (results.failCount > 0) details.push(`失败: ${results.failCount}块`)
+      if (plantCount < emptyLands.length) details.push(`剩余空地: ${emptyLands.length - plantCount}块`)
 
+      await this._renderFarmWithResult(e, userId, {
+        type: results.successCount > 0 ? 'success' : 'warning',
+        icon: '🌾',
+        title: '批量种植完成',
+        details
+      })
       return true;
-
     } catch (error) {
       logger.error('[农场游戏] 指定作物种植失败:', error);
       e.reply('指定作物种植失败，请稍后重试');
@@ -1058,88 +1018,4 @@ export class farm extends plugin {
 
     return results;
   }
-
-  /**
-   * 格式化智能种植结果消息
-   * @param {Object} e 消息事件对象
-   * @param {Object} selectedCrop 选中的作物信息
-   * @param {Object} results 种植结果
-   * @param {number} plantCount 种植数量
-   * @param {number} totalEmpty 空闲土地总数
-   */
-  async sendSmartPlantingResults(e, selectedCrop, results, plantCount, totalEmpty) {
-    const cropConfig = this.config.crops[selectedCrop.cropType];
-
-    // 计算预期收益
-    const expectedProfit = results.successCount * cropConfig.sellPrice;
-
-    // 计算收获时间
-    const growTimeHours = Math.round(selectedCrop.growTimeHours * 10) / 10;
-
-    let message = `🌱 智能种植完成！\n`;
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `🎯 选择作物: ${selectedCrop.cropName}\n`;
-    message += `💡 选择原因: 时间效率最高 (${Math.round(selectedCrop.score * 100) / 100}分)\n`;
-    message += `✅ 成功种植: ${results.successCount}块土地\n`;
-
-    if (results.failCount > 0) {
-      message += `❌ 种植失败: ${results.failCount}块土地\n`;
-    }
-
-    if (plantCount < totalEmpty) {
-      message += `📦 种子不足: 剩余${totalEmpty - plantCount}块空地未种植\n`;
-    }
-
-    message += `💰 预期收益: ${expectedProfit}金币\n`;
-    message += `⏰ 收获时间: ${growTimeHours}小时后\n`;
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `💡 提示: 使用"#种植 全部 [作物名]"可指定作物种植`;
-
-    if (results.failCount > 0 && results.results.length > 0) {
-      message += `\n\n失败详情:\n${results.results.slice(0, 3).join('\n')}`;
-      if (results.results.length > 3) {
-        message += `\n... 还有${results.results.length - 3}个失败`;
-      }
-    }
-
-    await e.reply(message);
-  }
-
-  /**
-   * 格式化指定作物种植结果消息
-   * @param {Object} e 消息事件对象
-   * @param {string} cropName 作物名称
-   * @param {Object} results 种植结果
-   * @param {number} plantCount 种植数量
-   * @param {number} totalEmpty 空闲土地总数
-   */
-  async sendSpecificPlantingResults(e, cropName, results, plantCount, totalEmpty) {
-    let message = `🌾 指定作物种植完成！\n`;
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `🎯 种植作物: ${cropName}\n`;
-    message += `✅ 成功种植: ${results.successCount}块土地\n`;
-
-    if (results.failCount > 0) {
-      message += `❌ 种植失败: ${results.failCount}块土地\n`;
-    }
-
-    if (plantCount < totalEmpty) {
-      message += `📦 种子不足: 剩余${totalEmpty - plantCount}块空地未种植\n`;
-      message += `💡 提示: 请到商店购买更多${cropName}种子\n`;
-    }
-
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `💡 提示: 使用"#种植 全部"可让系统智能选择最优作物`;
-
-    if (results.failCount > 0 && results.results.length > 0) {
-      message += `\n\n失败详情:\n${results.results.slice(0, 3).join('\n')}`;
-      if (results.results.length > 3) {
-        message += `\n... 还有${results.results.length - 3}个失败`;
-      }
-    }
-
-    await e.reply(message);
-  }
 }
-
-// {{END MODIFICATIONS}}

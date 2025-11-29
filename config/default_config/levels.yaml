@@ -1,128 +1,129 @@
 # 等级系统配置（根据PRD v3.2设计）
+default:
   startingCoins: 100 # 新玩家初始金币
 
-  # 等级经验需求表
-  requirements:
-    1:
-      experience: 0 # 1级起始经验
-      description: "新手农夫"
-      unlocks: ["carrot"] # 解锁作物
+# 等级经验需求表
+requirements:
+  1:
+    experience: 0 # 1级起始经验
+    description: "新手农夫"
+    unlocks: ["carrot"] # 解锁作物
 
-    2:
-      experience: 100 # 升到2级需要的总经验
-      description: "见习农夫"
-      unlocks: ["wheat"]
+  2:
+    experience: 100 # 升到2级需要的总经验
+    description: "见习农夫"
+    unlocks: ["wheat"]
 
-    3:
-      experience: 250 # 升到3级需要的总经验
-      description: "熟练农夫"
-      unlocks: ["tomato", "watering_can"]
+  3:
+    experience: 250 # 升到3级需要的总经验
+    description: "熟练农夫"
+    unlocks: ["tomato", "watering_can"]
 
-    4:
-      experience: 450 # 升到4级需要的总经验
-      description: "专业农夫"
-      unlocks: []
+  4:
+    experience: 450 # 升到4级需要的总经验
+    description: "专业农夫"
+    unlocks: []
 
-    5:
-      experience: 700 # 升到5级需要的总经验
-      description: "农场主"
-      unlocks: ["premium_fertilizer"]
+  5:
+    experience: 700 # 升到5级需要的总经验
+    description: "农场主"
+    unlocks: ["premium_fertilizer"]
 
-    6:
-      experience: 1000
-      description: "高级农夫"
-      unlocks: ["advanced_seeds"]
+  6:
+    experience: 1000
+    description: "高级农夫"
+    unlocks: ["advanced_seeds"]
 
-    7:
-      experience: 1350
-      description: "农业专家"
-      unlocks: []
+  7:
+    experience: 1350
+    description: "农业专家"
+    unlocks: []
 
-    8:
-      experience: 1750
-      description: "大地园丁"
-      unlocks: ["rare_fertilizer"]
+  8:
+    experience: 1750
+    description: "大地园丁"
+    unlocks: ["rare_fertilizer"]
 
-    9:
-      experience: 2200
-      description: "作物大师"
-      unlocks: []
+  9:
+    experience: 2200
+    description: "作物大师"
+    unlocks: []
 
-    10:
-      experience: 2700
-      description: "丰收之王"
-      unlocks: []
+  10:
+    experience: 2700
+    description: "丰收之王"
+    unlocks: []
 
-    # 高级等级（11-30）
-    15:
-      experience: 5000
-      description: "农业导师"
-      unlocks: ["mentor_badge"]
+  # 高级等级（11-30）
+  15:
+    experience: 5000
+    description: "农业导师"
+    unlocks: ["mentor_badge"]
 
-    20:
-      experience: 10000
-      description: "土地管理者"
-      unlocks: ["land_manager_badge"]
+  20:
+    experience: 10000
+    description: "土地管理者"
+    unlocks: ["land_manager_badge"]
 
-    25:
-      experience: 18000
-      description: "农业科学家"
-      unlocks: ["scientist_badge"]
+  25:
+    experience: 18000
+    description: "农业科学家"
+    unlocks: ["scientist_badge"]
 
-    30:
-      experience: 30000
-      description: "田园诗人"
-      unlocks: ["poet_badge"]
+  30:
+    experience: 30000
+    description: "田园诗人"
+    unlocks: ["poet_badge"]
 
-    # 专家等级（31-60）
-    40:
-      experience: 60000
-      description: "农业革新者"
-      unlocks: ["innovator_badge", "silver_land_unlock"]
+  # 专家等级（31-60）
+  40:
+    experience: 60000
+    description: "农业革新者"
+    unlocks: ["innovator_badge", "silver_land_unlock"]
 
-    50:
-      experience: 120000
-      description: "丰收传说"
-      unlocks: ["legend_badge"]
+  50:
+    experience: 120000
+    description: "丰收传说"
+    unlocks: ["legend_badge"]
 
-    58:
-      experience: 200000
-      description: "黄金农夫"
-      unlocks: ["gold_land_unlock"]
+  58:
+    experience: 200000
+    description: "黄金农夫"
+    unlocks: ["gold_land_unlock"]
 
-    60:
-      experience: 250000
-      description: "农业帝王"
-      unlocks: ["emperor_badge"]
+  60:
+    experience: 250000
+    description: "农业帝王"
+    unlocks: ["emperor_badge"]
 
-    # 传奇等级（61-100）
-    70:
-      experience: 400000
-      description: "大地之神"
-      unlocks: ["god_badge"]
+  # 传奇等级（61-100）
+  70:
+    experience: 400000
+    description: "大地之神"
+    unlocks: ["god_badge"]
 
-    80:
-      experience: 600000
-      description: "永恒收割者"
-      unlocks: ["eternal_badge"]
+  80:
+    experience: 600000
+    description: "永恒收割者"
+    unlocks: ["eternal_badge"]
 
-    90:
-      experience: 900000
-      description: "宇宙农夫"
-      unlocks: ["cosmic_badge"]
+  90:
+    experience: 900000
+    description: "宇宙农夫"
+    unlocks: ["cosmic_badge"]
 
-    100:
-      experience: 1500000
-      description: "无上农神"
-      unlocks: ["supreme_badge"]
+  100:
+    experience: 1500000
+    description: "无上农神"
+    unlocks: ["supreme_badge"]
 
-  # 等级奖励配置
-  rewards:
-    levelUp:
-      coins: 50 # 每次升级获得金币
+# 等级奖励配置
+rewards:
+  levelUp:
+    coins: 50 # 每次升级获得金币
 
-  # 经验来源配置
-  experienceSources:
-    planting: 2 # 种植获得经验
-    harvesting: 5 # 收获获得经验（基础值，实际由作物配置决定）
-    selling: 1 # 售卖获得经验
+# 经验来源配置
+experienceSources:
+  planting: 2 # 种植获得经验
+  harvesting: 5 # 收获获得经验（基础值，实际由作物配置决定）
+  selling: 1 # 售卖获得经验
