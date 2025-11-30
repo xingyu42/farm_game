@@ -142,7 +142,54 @@ export class MarketService {
   }
 
   /**
-   * 更新动态价格 - 集成PriceCalculator、MarketDataManager和TransactionManager
+   * 每日价格更新任务入口（纯供应驱动模式）
+   * 执行流程：1.归档昨日供应 → 2.计算新价格 → 3.更新Redis
+   * @returns {Promise<Object>} 更新结果
+   */
+  async executeDailyPriceUpdate() {
+    const startTime = Date.now();
+
+    try {
+      if (!this._isDynamicPricingEnabled()) {
+        logger.info('[MarketService] 动态定价功能已禁用，跳过每日价格更新');
+        return { success: true, reason: 'disabled', updatedCount: 0 };
+      }
+
+      logger.info('[MarketService] ===== 开始每日价格更新 =====');
+
+      // Step 1: 归档所有物品的昨日供应量
+      logger.info('[MarketService] Step 1: 归档昨日供应量');
+      const archiveResult = await this.dataManager.archiveAllDailySupply();
+      logger.info(`[MarketService] 归档完成: ${archiveResult.archiveCount}/${archiveResult.totalItems}`);
+
+      // Step 2: 更新价格
+      logger.info('[MarketService] Step 2: 计算并更新价格');
+      const priceResult = await this.updateDynamicPrices();
+
+      const duration = Date.now() - startTime;
+      logger.info(`[MarketService] ===== 每日价格更新完成，总耗时: ${duration}ms =====`);
+
+      return {
+        success: true,
+        archive: archiveResult,
+        priceUpdate: priceResult,
+        duration
+      };
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error('[MarketService] 每日价格更新失败', {
+        error: error.message,
+        duration: `${duration}ms`,
+        stack: error.stack
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 更新动态价格（纯供应驱动模式）
+   * 基于7日平均供应量与昨日供应量的比值计算价格
    */
   async updateDynamicPrices() {
     const startTime = Date.now();
@@ -156,19 +203,10 @@ export class MarketService {
       const floatingItems = this._getFloatingPriceItems();
       logger.info(`[MarketService] 开始更新 ${floatingItems.length} 个浮动价格物品的价格`);
 
-      let result;
-
-      // 根据物品数量选择处理策略
-      if (floatingItems.length > this.batchSize) {
-        logger.info(`[MarketService] 物品数量 ${floatingItems.length} 超过批次大小 ${this.batchSize}，使用批量处理`);
-        result = await this._batchUpdatePrices(floatingItems);
-      } else {
-        logger.info(`[MarketService] 物品数量 ${floatingItems.length} 未超过批次大小，使用直接处理`);
-        result = await this._directUpdatePrices(floatingItems);
-      }
+      const result = await this._updatePricesSupplyDriven(floatingItems);
 
       const duration = Date.now() - startTime;
-      logger.info(`[MarketService] 价格更新完成，耗时: ${duration}ms, 总计物品: ${floatingItems.length}, 更新数量: ${result.updatedCount}`);
+      logger.info(`[MarketService] 价格更新完成，耗时: ${duration}ms, 更新数量: ${result.updatedCount}`);
 
       // 更新性能统计
       this._updatePerformanceStats(result.updatedCount, duration);
@@ -178,7 +216,6 @@ export class MarketService {
         updatedCount: result.updatedCount,
         totalItems: floatingItems.length,
         duration,
-        strategy: floatingItems.length > this.batchSize ? 'batch' : 'direct',
         priceChanges: result.priceChanges,
         errors: result.errors
       };
@@ -191,6 +228,101 @@ export class MarketService {
         stack: error.stack
       });
 
+      throw error;
+    }
+  }
+
+  /**
+   * 纯供应驱动的价格更新逻辑
+   * @param {Array} floatingItems 浮动价格物品列表
+   * @returns {Promise<Object>} 更新结果
+   * @private
+   */
+  async _updatePricesSupplyDriven(floatingItems) {
+    const errors = [];
+    let updatedCount = 0;
+    const priceChanges = [];
+
+    try {
+      const priceUpdates = [];
+
+      for (const itemId of floatingItems) {
+        try {
+          // 获取当前统计数据
+          const stats = await this.dataManager.getMarketStats(itemId);
+          if (!stats || stats.error) {
+            errors.push({ itemId, error: '统计数据不存在' });
+            continue;
+          }
+
+          // 获取基准供应量（7日平均）
+          const baseSupply = await this.dataManager.calculateBaseSupply(itemId);
+
+          // 获取昨日供应量（已归档到历史，取最新的历史记录）
+          const supplyHistory = await this.dataManager.getSupplyHistory(itemId);
+          const yesterdaySupply = supplyHistory.length > 0 ? supplyHistory[0] : 0;
+
+          // 计算新价格
+          const priceResult = await this.priceCalculator.calculatePrice(
+            itemId,
+            stats.basePrice,
+            baseSupply,
+            yesterdaySupply
+          );
+
+          if (!priceResult.degraded) {
+            const trend = this.priceCalculator.analyzePriceTrend(stats.currentPrice, priceResult.buyPrice);
+            const history = this.priceCalculator.updatePriceHistory(
+              JSON.stringify(stats.priceHistory),
+              priceResult.buyPrice
+            );
+
+            priceUpdates.push({
+              type: 'hset',
+              key: `farm_game:market:stats:${itemId}`,
+              data: {
+                current_price: priceResult.buyPrice.toString(),
+                current_sell_price: priceResult.sellPrice.toString(),
+                price_trend: trend,
+                price_history: JSON.stringify(history),
+                last_updated: Date.now().toString()
+              }
+            });
+
+            // 记录价格变化
+            if (Math.abs(priceResult.buyPrice - stats.currentPrice) > 0.01) {
+              priceChanges.push({
+                itemId,
+                oldPrice: stats.currentPrice,
+                newPrice: priceResult.buyPrice,
+                change: priceResult.buyPrice - stats.currentPrice,
+                changePercent: ((priceResult.buyPrice - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
+                baseSupply,
+                yesterdaySupply,
+                ratio: priceResult.ratio,
+                timestamp: Date.now()
+              });
+            }
+          }
+        } catch (error) {
+          errors.push({ itemId, error: error.message });
+        }
+      }
+
+      // 批量更新 Redis
+      if (priceUpdates.length > 0) {
+        const transactionResult = await this.transactionManager.executeBatchUpdate(priceUpdates);
+        updatedCount = transactionResult.successCount;
+
+        if (transactionResult.errors && transactionResult.errors.length > 0) {
+          errors.push(...transactionResult.errors);
+        }
+      }
+
+      return { updatedCount, priceChanges, errors };
+
+    } catch (error) {
+      logger.error('[MarketService] 供应驱动价格更新失败', { error: error.message });
       throw error;
     }
   }
@@ -372,172 +504,6 @@ export class MarketService {
           lastUpdate: 0
         }
       };
-    }
-  }
-
-  /**
-   * 批量更新价格 - 使用TransactionManager确保数据一致性
-   * @param {Array} floatingItems 浮动价格物品列表
-   * @private
-   */
-  async _batchUpdatePrices(floatingItems) {
-    const errors = [];
-    let updatedCount = 0;
-    const priceChanges = [];
-
-    try {
-      // 获取所有物品的统计数据
-      const allStats = await this.dataManager.getMarketStats(floatingItems);
-
-      // 批量计算新价格
-      const priceUpdates = [];
-      for (const stats of allStats) {
-        if (!stats.error) {
-          try {
-            const priceResult = await this.priceCalculator.calculatePrice(
-              stats.itemId,
-              stats.basePrice,
-              stats.demand24h,
-              stats.supply24h
-            );
-
-            if (!priceResult.degraded) {
-              const trend = this.priceCalculator.analyzePriceTrend(stats.currentPrice, priceResult.buyPrice);
-              const history = this.priceCalculator.updatePriceHistory(
-                JSON.stringify(stats.priceHistory),
-                priceResult.buyPrice
-              );
-
-              priceUpdates.push({
-                type: 'hset',
-                key: `farm_game:market:stats:${stats.itemId}`,
-                data: {
-                  current_price: priceResult.buyPrice.toString(),
-                  current_sell_price: priceResult.sellPrice.toString(),
-                  price_trend: trend,
-                  price_history: JSON.stringify(history),
-                  last_updated: Date.now().toString()
-                }
-              });
-
-              // 记录价格变化
-              if (Math.abs(priceResult.buyPrice - stats.currentPrice) > 0.01) {
-                priceChanges.push({
-                  itemId: stats.itemId,
-                  oldPrice: stats.currentPrice,
-                  newPrice: priceResult.buyPrice,
-                  change: priceResult.buyPrice - stats.currentPrice,
-                  changePercent: ((priceResult.buyPrice - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
-                  demand: stats.demand24h,
-                  supply: stats.supply24h,
-                  timestamp: Date.now()
-                });
-              }
-            }
-          } catch (error) {
-            errors.push({ itemId: stats.itemId, error: error.message });
-          }
-        }
-      }
-
-      // 使用TransactionManager执行批量更新
-      if (priceUpdates.length > 0) {
-        const transactionResult = await this.transactionManager.executeBatchUpdate(priceUpdates);
-        updatedCount = transactionResult.successCount;
-
-        if (transactionResult.errors && transactionResult.errors.length > 0) {
-          errors.push(...transactionResult.errors);
-        }
-      }
-
-      return { updatedCount, priceChanges, errors };
-
-    } catch (error) {
-      logger.error('批量价格更新失败', { error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * 直接更新价格 - 使用TransactionManager确保原子性
-   * @param {Array} floatingItems 浮动价格物品列表
-   * @private
-   */
-  async _directUpdatePrices(floatingItems) {
-    const errors = [];
-    let updatedCount = 0;
-    const priceChanges = [];
-
-    try {
-      const operations = [];
-
-      // 获取所有统计数据并准备更新操作
-      const allStats = await this.dataManager.getMarketStats(floatingItems);
-
-      for (const stats of allStats) {
-        if (!stats.error) {
-          try {
-            const priceResult = await this.priceCalculator.calculatePrice(
-              stats.itemId,
-              stats.basePrice,
-              stats.demand24h,
-              stats.supply24h
-            );
-
-            if (!priceResult.degraded) {
-              const trend = this.priceCalculator.analyzePriceTrend(stats.currentPrice, priceResult.buyPrice);
-              const history = this.priceCalculator.updatePriceHistory(
-                JSON.stringify(stats.priceHistory),
-                priceResult.buyPrice
-              );
-
-              operations.push({
-                type: 'hset',
-                key: `farm_game:market:stats:${stats.itemId}`,
-                data: {
-                  current_price: priceResult.buyPrice.toString(),
-                  current_sell_price: priceResult.sellPrice.toString(),
-                  price_trend: trend,
-                  price_history: JSON.stringify(history),
-                  last_updated: Date.now().toString()
-                }
-              });
-
-              // 记录价格变化
-              if (Math.abs(priceResult.buyPrice - stats.currentPrice) > 0.01) {
-                priceChanges.push({
-                  itemId: stats.itemId,
-                  oldPrice: stats.currentPrice,
-                  newPrice: priceResult.buyPrice,
-                  change: priceResult.buyPrice - stats.currentPrice,
-                  changePercent: ((priceResult.buyPrice - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
-                  demand: stats.demand24h,
-                  supply: stats.supply24h,
-                  timestamp: Date.now()
-                });
-              }
-            }
-          } catch (error) {
-            errors.push({ itemId: stats.itemId, error: error.message });
-          }
-        }
-      }
-
-      // 使用TransactionManager执行更新
-      if (operations.length > 0) {
-        const result = await this.transactionManager.executeBatchUpdate(operations);
-        updatedCount = result.successCount;
-
-        if (result.errors && result.errors.length > 0) {
-          errors.push(...result.errors);
-        }
-      }
-
-      return { updatedCount, priceChanges, errors };
-
-    } catch (error) {
-      logger.error('直接价格更新失败', { error: error.message });
-      throw error;
     }
   }
 

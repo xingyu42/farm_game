@@ -21,10 +21,9 @@ export class TaskScheduler {
         // 新增：用于跟踪每日任务的最后执行日期
         this.lastResetDate = null;
 
-        // 任务映射表 - 原 TaskExecutor 逻辑
+        // 任务映射表
         this.taskMapping = {
-            priceUpdate: () => this.marketService.updateDynamicPrices(),
-            statsReset: () => this.marketService.resetDailyStats(),
+            dailyPriceUpdate: () => this.marketService.executeDailyPriceUpdate(),
             monitoring: () => this.marketService.monitorMarket()
         };
     }
@@ -59,8 +58,16 @@ export class TaskScheduler {
             if (!task.name || typeof task.name !== 'string') {
                 errors.push(`任务${index}: name必须是非空字符串`);
             }
-            if (typeof task.interval !== 'number' || task.interval <= 0) {
-                errors.push(`任务${task.name || index}: interval必须是正数`);
+            // 根据任务类型验证不同字段
+            if (task.type === 'daily') {
+                if (typeof task.hour !== 'number' || task.hour < 0 || task.hour > 23) {
+                    errors.push(`任务${task.name || index}: hour必须是0-23的整数`);
+                }
+            } else {
+                // interval 类型任务
+                if (typeof task.interval !== 'number' || task.interval <= 0) {
+                    errors.push(`任务${task.name || index}: interval必须是正数`);
+                }
             }
             if (typeof task.timeout !== 'number' || task.timeout <= 0) {
                 errors.push(`任务${task.name || index}: timeout必须是正数`);
@@ -112,30 +119,48 @@ export class TaskScheduler {
     }
 
     /**
-     * 调度单个任务 - 原 SimpleTaskScheduler._scheduleTask 逻辑
+     * 调度单个任务
+     * 支持两种类型：daily（每日定时）和 interval（间隔执行）
      * @param {Object} taskDef 任务定义
      * @private
      */
     _scheduleTask(taskDef) {
-        const job = setInterval(async () => {
-            // statsReset 任务特殊处理：确保每天只执行一次
-            if (taskDef.name === 'statsReset') {
+        if (taskDef.type === 'daily') {
+            // 每日定时任务：每分钟检查是否到达指定时间
+            const job = setInterval(async () => {
                 const now = new Date();
-                const today = now.toDateString(); // 获取今天的日期字符串
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                const today = now.toDateString();
 
-                // 如果今天已经执行过，则跳过
-                if (this.lastResetDate === today) {
-                    return;
+                // 检查是否到达指定时间
+                if (currentHour === taskDef.hour && currentMinute === taskDef.minute) {
+                    // 检查今天是否已执行
+                    const lastExecuteKey = `lastExecute_${taskDef.name}`;
+                    if (this[lastExecuteKey] === today) {
+                        return;
+                    }
+
+                    // 标记今天已执行
+                    this[lastExecuteKey] = today;
+                    logger.info(`[TaskScheduler] 每日任务触发: ${taskDef.name} @ ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+
+                    await this._execute(taskDef.name, taskDef.timeout);
                 }
+            }, 60 * 1000); // 每分钟检查一次
 
-                // 标记为今天已执行（在执行前设置，防止重复执行）
-                this.lastResetDate = today;
-            }
+            this.jobs.set(taskDef.name, job);
+            logger.info(`[TaskScheduler] 已调度每日任务: ${taskDef.name} @ ${taskDef.hour}:${(taskDef.minute || 0).toString().padStart(2, '0')}`);
 
-            await this._execute(taskDef.name, taskDef.timeout);
-        }, taskDef.interval * 1000);
+        } else {
+            // 间隔执行任务（默认）
+            const job = setInterval(async () => {
+                await this._execute(taskDef.name, taskDef.timeout);
+            }, taskDef.interval * 1000);
 
-        this.jobs.set(taskDef.name, job);
+            this.jobs.set(taskDef.name, job);
+            logger.info(`[TaskScheduler] 已调度间隔任务: ${taskDef.name}, 间隔: ${taskDef.interval}s`);
+        }
     }
 
     /**

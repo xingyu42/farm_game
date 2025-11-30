@@ -12,7 +12,7 @@ export class PriceCalculator {
   constructor(config) {
     this.config = config;
     this.cache = new Map(); // 价格计算缓存
-    
+
     // 获取价格计算配置
     this.pricingConfig = this.config.market?.pricing
     this.sensitivity = this.pricingConfig.sensitivity
@@ -22,28 +22,33 @@ export class PriceCalculator {
     this.stabilityThreshold = this.pricingConfig.stability_threshold
     this.extremeRatioMax = this.pricingConfig.extreme_ratio_max
     this.extremeRatioMin = this.pricingConfig.extreme_ratio_min
+    this.minBaseSupply = this.pricingConfig.min_base_supply || 1
+    this.historyDays = this.pricingConfig.history_days || 7
   }
 
   /**
-   * 计算物品价格
+   * 计算物品价格（纯供应驱动模式）
    * @param {string} itemId 物品ID
    * @param {number} basePrice 基准价格
-   * @param {number} demand 24小时需求量
-   * @param {number} supply 24小时供应量
+   * @param {number} baseSupply 基准供应量（7日平均）
+   * @param {number} actualSupply 昨日实际供应量
    * @returns {Object} 价格计算结果
    */
-  async calculatePrice(itemId, basePrice, demand, supply) {
+  async calculatePrice(itemId, basePrice, baseSupply, actualSupply) {
     try {
       // 验证输入参数
       CommonUtils.validatePrice(basePrice, `base price for ${itemId}`);
-      
-      const cacheKey = `${itemId}_${basePrice}_${demand}_${supply}`;
+
+      const cacheKey = `${itemId}_${basePrice}_${baseSupply}_${actualSupply}`;
       if (this.cache.has(cacheKey)) {
         return this.cache.get(cacheKey);
       }
 
+      // 计算供应比率
+      const ratio = this._calculateSupplyRatio(baseSupply, actualSupply);
+
       // 计算新价格
-      const calculatedPrice = this._calculatePriceFromSupplyDemand(basePrice, demand, supply);
+      const calculatedPrice = this._calculatePriceFromSupply(basePrice, ratio);
       const clampedBuyPrice = this._clampPrice(calculatedPrice, basePrice);
       const newSellPrice = clampedBuyPrice * this.sellPriceRatio;
 
@@ -56,15 +61,15 @@ export class PriceCalculator {
         basePrice,
         buyPrice: clampedBuyPrice,
         sellPrice: parseFloat(newSellPrice.toFixed(2)),
-        demand,
-        supply,
-        ratio: supply > 0 ? demand / supply : (demand > 0 ? this.extremeRatioMax : 1),
+        baseSupply,
+        supply: actualSupply,
+        ratio,
         timestamp: Date.now()
       };
 
-      // 缓存结果（5分钟TTL）
+      // 缓存结果（24小时TTL，因为每日只更新一次）
       this.cache.set(cacheKey, result);
-      setTimeout(() => this.cache.delete(cacheKey), 5 * 60 * 1000);
+      setTimeout(() => this.cache.delete(cacheKey), 24 * 60 * 60 * 1000);
 
       return result;
     } catch (error) {
@@ -75,8 +80,8 @@ export class PriceCalculator {
         basePrice,
         buyPrice: basePrice,
         sellPrice: basePrice * this.sellPriceRatio,
-        demand,
-        supply,
+        baseSupply,
+        supply: actualSupply,
         ratio: 1,
         timestamp: Date.now(),
         degraded: true
@@ -85,8 +90,48 @@ export class PriceCalculator {
   }
 
   /**
+   * 计算供应比率（纯供应驱动）
+   * @param {number} baseSupply 基准供应量（7日平均）
+   * @param {number} actualSupply 昨日实际供应量
+   * @returns {number} 供应比率
+   * @private
+   */
+  _calculateSupplyRatio(baseSupply, actualSupply) {
+    const safeBaseSupply = Number.isFinite(baseSupply) && baseSupply > 0 ? baseSupply : 0;
+    const safeActualSupply = Number.isFinite(actualSupply) && actualSupply > 0 ? actualSupply : 0;
+
+    // 冷启动 / 无人交易：保持价格稳定
+    if (safeActualSupply <= 0 && safeBaseSupply <= 0) {
+      logger.debug(`[PriceCalculator] 供应冷启动: baseSupply=${safeBaseSupply}, actualSupply=${safeActualSupply}, ratio=1`);
+      return 1;
+    }
+
+    // 有历史基准但昨日无供应：严重短缺 → 高价
+    if (safeActualSupply <= 0 && safeBaseSupply > 0) {
+      logger.debug(`[PriceCalculator] 零供应短缺: baseSupply=${safeBaseSupply}, ratio=${this.extremeRatioMax}`);
+      return this.extremeRatioMax;
+    }
+
+    // 无历史基准但有实际供应：暂时保持中性
+    if (safeBaseSupply <= 0 && safeActualSupply > 0) {
+      logger.debug(`[PriceCalculator] 无基准供应，中性比率: actualSupply=${safeActualSupply}, ratio=1`);
+      return 1;
+    }
+
+    // 正常情况：baseSupply / actualSupply
+    // 供应多于基准 → ratio < 1 → 价格下跌
+    // 供应少于基准 → ratio > 1 → 价格上涨
+    const ratio = safeBaseSupply / safeActualSupply;
+
+    // 确保 ratio 始终在合理范围内（防止 log 计算异常）
+    const clampedRatio = Math.max(this.extremeRatioMin, Math.min(this.extremeRatioMax, ratio));
+    logger.debug(`[PriceCalculator] 供应驱动: baseSupply=${safeBaseSupply}, actualSupply=${safeActualSupply}, ratio=${ratio.toFixed(4)}, clamped=${clampedRatio.toFixed(4)}`);
+    return clampedRatio;
+  }
+
+  /**
    * 批量价格计算
-   * @param {Array} items 物品数组 [{itemId, basePrice, demand, supply}]
+   * @param {Array} items 物品数组 [{itemId, basePrice, baseSupply, actualSupply}]
    * @returns {Promise<Array>} 批量计算结果
    */
   async calculateBatchPrices(items) {
@@ -97,8 +142,8 @@ export class PriceCalculator {
       logger.info(`[PriceCalculator] 开始批量计算 ${items.length} 个物品价格`);
 
       // 并行计算所有价格（利用缓存和快速计算）
-      const promises = items.map(item => 
-        this.calculatePrice(item.itemId, item.basePrice, item.demand, item.supply)
+      const promises = items.map(item =>
+        this.calculatePrice(item.itemId, item.basePrice, item.baseSupply, item.actualSupply)
       );
 
       const batchResults = await Promise.all(promises);
@@ -197,34 +242,16 @@ export class PriceCalculator {
   }
 
   /**
-   * 根据供需数据计算物品价格
+   * 根据供应比率计算物品价格（纯供应驱动）
    * @param {number} basePrice 基准价格
-   * @param {number} demand 24小时需求量
-   * @param {number} supply 24小时供应量
+   * @param {number} ratio 供应比率（baseSupply / actualSupply）
    * @returns {number} 计算后的价格
    * @private
    */
-  _calculatePriceFromSupplyDemand(basePrice, demand, supply) {
+  _calculatePriceFromSupply(basePrice, ratio) {
     return CommonUtils.safeCalculation(() => {
       // 验证基准价格
-      CommonUtils.validatePrice(basePrice, 'base price in price calculation');
-
-      let ratio;
-
-      // 处理边界情况
-      if (supply === 0) {
-        // 零供应量：高需求系数或平衡状态
-        ratio = demand > 0 ? this.extremeRatioMax : 1;
-        logger.debug(`[PriceCalculator] 零供应情况: demand=${demand}, 使用比率=${ratio}`);
-      } else if (demand === 0) {
-        // 零需求量：低需求系数
-        ratio = this.extremeRatioMin;
-        logger.debug(`[PriceCalculator] 零需求情况: supply=${supply}, 使用比率=${ratio}`);
-      } else {
-        // 正常情况：计算供需比率
-        ratio = demand / supply;
-        logger.debug(`[PriceCalculator] 正常供需情况: demand=${demand}, supply=${supply}, ratio=${ratio}`);
-      }
+      CommonUtils.validatePrice(basePrice, 'base price in supply-based calculation');
 
       // 限制比率在合理范围内
       const clampedRatio = Math.max(this.extremeRatioMin, Math.min(this.extremeRatioMax, ratio));
@@ -237,8 +264,6 @@ export class PriceCalculator {
 
       logger.debug(`[PriceCalculator] 价格计算详情`, {
         basePrice,
-        demand,
-        supply,
         ratio: ratio.toFixed(4),
         clampedRatio: clampedRatio.toFixed(4),
         adjustment: adjustment.toFixed(4),

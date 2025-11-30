@@ -4,7 +4,7 @@
 # 全局开关
 enabled: true
 
-# 价格调整参数
+# 价格调整参数（纯供应驱动模式）
 pricing:
   sensitivity: 0.1 # 价格敏感度系数K
   min_ratio: 0.5 # 最小价格比率（基准价的50%）
@@ -13,6 +13,8 @@ pricing:
   stability_threshold: 2 # 价格稳定性判断阈值（百分比）
   extreme_ratio_max: 10 # 极端供需比上限
   extreme_ratio_min: 0.1 # 极端供需比下限
+  min_base_supply: 1 # 基准供应量下限（防止除零）
+  history_days: 7 # 供应历史记录天数
 
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小
@@ -43,23 +45,19 @@ scheduler:
   task_timeout: 300 # 任务超时时间（秒）
   retry_attempts: 2 # 任务重试次数
   lock_ttl: 600 # 分布式锁TTL（秒）
-  # 任务定义配置（新增）- 支持配置驱动的任务管理
+  # 任务定义配置 - 支持配置驱动的任务管理
   tasks:
-    - name: priceUpdate
-      interval: 600 # 10分钟（秒）
+    - name: dailyPriceUpdate
+      type: daily # 每日定时任务
+      hour: 4 # 执行时间：04:00
+      minute: 0
       timeout: 300 # 5分钟超时（秒）
       retry_attempts: 2 # 重试2次
       enabled: true # 启用任务
-      description: "动态价格更新任务"
-
-    - name: statsReset
-      interval: 86400 # 24小时（秒）
-      timeout: 60 # 1分钟超时（秒）
-      retry_attempts: 1 # 重试1次
-      enabled: true # 启用任务
-      description: "每日统计重置任务"
+      description: "每日价格更新任务（归档供应历史+计算新价格+重置计数器）"
 
     - name: monitoring
+      type: interval # 间隔执行任务
       interval: 1800 # 30分钟（秒）
       timeout: 120 # 2分钟超时（秒）
       retry_attempts: 1 # 重试1次

@@ -17,6 +17,8 @@ export class MarketDataManager {
     // 获取市场配置
     this.marketConfig = this.config.market
     this.batchSize = this.marketConfig.batch_size
+    this.historyDays = this.marketConfig.pricing?.history_days || 7
+    this.minBaseSupply = this.marketConfig.pricing?.min_base_supply || 1
   }
 
   /**
@@ -115,6 +117,159 @@ export class MarketDataManager {
     } catch (error) {
       logger.error(`[MarketDataManager] 记录交易统计失败 [${itemId}]: ${error.message}`);
       return false;
+    }
+  }
+
+  /**
+   * 归档昨日供应量到历史列表
+   * @param {string} itemId 物品ID
+   * @returns {Promise<Object>} 归档结果 { success, dailySupply, historyLength }
+   */
+  async archiveDailySupply(itemId) {
+    try {
+      const statsKey = `farm_game:market:stats:${itemId}`;
+      const historyKey = `farm_game:market:supply:history:${itemId}`;
+
+      // 获取昨日供应量
+      const dailySupply = parseInt(await this.redis.hGet(statsKey, 'supply_24h')) || 0;
+
+      // 写入历史列表（LPUSH 确保最新的在前面）
+      await this.redis.lPush(historyKey, dailySupply.toString());
+
+      // 只保留最近 N 天的数据
+      await this.redis.lTrim(historyKey, 0, this.historyDays - 1);
+
+      // 重置当日供应计数器
+      await this.redis.hSet(statsKey, {
+        supply_24h: '0',
+        last_archive: Date.now().toString()
+      });
+
+      // 获取当前历史长度
+      const historyLength = await this.redis.lLen(historyKey);
+
+      logger.debug(`[MarketDataManager] 归档供应量: ${itemId}, dailySupply=${dailySupply}, historyLength=${historyLength}`);
+
+      return { success: true, dailySupply, historyLength };
+    } catch (error) {
+      logger.error(`[MarketDataManager] 归档供应量失败 [${itemId}]: ${error.message}`);
+      return { success: false, dailySupply: 0, historyLength: 0 };
+    }
+  }
+
+  /**
+   * 获取物品的供应历史
+   * @param {string} itemId 物品ID
+   * @returns {Promise<Array<number>>} 供应历史数组（最新的在前）
+   */
+  async getSupplyHistory(itemId) {
+    try {
+      const historyKey = `farm_game:market:supply:history:${itemId}`;
+      const history = await this.redis.lRange(historyKey, 0, -1);
+
+      // 转换为数字数组并过滤无效值
+      return history
+        .map(v => parseInt(v))
+        .filter(v => Number.isFinite(v) && v >= 0);
+    } catch (error) {
+      logger.error(`[MarketDataManager] 获取供应历史失败 [${itemId}]: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * 计算基准供应量（7日滚动平均）
+   * @param {string} itemId 物品ID
+   * @returns {Promise<number>} 基准供应量
+   */
+  async calculateBaseSupply(itemId) {
+    try {
+      const history = await this.getSupplyHistory(itemId);
+
+      // 冷启动：没有历史数据
+      if (history.length === 0) {
+        logger.debug(`[MarketDataManager] 无供应历史，使用最小基准: ${itemId}`);
+        return this.minBaseSupply;
+      }
+
+      // 计算平均值
+      const sum = history.reduce((acc, val) => acc + val, 0);
+      const avg = sum / history.length;
+
+      // 确保不低于最小值
+      const baseSupply = Math.max(avg, this.minBaseSupply);
+
+      logger.debug(`[MarketDataManager] 计算基准供应量: ${itemId}, history=${history.length}天, avg=${avg.toFixed(2)}, baseSupply=${baseSupply.toFixed(2)}`);
+
+      return baseSupply;
+    } catch (error) {
+      logger.error(`[MarketDataManager] 计算基准供应量失败 [${itemId}]: ${error.message}`);
+      return this.minBaseSupply;
+    }
+  }
+
+  /**
+   * 批量归档所有浮动价格物品的供应量（使用 pipeline 优化）
+   * @returns {Promise<Object>} 归档结果统计
+   */
+  async archiveAllDailySupply() {
+    const startTime = Date.now();
+    const errors = [];
+
+    try {
+      const floatingItems = this._getFloatingPriceItems();
+      logger.info(`[MarketDataManager] 开始归档 ${floatingItems.length} 个物品的每日供应量`);
+
+      // Step 1: 批量获取所有物品的 supply_24h
+      const readPipeline = this.redis.pipeline();
+      for (const itemId of floatingItems) {
+        readPipeline.hGet(`farm_game:market:stats:${itemId}`, 'supply_24h');
+      }
+      const supplyValues = await readPipeline.exec();
+
+      // Step 2: 构造批量写入命令
+      const writePipeline = this.redis.pipeline();
+      const archiveTime = Date.now().toString();
+
+      for (let i = 0; i < floatingItems.length; i++) {
+        const itemId = floatingItems[i];
+        const dailySupply = parseInt(supplyValues[i]) || 0;
+        const statsKey = `farm_game:market:stats:${itemId}`;
+        const historyKey = `farm_game:market:supply:history:${itemId}`;
+
+        // 写入历史列表
+        writePipeline.lPush(historyKey, dailySupply.toString());
+        // 只保留最近 N 天
+        writePipeline.lTrim(historyKey, 0, this.historyDays - 1);
+        // 重置当日供应计数器
+        writePipeline.hSet(statsKey, {
+          supply_24h: '0',
+          last_archive: archiveTime
+        });
+      }
+
+      // Step 3: 执行批量写入
+      await writePipeline.exec();
+
+      const duration = Date.now() - startTime;
+      logger.info(`[MarketDataManager] 归档完成: ${floatingItems.length} 个物品, 耗时: ${duration}ms`);
+
+      return {
+        success: true,
+        archiveCount: floatingItems.length,
+        totalItems: floatingItems.length,
+        duration,
+        errors
+      };
+    } catch (error) {
+      logger.error(`[MarketDataManager] 批量归档失败: ${error.message}`);
+      return {
+        success: false,
+        archiveCount: 0,
+        totalItems: 0,
+        duration: Date.now() - startTime,
+        errors: [error.message]
+      };
     }
   }
 
