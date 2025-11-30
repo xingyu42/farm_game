@@ -48,7 +48,6 @@ export class StealService {
       throw new Error('不能偷窃自己的农场');
     }
 
-    logger.info(`[StealService] 玩家 ${attackerId} 尝试偷窃 ${targetId}`);
 
     // 使用批量锁：确保操作原子性，避免嵌套锁冲突
     const lockTimeout = Math.ceil(this.stealConfig.locks.timeout / 1000); // 转换为秒
@@ -150,7 +149,6 @@ export class StealService {
           fromLand: land.landId
         });
 
-        logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${cropConfig.name}`);
       }
     }
 
@@ -193,7 +191,6 @@ export class StealService {
       // 扣除偷窃者金币
       await this.playerService.updateEconomyField(attackerId, 'coins', -penalty);
 
-      logger.info(`[StealService] 偷窃失败：${attackerId} 被罚款 ${penalty} 金币`);
     }
 
     // 设置偷窃冷却（失败也有冷却）
@@ -569,7 +566,6 @@ export class StealService {
         penalty
       };
 
-      logger.info(`[StealService] 偷窃记录: ${JSON.stringify(logData)}`);
     } catch (error) {
       logger.error(`[StealService] 记录偷窃尝试失败: ${error.message}`);
       // 记录失败不应影响主流程

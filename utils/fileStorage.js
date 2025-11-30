@@ -90,7 +90,6 @@ export class FileStorage {
       const filePath = join(this.baseDir, filename)
       const jsonData = JSON.stringify(data, null, 2)
       await fs.writeFile(filePath, jsonData, 'utf8')
-      logger.info(`[FileStorage] 成功写入文件: ${filename}`)
       return true
     } catch (error) {
       logger.error(`[FileStorage] 写入文件失败 ${filename}:`, error)
@@ -139,7 +138,6 @@ export class FileStorage {
         minContentWidth: 0
       })
       await fs.writeFile(filePath, yamlData, 'utf8')
-      logger.info(`[FileStorage] 成功写入YAML文件: ${filename}`)
       return true
     } catch (error) {
       logger.error(`[FileStorage] 写入YAML文件失败 ${filename}:`, error)

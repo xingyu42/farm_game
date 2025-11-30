@@ -85,8 +85,6 @@ class CropPlantingService {
         // 8. 添加到收获计划
         await this.cropScheduleService.addHarvestSchedule(userId, landId, harvestTime);
 
-        logger.info(`[CropPlantingService] 用户${userId}在第${landId}块土地种植了${cropConfig.name}`);
-
         // 9. 构建返回消息
         return this.messageBuilder.buildPlantingMessage(
           cropConfig.name,
@@ -196,8 +194,6 @@ class CropPlantingService {
 
         // 5. 批量更新土地
         await this.plantingDataService.updateMultipleLands(userId, landUpdates);
-
-        logger.info(`[CropPlantingService] 用户${userId}批量种植了${results.length}块土地`);
 
         return {
           success: true,

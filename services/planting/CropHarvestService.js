@@ -148,7 +148,6 @@ class CropHarvestService {
         const scheduleMembers = harvestedLandIds.map(landId => `${userId}:${landId}`);
         await this.cropScheduleService.batchRemoveHarvestSchedules(scheduleMembers);
 
-        logger.info(`[CropHarvestService] 用户${userId}收获了${harvestedCrops.length}块土地的作物`);
 
         // 6. 构建返回消息
         return this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp);

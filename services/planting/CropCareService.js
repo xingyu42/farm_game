@@ -56,8 +56,6 @@ class CropCareService {
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
 
-        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}浇水`);
-
         // 5. 构建返回消息
         return this.messageBuilder.buildCareMessage('water', cropName, landId, {
           health: landUpdates.health,
@@ -138,8 +136,6 @@ class CropCareService {
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
 
-        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}施肥`);
-
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('fertilize', cropName, landId, {
           health: landUpdates.health,
@@ -208,8 +204,6 @@ class CropCareService {
 
         const cropsConfig = this.config.crops;
         const cropName = this._getCropName(landData.crop, cropsConfig);
-
-        logger.info(`[CropCareService] 用户${userId}为第${landId}块土地的${cropName}除虫`);
 
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('pesticide', cropName, landId, {
@@ -345,7 +339,6 @@ class CropCareService {
           }
         }
 
-        logger.info(`[CropCareService] 用户${userId}批量护理了${results.length}块土地`);
 
         return {
           success: true,

@@ -78,11 +78,8 @@ export class InventoryService {
    */
   async addItem(userId, itemId, quantity) {
     try {
-      logger.info(`[InventoryService] 开始添加物品 [${userId}]: ${itemId} x${quantity}`);
-
       // 直接获取当前仓库数据，内部已包含存在检查
       const inventory = await this.getInventory(userId);
-      logger.info(`[InventoryService] 当前仓库状态 [${userId}]: 使用量=${inventory.usage}, 容量=${inventory.capacity}, 物品数=${Object.keys(inventory.items).length}`);
 
       // 检查仓库容量
       if (inventory.usage + quantity > inventory.capacity) {
@@ -100,17 +97,8 @@ export class InventoryService {
         // 现有物品，尝试添加数量
         targetItem = inventory.items[itemId];
 
-        logger.info(`[InventoryService] 发现现有物品 [${userId}]:`, {
-          itemId,
-          currentQuantity: targetItem.quantity,
-          name: targetItem.name,
-          category: targetItem.category,
-          isValid: !isNaN(targetItem.quantity)
-        });
-
         try {
           targetItem.addQuantity(quantity);
-          logger.info(`[InventoryService] 现有物品数量更新成功 [${userId}]: ${itemId} 新数量=${targetItem.quantity}`);
         } catch (error) {
           if (error.message.includes('超过最大堆叠数量')) {
             const canAdd = targetItem.maxStack - targetItem.quantity;
@@ -135,15 +123,7 @@ export class InventoryService {
         }
       } else {
         // 新物品，从配置创建
-        logger.info(`[InventoryService] 创建新物品 [${userId}]: ${itemId} x${quantity}`);
         targetItem = Item.fromConfig(itemId, quantity, this.config, this.itemResolver);
-
-        logger.info(`[InventoryService] 物品创建成功 [${userId}]:`, {
-          id: targetItem.id,
-          name: targetItem.name,
-          quantity: targetItem.quantity,
-          category: targetItem.category
-        });
 
         // 验证新创建的物品
         const validation = targetItem.validate();
@@ -156,28 +136,16 @@ export class InventoryService {
         }
 
         inventory.items[itemId] = targetItem;
-        logger.info(`[InventoryService] 新物品已添加到仓库 [${userId}]: ${itemId}`);
       }
 
       // 更新物品元数据
       targetItem.metadata.lastUpdated = Date.now();
 
       // 保存到Redis
-      logger.info(`[InventoryService] 保存仓库数据 [${userId}]`);
       await this._saveInventoryToRedis(userId, inventory);
-
-      logger.info(`玩家 ${userId} 添加物品: ${itemId} x${quantity}`);
 
       const displayInfo = targetItem.getDisplayInfo();
       const newUsage = this._calculateInventoryUsage(inventory.items);
-
-      logger.info(`[InventoryService] 添加物品完成 [${userId}]:`, {
-        itemId,
-        itemName: displayInfo.name,
-        quantity: targetItem.quantity,
-        newUsage,
-        totalItems: Object.keys(inventory.items).length
-      });
 
       return {
         success: true,
@@ -316,7 +284,6 @@ export class InventoryService {
       const successfulItems = results.filter(r => r.success);
       const totalAdded = successfulItems.reduce((sum, r) => sum + r.quantity, 0);
 
-      logger.info(`玩家 ${userId} 批量添加物品完成，成功添加 ${totalAdded} 个物品`);
 
       return {
         success: successfulItems.length === items.length,
@@ -388,8 +355,6 @@ export class InventoryService {
 
       // 保存到Redis
       await this._saveInventoryToRedis(userId, inventory);
-
-      logger.info(`玩家 ${userId} 移除物品: ${itemId} x${quantity}`);
 
       const economicInfo = targetItem.getEconomicInfo();
 
@@ -684,7 +649,6 @@ export class InventoryService {
       // 保存到Redis
       await this._saveInventoryToRedis(userId, inventory);
 
-      logger.info(`玩家 ${userId} 锁定物品: ${itemId}`);
 
       const displayInfo = targetItem.getDisplayInfo();
 
@@ -741,7 +705,6 @@ export class InventoryService {
       // 保存到Redis
       await this._saveInventoryToRedis(userId, inventory);
 
-      logger.info(`玩家 ${userId} 解锁物品: ${itemId}`);
 
       const displayInfo = targetItem.getDisplayInfo();
 
@@ -843,7 +806,6 @@ export class InventoryService {
       }
 
       const successful = results.filter(r => r.success).length;
-      logger.info(`玩家 ${userId} 批量锁定物品完成，成功锁定 ${successful}/${itemIds.length} 个物品`);
 
       return {
         success: successful === itemIds.length,
@@ -915,7 +877,6 @@ export class InventoryService {
       }
 
       const successful = results.filter(r => r.success).length;
-      logger.info(`玩家 ${userId} 批量解锁物品完成，成功解锁 ${successful}/${itemIds.length} 个物品`);
 
       return {
         success: successful === itemIds.length,
@@ -1042,7 +1003,6 @@ export class InventoryService {
       // 8. 更新仓库容量
       await this.playerDataService.updateSimpleField(userId, 'inventory_capacity', nextStep.capacity);
 
-      logger.info(`玩家 ${userId} 成功升级仓库: ${currentCapacity} -> ${nextStep.capacity}, 花费 ${nextStep.cost} 金币`);
 
       return {
         success: true,

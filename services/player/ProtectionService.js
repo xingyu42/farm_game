@@ -81,7 +81,6 @@ export class ProtectionService {
         { protection: newProtection }
       );
 
-      logger.info(`[ProtectionService] 玩家 ${userId} 使用 ${itemId} 狗粮，防御 ${dogFoodConfig.defenseBonus}%，持续 ${dogFoodConfig.duration} 分钟`);
 
       return {
         success: true,
@@ -229,7 +228,6 @@ export class ProtectionService {
         { protection: newProtection }
       );
 
-      logger.info(`[ProtectionService] 玩家 ${userId} 设置农场防护 ${protectionMinutes} 分钟`);
 
       return {
         success: true,
@@ -298,7 +296,6 @@ export class ProtectionService {
           { protection: newProtection, stealing: newStealing }
         );
 
-        logger.info(`[ProtectionService] 清除玩家 ${userId} 过期防御效果: ${clearedEffects.join(', ')}`);
       }
 
       return {
@@ -418,7 +415,6 @@ export class ProtectionService {
         { stealing: newStealing }
       );
 
-      logger.info(`[ProtectionService] 玩家 ${userId} 偷菜冷却 ${cooldownMinutes} 分钟`);
       return {
         success: true,
         endTime: newStealing.cooldownEndTime,

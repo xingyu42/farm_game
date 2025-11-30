@@ -79,7 +79,6 @@ class LandManagerService {
                 // 保存更新后的数据
                 await dataService.savePlayer(userId, playerData);
 
-                logger.info(`[LandManagerService] 玩家 ${userId} 扩张土地成功，第 ${nextLandNumber} 块土地，花费 ${landConfig.goldCost} 金币`);
 
                 return {
                     success: true,
@@ -240,7 +239,6 @@ class LandManagerService {
                 // 保存数据
                 await dataService.savePlayer(userId, playerData);
 
-                logger.info(`[LandManagerService] 玩家 ${userId} 土地 ${landId} 更新成功`);
 
                 return {
                     success: true,

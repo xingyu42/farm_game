@@ -37,10 +37,6 @@ class EconomyService {
                 // 持久化数据
                 await dataService.savePlayer(uid, playerData);
 
-                logger.info(
-                    `[EconomyService] 玩家 ${uid} 金币变化: ${actualChange >= 0 ? '+' : ''}${actualChange
-                    }, 当前: ${playerData.coins}`
-                );
                 return playerData;
             });
         } catch (error) {
@@ -106,12 +102,6 @@ class EconomyService {
 
                 // 保存更新后的数据
                 await dataService.savePlayer(userId, playerData);
-
-                logger.info(`[EconomyService] 玩家 ${userId} 经验变化: +${amount}, 当前: ${playerData.experience} (等级 ${newLevel})`);
-
-                if (levelUpInfo) {
-                    logger.info(`[EconomyService] 玩家 ${userId} 升级: ${oldLevel} -> ${newLevel}`);
-                }
 
                 return {
                     player: playerData,

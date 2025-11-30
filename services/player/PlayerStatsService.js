@@ -89,7 +89,6 @@ class PlayerStatsService {
                 moneyEarned: value
             });
 
-            logger.info(`[StatisticsService] 玩家 ${userId} 收获统计: +${amount} 作物, +${value} 金币`);
         } catch (error) {
             logger.error(`[StatisticsService] 更新收获统计失败 [${userId}]: ${error.message}`);
             throw error;
@@ -108,7 +107,6 @@ class PlayerStatsService {
                 stolenFrom: amount
             });
 
-            logger.info(`[StatisticsService] 玩家 ${userId} 被偷统计: +${amount} 作物`);
         } catch (error) {
             logger.error(`[StatisticsService] 更新被偷统计失败 [${userId}]: ${error.message}`);
             throw error;
@@ -128,7 +126,6 @@ class PlayerStatsService {
                 moneyEarned: value
             });
 
-            logger.info(`[StatisticsService] 玩家 ${userId} 偷取统计: +${amount} 作物, +${value} 金币`);
         } catch (error) {
             logger.error(`[StatisticsService] 更新偷取统计失败 [${userId}]: ${error.message}`);
             throw error;
@@ -147,7 +144,6 @@ class PlayerStatsService {
                 moneySpent: amount
             });
 
-            logger.info(`[StatisticsService] 玩家 ${userId} 消费统计: +${amount} 金币 (${category})`);
         } catch (error) {
             logger.error(`[StatisticsService] 更新消费统计失败 [${userId}]: ${error.message}`);
             throw error;

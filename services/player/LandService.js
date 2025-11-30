@@ -27,7 +27,6 @@ class LandService {
       // 直接调用PlayerService的扩张方法
       const result = await this.playerService.expandLand(userId);
 
-      logger.info(`[LandService] 玩家 ${userId} 土地扩张结果: ${result.success ? '成功' : '失败'}`);
 
       return result;
     } catch (error) {
@@ -425,7 +424,6 @@ class LandService {
         };
       }
 
-      logger.info(`[LandService] 玩家 ${userId} 土地 ${landId} 品质进阶: ${upgradeInfo.currentQuality} -> ${upgradeInfo.nextQuality}`);
 
       return {
         success: true,
