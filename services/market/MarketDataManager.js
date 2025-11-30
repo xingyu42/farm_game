@@ -234,6 +234,111 @@ export class MarketDataManager {
   }
 
   /**
+   * 获取市场图片渲染数据（按波动排序，分离Top10和其他）
+   * @param {number} topCount 高波动商品数量，默认10
+   * @returns {Promise<Object>} 渲染数据 { topVolatileItems, otherItems, totalItems }
+   */
+  async getMarketRenderData(topCount = 10) {
+    try {
+      const floatingItems = this._getFloatingPriceItems();
+      const allItems = [];
+
+      for (const itemId of floatingItems) {
+        const itemInfo = this.itemResolver.getItemInfo(itemId);
+        if (!itemInfo) continue;
+
+        try {
+          const stats = await this.getMarketStats(itemId);
+          if (stats && !stats.error) {
+            const buyPriceChange = stats.basePrice > 0
+              ? ((stats.currentPrice - stats.basePrice) / stats.basePrice * 100)
+              : 0;
+            const sellPriceChange = stats.baseSellPrice > 0
+              ? ((stats.currentSellPrice - stats.baseSellPrice) / stats.baseSellPrice * 100)
+              : 0;
+
+            allItems.push({
+              id: itemId,
+              name: itemInfo.name,
+              icon: this.config.getItemIcon(itemId),
+              currentBuyPrice: Math.round(stats.currentPrice),
+              currentSellPrice: Math.round(stats.currentSellPrice),
+              basePrice: stats.basePrice,
+              buyPriceChange: parseFloat(buyPriceChange.toFixed(1)),
+              sellPriceChange: parseFloat(sellPriceChange.toFixed(1)),
+              priceTrend: stats.priceTrend,
+              priceHistory: stats.priceHistory || [],
+              demand24h: stats.demand24h || 0,
+              supply24h: stats.supply24h || 0,
+              volatility: Math.abs(buyPriceChange)
+            });
+          }
+        } catch (error) {
+          logger.error(`[MarketDataManager] 获取物品 ${itemId} 渲染数据失败: ${error.message}`);
+        }
+      }
+
+      // 按波动幅度（绝对值）降序排序
+      allItems.sort((a, b) => b.volatility - a.volatility);
+
+      // 分离Top N和其他物品
+      const topVolatileItems = allItems.slice(0, topCount).map(item => ({
+        ...item,
+        sparklinePath: this._generateSparklinePath(item.priceHistory)
+      }));
+      const otherItems = allItems.slice(topCount);
+
+      return {
+        topVolatileItems,
+        otherItems,
+        totalItems: allItems.length
+      };
+    } catch (error) {
+      logger.error(`[MarketDataManager] 获取市场渲染数据失败: ${error.message}`);
+      return { topVolatileItems: [], otherItems: [], totalItems: 0 };
+    }
+  }
+
+  /**
+   * 生成 SVG Sparkline 路径
+   * @param {Array<number>} priceHistory 价格历史数组
+   * @param {number} width SVG宽度，默认100
+   * @param {number} height SVG高度，默认30
+   * @returns {string} SVG path d属性值
+   * @private
+   */
+  _generateSparklinePath(priceHistory, width = 100, height = 30) {
+    if (!Array.isArray(priceHistory) || priceHistory.length < 2) {
+      return `M 0 ${height / 2} L ${width} ${height / 2}`;
+    }
+
+    // 取最近24个数据点（一天的数据）
+    const data = priceHistory.slice(-24);
+    if (data.length < 2) {
+      return `M 0 ${height / 2} L ${width} ${height / 2}`;
+    }
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const padding = 2;
+    const effectiveHeight = height - padding * 2;
+
+    const points = data.map((price, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = padding + effectiveHeight - ((price - min) / range * effectiveHeight);
+      return { x, y };
+    });
+
+    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 1; i < points.length; i++) {
+      d += ` L ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)}`;
+    }
+
+    return d;
+  }
+
+  /**
    * 重置每日统计数据
    * @returns {Promise<Object>} 重置结果统计
    */

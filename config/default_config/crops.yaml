@@ -4,6 +4,7 @@
 # 胡萝卜 - 快速作物
 carrot:
   name: "胡萝卜"
+  icon: "🥕"
   price: 16 # 作物购买价格（商店/市场基准价）
   sellPrice: 8 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
@@ -14,6 +15,7 @@ carrot:
 # 西红柿 - 中等作物
 tomato:
   name: "西红柿"
+  icon: "🍅"
   price: 44 # 作物购买价格（商店/市场基准价）
   sellPrice: 22 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
@@ -24,6 +26,7 @@ tomato:
 # 小麦 - 粮食作物
 wheat:
   name: "小麦"
+  icon: "🌾"
   price: 20 # 作物购买价格（商店/市场基准价）
   sellPrice: 10 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
@@ -34,6 +37,7 @@ wheat:
 # 生菜 - 快速作物（Lv2）
 lettuce:
   name: "生菜"
+  icon: "🥬"
   price: 20
   sellPrice: 10
   is_dynamic_price: true
@@ -44,6 +48,7 @@ lettuce:
 # 土豆 - 中期入门（Lv4）
 potato:
   name: "土豆"
+  icon: "🥔"
   price: 42
   sellPrice: 21
   is_dynamic_price: true
@@ -54,6 +59,7 @@ potato:
 # 玉米 - 中期主粮（Lv6）
 corn:
   name: "玉米"
+  icon: "🌽"
   price: 68
   sellPrice: 34
   is_dynamic_price: true
@@ -64,6 +70,7 @@ corn:
 # 草莓 - 中后期高价值（Lv8）
 strawberry:
   name: "草莓"
+  icon: "🍓"
   price: 104
   sellPrice: 52
   is_dynamic_price: true
@@ -74,6 +81,7 @@ strawberry:
 # 葡萄 - 后期精品（Lv12）
 grape:
   name: "葡萄"
+  icon: "🍇"
   price: 344
   sellPrice: 172
   is_dynamic_price: true
@@ -84,6 +92,7 @@ grape:
 # 南瓜 - 后期高回报（Lv14）
 pumpkin:
   name: "南瓜"
+  icon: "🎃"
   price: 502
   sellPrice: 251
   is_dynamic_price: true

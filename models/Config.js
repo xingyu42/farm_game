@@ -101,6 +101,50 @@ class Config {
   }
 
   /**
+   * 获取物品图标（统一入口）
+   * @param {string} itemId 物品ID
+   * @returns {string} emoji图标
+   */
+  getItemIcon(itemId) {
+    if (!itemId || typeof itemId !== 'string') return '📦';
+
+    // 1. 作物配置
+    const cropsConfig = this.crops || {};
+    if (cropsConfig[itemId]?.icon) return cropsConfig[itemId].icon;
+    if (cropsConfig[itemId]) return '🌱';
+
+    // 2. 物品配置（按类别扫描）
+    const itemsRoot = this.items || {};
+    const categoryKeys = ['seeds', 'fertilizer', 'pesticide', 'defense', 'tools', 'materials'];
+
+    for (const categoryKey of categoryKeys) {
+      const group = itemsRoot[categoryKey];
+      if (!group || typeof group !== 'object') continue;
+
+      const itemInfo = group[itemId];
+      if (!itemInfo) continue;
+
+      if (itemInfo.icon) return itemInfo.icon;
+
+      // 类别级回退
+      const fallbacks = {
+        seeds: '🌱',
+        fertilizer: '💊',
+        pesticide: '🐛',
+        defense: '🦴',
+        tools: '🔧',
+        materials: '✨'
+      };
+      return fallbacks[categoryKey] || '📦';
+    }
+
+    // 3. ID推断回退
+    if (itemId.includes('seed')) return '🌱';
+
+    return '📦';
+  }
+
+  /**
    * 默认配置和用户配置
    * @param {string} name 配置名称
    */

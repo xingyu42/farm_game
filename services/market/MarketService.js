@@ -109,6 +109,20 @@ export class MarketService {
   }
 
   /**
+   * 获取市场图片渲染数据 - 委托给MarketDataManager
+   * @param {number} topCount 高波动商品数量，默认10
+   * @returns {Promise<Object>} 渲染数据 { topVolatileItems, otherItems, totalItems }
+   */
+  async getMarketRenderData(topCount = 10) {
+    try {
+      return await this.dataManager.getMarketRenderData(topCount);
+    } catch (error) {
+      logger.error(`[MarketService] 获取市场渲染数据失败: ${error.message}`);
+      return { topVolatileItems: [], otherItems: [], totalItems: 0 };
+    }
+  }
+
+  /**
    * 记录交易统计数据 - 委托给MarketDataManager
    * @param {string} itemId 物品ID
    * @param {number} quantity 交易数量

@@ -2,18 +2,6 @@ import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
 import { Puppeteer } from '../models/services.js'
 
-// Crop emoji mapping
-const CROP_ICONS = {
-  carrot: '🥕',
-  tomato: '🍅',
-  wheat: '🌾',
-  lettuce: '🥬',
-  potato: '🥔',
-  corn: '🌽',
-  strawberry: '🍓',
-  grape: '🍇',
-  pumpkin: '🎃'
-}
 
 // Quality config
 const QUALITY_CONFIG = {
@@ -184,7 +172,7 @@ export class farm extends plugin {
       if (!isEmpty) {
         const cropConfig = cropsConfig[land.crop]
         landData.cropName = cropConfig?.name || land.crop
-        landData.cropIcon = CROP_ICONS[land.crop] || '🌱'
+        landData.cropIcon = this.config.getItemIcon(land.crop)
 
         // 计算生长进度
         if (land.status === 'mature') {

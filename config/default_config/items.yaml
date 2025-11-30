@@ -12,6 +12,7 @@ seeds:
     description: "常见的蔬菜种子"
     requiredLevel: 1
     maxStack: 99
+    icon: 🌱
 
   tomato_seed:
     name: "西红柿种子"
@@ -22,6 +23,7 @@ seeds:
     description: "营养丰富的蔬菜种子"
     requiredLevel: 3
     maxStack: 99
+    icon: 🌱
 
   wheat_seed:
     name: "小麦种子"
@@ -32,6 +34,7 @@ seeds:
     description: "基础的谷物种子"
     requiredLevel: 2
     maxStack: 99
+    icon: 🌱
 
   lettuce_seed:
     name: "生菜种子"
@@ -42,6 +45,7 @@ seeds:
     description: "生菜的播种用种子"
     requiredLevel: 2
     maxStack: 99
+    icon: 🌱
 
   potato_seed:
     name: "土豆种子"
@@ -52,6 +56,7 @@ seeds:
     description: "土豆的播种用种子"
     requiredLevel: 4
     maxStack: 99
+    icon: 🌱
 
   corn_seed:
     name: "玉米种子"
@@ -62,6 +67,7 @@ seeds:
     description: "玉米的播种用种子"
     requiredLevel: 6
     maxStack: 99
+    icon: 🌱
 
   strawberry_seed:
     name: "草莓种子"
@@ -72,6 +78,7 @@ seeds:
     description: "草莓的播种用种子"
     requiredLevel: 8
     maxStack: 99
+    icon: 🌱
 
   grape_seed:
     name: "葡萄种子"
@@ -82,6 +89,7 @@ seeds:
     description: "葡萄的播种用种子"
     requiredLevel: 12
     maxStack: 99
+    icon: 🌱
 
   pumpkin_seed:
     name: "南瓜种子"
@@ -92,6 +100,7 @@ seeds:
     description: "南瓜的播种用种子"
     requiredLevel: 14
     maxStack: 99
+    icon: 🌱
 
 # 肥料配置
 fertilizer:
@@ -105,6 +114,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.2 # 加速20%
+    icon: 💊
 
   fertilizer_premium:
     name: "高级肥料"
@@ -116,6 +126,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.4 # 加速40%
+    icon: 💊
 
   fertilizer_deluxe:
     name: "顶级肥料"
@@ -127,6 +138,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.6 # 加速60%
+    icon: 💊
 
 # 杀虫剂配置
 pesticide:
@@ -140,6 +152,7 @@ pesticide:
     maxStack: 50
     effects:
       health: 15
+    icon: 🐛
 
 # 狗粮配置（防御系统）
 defense:
@@ -153,6 +166,7 @@ defense:
     maxStack: 20
     defenseBonus: 20 # 防御加成20%
     duration: 30 # 持续30分钟
+    icon: 🦴
   premium:
     name: "高级狗粮"
     price: 80
@@ -163,6 +177,7 @@ defense:
     maxStack: 20
     defenseBonus: 35 # 防御加成35%
     duration: 60 # 持续60分钟
+    icon: 🦴
   deluxe:
     name: "优质狗粮"
     price: 150
@@ -173,6 +188,7 @@ defense:
     maxStack: 20
     defenseBonus: 50 # 防御加成50%
     duration: 120 # 持续120分钟
+    icon: 🦴
 # 偷菜工具配置（未来扩展）
 tools:
   basic_lockpick:
@@ -186,6 +202,7 @@ tools:
     effect:
       successRateBonus: 10 # +10%成功率
       duration: 60 # 持续60分钟
+    icon: 🔐
   advanced_gloves:
     name: "隐形手套"
     price: 250
@@ -198,6 +215,7 @@ tools:
       successRateBonus: 20 # +20%成功率
       stealthBonus: 15 # +15%隐匿加成
       duration: 90 # 持续90分钟
+    icon: 🧤
   master_toolkit:
     name: "大师工具包"
     price: 500
@@ -211,6 +229,7 @@ tools:
       rewardBonus: 25 # +25%收益加成
       cooldownReduction: 20 # -20%冷却时间
       duration: 120 # 持续120分钟
+    icon: 🔧
 # 土地进阶材料
 materials:
   copper_essence:
@@ -221,6 +240,7 @@ materials:
     description: "用于土地品质进阶的珍贵材料"
     requiredLevel: 10
     maxStack: 10
+    icon: 🟤
   silver_essence:
     name: "银质精华"
     price: 50000 # 商店价格（超稀有）
@@ -229,6 +249,7 @@ materials:
     description: "用于土地品质进阶的传奇材料"
     requiredLevel: 15
     maxStack: 5
+    icon: ⚪
   gold_essence:
     name: "金质精华"
     price: 200000 # 商店价格（传说）
@@ -237,6 +258,7 @@ materials:
     description: "用于土地品质进阶的神话材料"
     requiredLevel: 20
     maxStack: 3
+    icon: 🟡
 # 分类定义
 categories:
   - key: "seeds"
@@ -266,7 +288,8 @@ initial_gift:
 inventory:
   startingCapacity: 20 # 初始仓库容量
   maxCapacity: 200 # 最大仓库容量
-  upgradeSteps: # 升级配置
+  upgradeSteps:
+    # 升级配置
     - capacity: 30
       cost: 500
     - capacity: 40

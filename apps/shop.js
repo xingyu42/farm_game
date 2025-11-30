@@ -104,17 +104,7 @@ export class ShopCommands extends plugin {
    * @private
    */
   _buildShopRenderData(shopItems, playerData) {
-    // 物品图标映射（根据物品名称关键字）
-    const itemIconMap = {
-      '胡萝卜': '🥕', '西红柿': '🍅', '小麦': '🌾', '生菜': '🥬',
-      '土豆': '🥔', '玉米': '🌽', '草莓': '🍓', '葡萄': '🍇',
-      '南瓜': '🎃', '肥料': '💊', '杀虫': '🐛', '狗粮': '🦴',
-      '锁': '🔐', '手套': '🧤', '工具': '🔧', '精华': '✨',
-      '铜': '🟤', '银': '⚪', '金': '🟡'
-    };
-
     const categories = shopItems.map(cat => {
-      // 获取分类 key（从分类名反推）
       const categoryKeyMap = {
         '种子': 'seeds', '肥料': 'fertilizer', '杀虫剂': 'pesticide',
         '防御': 'defense', '工具': 'tools', '材料': 'materials', '作物': 'crops'
@@ -122,20 +112,9 @@ export class ShopCommands extends plugin {
       const key = categoryKeyMap[cat.category] || 'unknown';
 
       const items = cat.items.map(item => {
-        // 根据物品名称获取图标
-        let icon = '📦';
-        for (const [keyword, emoji] of Object.entries(itemIconMap)) {
-          if (item.name.includes(keyword)) {
-            icon = emoji;
-            break;
-          }
-        }
-        // 种子类别默认图标
-        if (icon === '📦' && key === 'seeds') icon = '🌱';
-
         return {
           ...item,
-          icon,
+          icon: this.shopService.config.getItemIcon(item.id),
           isLocked: playerData.level < (item.requiredLevel || 1)
         };
       });
@@ -155,47 +134,49 @@ export class ShopCommands extends plugin {
   }
 
   /**
-   * 查看市场价格
+   * 查看市场价格（图片化）
    * @param {Object} e Miao-Yunzai事件对象
    */
   async viewMarket(e) {
     try {
-      // 获取市场显示数据
-      const marketData = await this.marketService.getMarketDisplayData();
+      const userId = e.user_id.toString();
 
-      if (marketData.length === 0) {
+      // 获取玩家数据（用于显示金币）
+      let playerCoins = 0;
+      if (await this.playerService.isPlayer(userId)) {
+        const playerData = await this.playerService.getPlayer(userId);
+        playerCoins = playerData.coins || 0;
+      }
+
+      // 获取市场渲染数据
+      const renderData = await this.marketService.getMarketRenderData(10);
+
+      if (renderData.totalItems === 0) {
         await e.reply('📈 市场暂时没有动态价格商品\n💡 动态价格功能可能未启用或没有配置动态价格商品');
         return true;
       }
 
-      // 构建市场价格显示
-      let message = '📈 动态市场价格\n';
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
+      // 获取更新时间
+      const now = new Date();
+      const updateTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-      for (const category of marketData) {
-        message += `🏷️ ${category.category}\n`;
+      // 构建完整渲染数据
+      const fullRenderData = {
+        playerCoins,
+        totalItems: renderData.totalItems,
+        updateTime,
+        topVolatileItems: renderData.topVolatileItems,
+        otherItems: renderData.otherItems
+      };
 
-        for (const item of category.items) {
-          // 价格趋势图标
-          const trendIcon = this._getPriceTrendIcon(item.priceTrend);
+      // 使用 Puppeteer 渲染图片
+      const result = await Puppeteer.render('market/index', fullRenderData, { e, scale: 2.0 });
 
-          // 价格变化显示
-          const buyChangeText = this._formatPriceChange(item.buyPriceChange);
-          const sellChangeText = this._formatPriceChange(item.sellPriceChange);
-
-          message += `   ${trendIcon} ${item.name}\n`;
-          message += `      购买: ${item.currentBuyPrice}金币 ${buyChangeText}\n`;
-          message += `      出售: ${item.currentSellPrice}金币 ${sellChangeText}\n`;
-        }
-
-        message += '\n';
+      if (!result) {
+        await e.reply('❌ 生成市场图片失败，请稍后再试');
+        return false;
       }
 
-      message += '━━━━━━━━━━━━━━━━━━━━\n';
-      message += ' 价格趋势: 📈上涨 📉下跌 📊稳定\n';
-      message += '💡 价格根据市场供需实时变化';
-
-      await e.reply(message);
       return true;
 
     } catch (error) {
@@ -331,39 +312,5 @@ export class ShopCommands extends plugin {
       await e.reply('❌ 批量出售失败，请稍后再试');
       return true;
     }
-  }
-
-  /**
-   * 获取价格趋势图标
-   * @param {string} trend 价格趋势
-   * @returns {string} 趋势图标
-   * @private
-   */
-  _getPriceTrendIcon(trend) {
-    switch (trend) {
-      case 'rising':
-        return '📈';
-      case 'falling':
-        return '📉';
-      case 'stable':
-      default:
-        return '📊';
-    }
-  }
-
-  /**
-   * 格式化价格变化显示
-   * @param {number} changePercent 价格变化百分比
-   * @returns {string} 格式化的价格变化文本
-   * @private
-   */
-  _formatPriceChange(changePercent) {
-    if (Math.abs(changePercent) < 0.1) {
-      return '';
-    }
-
-    const sign = changePercent > 0 ? '+' : '';
-    const color = changePercent > 0 ? '🟢' : '🔴';
-    return `${color}${sign}${changePercent}%`;
   }
 }
