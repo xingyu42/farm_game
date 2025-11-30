@@ -358,25 +358,12 @@ body {
   text-align: center;
 }
 
-.supply-demand {
+.supply-info {
   font-size: 10px;
   color: var(--text-dim);
   background: rgba(0,0,0,0.05);
   padding: 2px 6px;
   border-radius: 2px;
-}
-
-.demand {
-  color: var(--price-buy);
-}
-
-.supply {
-  color: var(--price-sell);
-}
-
-.separator {
-  color: var(--text-dim);
-  margin: 0 2px;
 }
 
 /* === Compact List (Other Items) === */

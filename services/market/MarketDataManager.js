@@ -423,7 +423,6 @@ export class MarketDataManager {
               sellPriceChange: parseFloat(sellPriceChange.toFixed(1)),
               priceTrend: stats.priceTrend,
               priceHistory: stats.priceHistory || [],
-              demand24h: stats.demand24h || 0,
               supply24h: stats.supply24h || 0,
               volatility: Math.abs(buyPriceChange)
             });
