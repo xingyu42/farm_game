@@ -15,7 +15,7 @@ export class HelpCommands extends plugin {
       priority: 100,
       rule: [
         {
-          reg: '^#(nc)?农场帮助$',
+          reg: '^#(nc|农场)帮助$',
           fnc: 'showHelp'
         }
       ]

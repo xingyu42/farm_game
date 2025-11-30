@@ -1,9 +1,9 @@
 body {
-    width: 540px;
+    width: 700px;
 }
 
 .container {
-    width: 540px;
+    width: 700px;
     padding: 20px 15px 10px 15px;
     overflow: hidden;
     background-image: url(../help/bg.jpg);
@@ -241,8 +241,8 @@ body {
 }
 
 .status-badge {
-    font-size: 9px;
-    padding: 2px 5px;
+    font-size: 11px;
+    padding: 3px 6px;
     border-radius: 8px;
     color: white;
     font-weight: bold;
@@ -261,22 +261,8 @@ body {
 }
 
 .bg-steal {
-    background: #ffa726;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
-    }
-
-    100% {
-        transform: scale(1);
-    }
+    background: linear-gradient(135deg, #ffa726, #ff9800);
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.6);
 }
 
 /* --- Footer --- */

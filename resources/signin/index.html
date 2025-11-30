@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{pluResPath}}signin/index.css" />
+    <link rel="shortcut icon" href="#" />
+    <style>
+        #container {
+            background: url("{{pluResPath}}help/bg.jpg") center !important;
+            background-size: cover !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+
+        <!-- Header -->
+        <div class="glass-panel header">
+            <div class="header-content">
+                <div class="icon-check">✓</div>
+                <div class="title-group">
+                    <div class="main-title">签到成功</div>
+                    <div class="subtitle">Hi, {{playerName}}</div>
+                </div>
+            </div>
+            <div class="streak-badge">
+                <span class="fire-icon">🔥</span>
+                <span>连签 {{consecutiveDays}} 天</span>
+            </div>
+        </div>
+
+        <!-- Today Rewards -->
+        <div class="glass-panel rewards-section">
+            <div class="section-header">
+                <span>🎁 今日奖励</span>
+            </div>
+            <div class="rewards-grid">
+                <div class="reward-box">
+                    <span class="reward-icon">💰</span>
+                    <div class="reward-info">
+                        <span class="reward-label">金币</span>
+                        <span class="reward-value">+{{rewardCoins}}</span>
+                    </div>
+                </div>
+                <div class="reward-box">
+                    <span class="reward-icon">✨</span>
+                    <div class="reward-info">
+                        <span class="reward-label">经验</span>
+                        <span class="reward-value">+{{rewardExp}}</span>
+                    </div>
+                </div>
+            </div>
+            {{if rewardItems.length}}
+            <div class="items-row">
+                {{each rewardItems item}}
+                <div class="item-tag">📦 {{item.name}} x{{item.quantity}}</div>
+                {{/each}}
+            </div>
+            {{/if}}
+        </div>
+
+        <!-- Milestone Banner -->
+        {{if hasMilestone}}
+        <div class="glass-panel milestone-banner">
+            <div class="milestone-content">
+                <span class="milestone-icon">🏆</span>
+                <div class="milestone-text">
+                    <span class="milestone-title">达成里程碑!</span>
+                    <span class="milestone-name">{{milestoneName}}</span>
+                </div>
+            </div>
+            <div class="shine-effect"></div>
+        </div>
+        {{/if}}
+
+        <!-- Week Grid -->
+        <div class="glass-panel week-section">
+            <div class="section-header">
+                <span>📅 本周签到</span>
+            </div>
+            <div class="week-grid">
+                {{each weekDays item}}
+                <div class="day-cell {{if item.signed}}signed{{/if}} {{if item.isToday}}today{{/if}}">
+                    <div class="day-label">{{item.dayName}}</div>
+                    <div class="day-status">
+                        {{if item.signed}}✓{{else if item.isToday}}今{{else}}·{{/if}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+
+        <!-- Stats & Progress -->
+        <div class="glass-panel stats-section">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-label">📊 总签到</span>
+                    <span class="stat-value">{{totalSignDays}} 天</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">🎯 下一目标</span>
+                    <span class="stat-value target">{{nextMilestone}}</span>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: {{milestoneProgress}}%;"></div>
+                <div class="progress-text">{{milestoneProgress}}%</div>
+            </div>
+        </div>
+
+        <!-- Tomorrow Preview -->
+        <div class="glass-panel preview-section">
+            <div class="preview-header">
+                <span>🔮 明日奖励预览</span>
+            </div>
+            <div class="preview-rewards">
+                <span class="preview-item">💰 +{{nextRewardCoins}}</span>
+                <span class="preview-item">✨ +{{nextRewardExp}}</span>
+            </div>
+        </div>
+
+        <!-- Encourage Text -->
+        <div class="glass-panel encourage-section">
+            <p class="encourage-text">{{encourageText}}</p>
+        </div>
+
+        <div class="footer">
+            Generated by Miao-Yunzai Farm Plugin
+        </div>
+
+    </div>
+</body>
+
+</html>

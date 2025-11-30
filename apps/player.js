@@ -164,27 +164,24 @@ export class player extends plugin {
   }
 
   /**
-   * 每日签到功能
+   * 每日签到功能（图片化展示）
    */
   async dailySignIn(e) {
     try {
       const userId = e.user_id.toString();
+      const userName = e.sender?.card || e.sender?.nickname || `玩家${userId}`;
 
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 使用签到服务
       const signInResult = await this.playerService.signInService.signIn(userId);
 
-      // 如果签到失败，直接返回错误信息
       if (!signInResult.success) {
         await e.reply(signInResult.message);
         return true;
       }
 
-      // 格式化详细的签到奖励信息
-      const detailedMessage = this._formatSignInRewards(signInResult);
-
-      await e.reply(detailedMessage);
+      const renderData = this._buildSignInRenderData(signInResult, userName);
+      await Puppeteer.render('signin/index', renderData, { e, scale: 2.0 });
       return true;
 
     } catch (error) {
@@ -195,84 +192,129 @@ export class player extends plugin {
   }
 
   /**
-   * 格式化签到奖励信息
-   * @param {Object} signInResult 签到结果
-   * @returns {string} 格式化后的奖励信息
+   * 构建签到渲染数据
    */
-  _formatSignInRewards(signInResult) {
+  _buildSignInRenderData(signInResult, userName) {
     const { rewards, consecutiveDays, totalSignDays } = signInResult;
 
-    const messages = [
-      `🎉 签到成功！连续签到 ${consecutiveDays} 天`,
-      `━━━━━━━━━━━━━━━━━━`,
-      `🎁 今日奖励：`
-    ];
+    // 构建本周签到数据
+    const weekDays = this._buildWeekDays(consecutiveDays);
 
-    // 基础奖励展示
-    if (rewards.coins > 0) {
-      messages.push(`💰 金币: +${rewards.coins.toLocaleString()}`);
-    }
+    // 计算里程碑进度
+    const { nextMilestone, milestoneProgress } = this._calculateMilestoneProgress(consecutiveDays);
 
-    if (rewards.experience > 0) {
-      messages.push(`✨ 经验: +${rewards.experience}`);
-    }
-
-    // 物品奖励展示
-    if (rewards.items && rewards.items.length > 0) {
-      messages.push(`📦 物品奖励:`);
-      rewards.items.forEach(item => {
-        const itemName = this.itemResolver ? this.itemResolver.getItemName(item.type) : item.type;
-        messages.push(`   • ${itemName} x${item.quantity}`);
-      });
-    }
-
-    // 里程碑奖励特殊展示
-    if (rewards.milestone) {
-      messages.push(``, `🏆 里程碑达成: ${rewards.milestone}!`);
-
-      // 根据连续签到天数显示特殊祝贺
-      if (consecutiveDays === 7) {
-        messages.push(`🌟 坚持一周签到，真不容易！`);
-      } else if (consecutiveDays === 30) {
-        messages.push(`🎊 连续签到一个月，你是真正的农场主！`);
-      } else if (consecutiveDays === 100) {
-        messages.push(`👑 签到百日成就解锁，传奇农场主诞生！`);
-      }
-    }
-
-    // 签到统计信息
-    messages.push(``, `📊 签到统计:`);
-    messages.push(`📅 总签到天数: ${totalSignDays} 天`);
-    messages.push(`🔥 连续签到: ${consecutiveDays} 天`);
-
-    // 下次签到奖励预览 - 使用SignInService的预览功能
+    // 获取明日奖励预览
+    let nextRewardCoins = 0, nextRewardExp = 0;
     try {
       const previewRewards = this.playerService.signInService.getSignInRewardsPreview(consecutiveDays);
-      const nextDayReward = previewRewards.find(reward => reward.day === consecutiveDays + 1);
-
+      const nextDayReward = previewRewards.find(r => r.day === consecutiveDays + 1);
       if (nextDayReward) {
-        messages.push(``, `🔮 明日奖励预览:`);
-        messages.push(`💰 金币: +${nextDayReward.coins.toLocaleString()}`);
-        messages.push(`✨ 经验: +${nextDayReward.experience}`);
-
-        if (nextDayReward.milestone) {
-          messages.push(`🏆 里程碑: ${nextDayReward.milestone}`);
-        }
+        nextRewardCoins = nextDayReward.coins;
+        nextRewardExp = nextDayReward.experience;
       }
-    } catch (error) {
-      logger.warn('[农场游戏] 获取明日奖励预览失败:', error);
+    } catch (err) {
+      logger.warn('[农场游戏] 获取明日奖励预览失败:', err);
     }
 
-    // 激励信息
-    if (consecutiveDays < 7) {
-      const remainingDays = 7 - consecutiveDays;
-      messages.push(``, `💪 再坚持 ${remainingDays} 天可获得一周里程碑奖励！`);
-    } else if (consecutiveDays < 30) {
-      const remainingDays = 30 - consecutiveDays;
-      messages.push(``, `🚀 距离月度里程碑还有 ${remainingDays} 天！`);
+    // 处理物品奖励
+    const rewardItems = (rewards.items || []).map(item => ({
+      name: this.itemResolver ? this.itemResolver.getItemName(item.type) : item.type,
+      quantity: item.quantity
+    }));
+
+    // 激励文案
+    const encourageText = this._getEncourageText(consecutiveDays);
+
+    return {
+      saveId: `signin_${Date.now()}`,
+      playerName: userName,
+      consecutiveDays,
+      totalSignDays,
+      rewardCoins: rewards.coins.toLocaleString(),
+      rewardExp: rewards.experience,
+      rewardItems,
+      hasMilestone: !!rewards.milestone,
+      milestoneName: rewards.milestone || '',
+      weekDays,
+      nextMilestone,
+      milestoneProgress,
+      nextRewardCoins,
+      nextRewardExp,
+      encourageText
+    };
+  }
+
+  /**
+   * 构建本周签到数据
+   */
+  _buildWeekDays(consecutiveDays) {
+    const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const now = new Date();
+    const todayIndex = now.getDay();
+
+    // 获取本周一的日期
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (todayIndex === 0 ? 6 : todayIndex - 1));
+
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      const dayIndex = date.getDay();
+      const isToday = date.toDateString() === now.toDateString();
+      const isPast = date < now && !isToday;
+
+      // 根据连续签到天数推算哪些天已签到
+      let signed = false;
+      if (isToday) {
+        signed = true; // 今天刚签到
+      } else if (isPast) {
+        const daysAgo = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+        signed = daysAgo < consecutiveDays;
+      }
+
+      weekDays.push({
+        dayName: dayNames[dayIndex],
+        signed,
+        isToday
+      });
+    }
+    return weekDays;
+  }
+
+  /**
+   * 计算里程碑进度
+   */
+  _calculateMilestoneProgress(consecutiveDays) {
+    const milestones = [7, 14, 30, 60, 100];
+    const milestoneNames = ['一周', '两周', '一个月', '两个月', '百日'];
+
+    let nextMilestoneIdx = milestones.findIndex(m => m > consecutiveDays);
+    if (nextMilestoneIdx === -1) {
+      return { nextMilestone: '已达成全部', milestoneProgress: 100 };
     }
 
-    return messages.join('\n');
+    const target = milestones[nextMilestoneIdx];
+    const prev = nextMilestoneIdx > 0 ? milestones[nextMilestoneIdx - 1] : 0;
+    const progress = Math.round(((consecutiveDays - prev) / (target - prev)) * 100);
+
+    return {
+      nextMilestone: `${milestoneNames[nextMilestoneIdx]} (${target}天)`,
+      milestoneProgress: Math.min(progress, 100)
+    };
+  }
+
+  /**
+   * 获取激励文案
+   */
+  _getEncourageText(consecutiveDays) {
+    if (consecutiveDays >= 100) return '传奇农场主，你的坚持令人敬佩！';
+    if (consecutiveDays >= 60) return '两个月的坚持，你已是资深农场主！';
+    if (consecutiveDays >= 30) return '月度达人！继续保持这份热情！';
+    if (consecutiveDays >= 14) return '两周连签，农场经营有声有色！';
+    if (consecutiveDays >= 7) return '一周达成！好习惯正在养成！';
+    const remaining = 7 - consecutiveDays;
+    return `再坚持 ${remaining} 天，即可达成一周里程碑！`;
   }
 }
 

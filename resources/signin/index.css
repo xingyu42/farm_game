@@ -1,0 +1,381 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 500px;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    width: 500px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 15px;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon-check {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.title-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.main-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2e7d32;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #5d4037;
+}
+
+.streak-badge {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    padding: 8px 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #e65100;
+    font-size: 14px;
+    border: 1px solid #ffcc80;
+}
+
+.fire-icon {
+    font-size: 16px;
+}
+
+/* Section Header */
+.section-header {
+    font-size: 14px;
+    font-weight: bold;
+    color: #4e342e;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed rgba(141, 110, 99, 0.2);
+    margin-bottom: 12px;
+}
+
+/* Rewards Section */
+.rewards-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.rewards-grid {
+    display: flex;
+    gap: 12px;
+}
+
+.reward-box {
+    flex: 1;
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #a5d6a7;
+}
+
+.reward-icon {
+    font-size: 32px;
+}
+
+.reward-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.reward-label {
+    font-size: 11px;
+    color: #558b2f;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reward-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #33691e;
+}
+
+.items-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.item-tag {
+    background: rgba(255, 248, 225, 0.8);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #5d4037;
+    border: 1px solid rgba(255, 236, 179, 0.5);
+}
+
+/* Milestone Banner */
+.milestone-banner {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 193, 7, 0.25));
+    border: 1px solid rgba(255, 193, 7, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+.milestone-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.milestone-icon {
+    font-size: 32px;
+}
+
+.milestone-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.milestone-title {
+    font-size: 11px;
+    font-weight: bold;
+    color: #f57c00;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.milestone-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #e65100;
+}
+
+.shine-effect {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    transform: skewX(-20deg);
+    animation: shine 2.5s infinite;
+}
+
+@keyframes shine {
+    100% {
+        left: 200%;
+    }
+}
+
+/* Week Grid */
+.week-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.day-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.day-label {
+    font-size: 12px;
+    color: #78909c;
+    font-weight: 500;
+}
+
+.day-status {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 13px;
+    color: #bdbdbd;
+    font-weight: bold;
+}
+
+.day-cell.signed .day-status {
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: white;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.35);
+}
+
+.day-cell.today .day-status {
+    border: 2px solid #43a047;
+    background: white;
+    color: #43a047;
+}
+
+.day-cell.today.signed .day-status {
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: white;
+    border: 2px solid #2e7d32;
+}
+
+/* Stats Section */
+.stats-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #78909c;
+}
+
+.stat-value {
+    font-size: 15px;
+    font-weight: bold;
+    color: #37474f;
+}
+
+.stat-value.target {
+    color: #f57c00;
+}
+
+.progress-container {
+    height: 12px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #66bb6a, #43a047);
+    border-radius: 6px;
+    transition: width 0.8s ease-out;
+}
+
+.progress-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 0;
+    line-height: 12px;
+    font-size: 9px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    font-weight: bold;
+    z-index: 2;
+}
+
+/* Preview Section */
+.preview-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(227, 242, 253, 0.85);
+    border: 1px solid rgba(144, 202, 249, 0.5);
+}
+
+.preview-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1565c0;
+}
+
+.preview-rewards {
+    display: flex;
+    gap: 16px;
+}
+
+.preview-item {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0d47a1;
+}
+
+/* Encourage Section */
+.encourage-section {
+    text-align: center;
+    background: rgba(255, 243, 224, 0.85);
+    border: 1px solid rgba(255, 204, 128, 0.5);
+}
+
+.encourage-text {
+    font-size: 13px;
+    color: #6d4c41;
+    font-style: italic;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    font-size: 10px;
+    color: #5d4037;
+    opacity: 0.7;
+    padding: 5px 0;
+}

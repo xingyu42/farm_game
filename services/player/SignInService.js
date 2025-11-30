@@ -213,8 +213,9 @@ class SignInService {
      */
     getSignInRewardsPreview(consecutiveDays) {
         const rewards = [];
+        const maxPreviewDay = consecutiveDays + 7;
 
-        for (let day = 1; day <= Math.min(consecutiveDays + 7, 30); day++) {
+        for (let day = 1; day <= maxPreviewDay; day++) {
             const dayRewards = this._calculateSignInRewards(day);
             rewards.push({
                 day,

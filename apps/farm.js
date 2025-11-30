@@ -63,7 +63,7 @@ export class farm extends plugin {
       // 添加定时任务，检查作物状态
       task: [
         {
-          cron: '0 0 * * * *',  // 每分钟执行一次
+          cron: '0 * * * * *',  // 每分钟的第0秒执行
           name: '更新作物状态',
           fnc: () => this.updateCropsStatus()
         }
@@ -157,6 +157,12 @@ export class farm extends plugin {
       const qualityInfo = QUALITY_CONFIG[quality] || QUALITY_CONFIG.normal
       const isEmpty = !land.crop || land.status === 'empty'
 
+      // 先计算实时成熟状态
+      let isMature = land.status === 'mature'
+      if (!isEmpty && !isMature && land.harvestTime) {
+        isMature = land.harvestTime <= now
+      }
+
       let landData = {
         id: land.id,
         quality,
@@ -165,7 +171,7 @@ export class farm extends plugin {
         isEmpty,
         needsWater: land.needsWater || false,
         hasPests: land.hasPests || false,
-        stealable: land.status === 'mature' && land.stealable,
+        stealable: isMature,
         status: land.status || 'empty'
       }
 
@@ -175,17 +181,14 @@ export class farm extends plugin {
         landData.cropIcon = this.config.getItemIcon(land.crop)
 
         // 计算生长进度
-        if (land.status === 'mature') {
+        if (isMature) {
           landData.growthPercent = 100
           landData.timeRemaining = '已成熟'
+          landData.status = 'mature'
         } else if (land.harvestTime) {
           const remainingTime = land.harvestTime - now
 
-          if (remainingTime <= 0) {
-            landData.growthPercent = 100
-            landData.timeRemaining = '已成熟'
-            landData.status = 'mature'
-          } else if (land.plantTime && land.harvestTime > land.plantTime) {
+          if (land.plantTime && land.harvestTime > land.plantTime) {
             const totalTime = land.harvestTime - land.plantTime
             const elapsedTime = now - land.plantTime
             const rawPercent = Math.round((elapsedTime / totalTime) * 100)

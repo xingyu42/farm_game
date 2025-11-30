@@ -258,7 +258,7 @@ class Puppeteer {
       tplPath = tplPath.replace(/.html$/, '')
       let paths = _.filter(tplPath.split('/'), (p) => !!p)
       tplPath = paths.join('/')
-      let { e } = cfg
+      let { e, scale = 1.6 } = cfg
 
       // 创建临时目录
       const tempDir = path.join(_path, 'temp', 'html', PLUGIN_NAME, tplPath)
@@ -272,7 +272,7 @@ class Puppeteer {
       // 渲染数据
       data = {
         sys: {
-          scale: 1.2
+          scale
         },
         _plugin: PLUGIN_NAME,
         _htmlPath: tplPath,
@@ -281,8 +281,8 @@ class Puppeteer {
         saveId: data.saveId || data.save_id || paths[paths.length - 1],
 
         // 截图参数
-        imgType: 'jpeg',
-        quality: 90, // 图片质量
+        imgType: 'png',
+        quality: 100, // 图片质量
         omitBackground: false,
         pageGotoParams: {
           waitUntil: 'networkidle0'
