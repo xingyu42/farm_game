@@ -122,44 +122,37 @@ export class StealService {
    */
   async _handleStealSuccess(attackerId, targetId, stealableLands, successRate) {
     const rewards = [];
+    const cropsConfig = this.config.crops || {};
 
     // 随机选择要偷取的土地（最多maxStealPerAttempt块）
     const maxSteal = this.stealConfig.basic.maxStealPerAttempt;
     const selectedLands = this._selectRandomLands(stealableLands, maxSteal);
 
-    // 使用Redis Pipeline优化连续写操作
-    const pipeline = this.redisClient.multi();
-
     for (const land of selectedLands) {
+      // 获取作物配置（land.crop 是作物ID字符串）
+      const cropConfig = cropsConfig[land.crop];
+      if (!cropConfig) {
+        logger.warn(`[StealService] 未找到作物配置: ${land.crop}`);
+        continue;
+      }
+
       // 计算偷取数量
-      const stealAmount = await this._calculateStealAmount(land);
+      const stealAmount = this._calculateStealAmount(land, cropConfig);
 
       if (stealAmount > 0) {
-        // 减少目标作物数量
-        const newQuantity = Math.max(0, land.crop.quantity - stealAmount);
-
-        // 更新土地数据
-        await this.landService.updateLandCrop(targetId, land.landId, {
-          ...land.crop,
-          quantity: newQuantity
-        });
-
         // 偷窃者获得作物
-        await this.inventoryService.addItem(attackerId, land.crop.cropId, stealAmount);
+        await this.inventoryService.addItem(attackerId, land.crop, stealAmount);
 
         rewards.push({
-          cropId: land.crop.cropId,
-          cropName: land.crop.cropName,
+          cropId: land.crop,
+          cropName: cropConfig.name,
           quantity: stealAmount,
           fromLand: land.landId
         });
 
-        logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${land.crop.cropName}`);
+        logger.info(`[StealService] 偷窃成功：${attackerId} 从 ${targetId} 的土地 ${land.landId} 偷得 ${stealAmount} 个 ${cropConfig.name}`);
       }
     }
-
-    // 执行Pipeline
-    await pipeline.exec();
 
     // 设置偷窃冷却
     await this._setStealCooldown(attackerId);
@@ -306,10 +299,12 @@ export class StealService {
    */
   async _getStealableLands(targetId) {
     try {
-      const allLands = await this.landService.getAllLands(targetId);
+      const result = await this.landService.getAllLands(targetId);
+      const allLands = result?.lands || [];
       const stealableLands = [];
       const minGrowthProgress = this.stealConfig.landRequirements.minGrowthProgress;
       const excludeStates = this.stealConfig.landRequirements.excludeStates;
+      const now = Date.now();
 
       for (const land of allLands) {
         // 检查土地状态
@@ -317,25 +312,31 @@ export class StealService {
           continue;
         }
 
-        // 检查是否有作物
-        if (!land.crop || !land.crop.cropId) {
+        // 检查是否有作物（land.crop 是作物ID字符串）
+        if (!land.crop) {
           continue;
         }
+
+        // 检查是否有有效的种植和收获时间
+        if (!land.plantTime || !land.harvestTime) {
+          continue;
+        }
+
+        // 计算生长进度
+        const totalGrowTime = land.harvestTime - land.plantTime;
+        const timeSincePlant = now - land.plantTime;
+        const growthProgress = totalGrowTime > 0 ? timeSincePlant / totalGrowTime : 0;
 
         // 检查生长进度
-        if (land.crop.growthProgress < minGrowthProgress) {
-          continue;
-        }
-
-        // 检查作物数量
-        if (land.crop.quantity <= 0) {
+        if (growthProgress < minGrowthProgress) {
           continue;
         }
 
         stealableLands.push({
-          landId: land.landId,
+          landId: land.id,
           crop: land.crop,
-          quality: land.quality
+          quality: land.quality,
+          growthProgress
         });
       }
 
@@ -396,30 +397,37 @@ export class StealService {
    * @returns {number} 偷取数量
    * @private
    */
-  async _calculateStealAmount(land) {
+  _calculateStealAmount(land, cropConfig) {
     try {
       const rewardConfig = this.stealConfig.rewards;
       const baseRate = rewardConfig.baseRewardRate;
       const maxRate = rewardConfig.maxRewardRate;
       const qualityBonus = rewardConfig.bonusByQuality;
 
+      // 获取作物基础产量
+      const baseYield = cropConfig.baseYield || 1;
+
       // 基础偷取比例
       let stealRate = baseRate;
 
       // 土地品质加成
-      const qualityMultiplier = qualityBonus[land.quality];
+      const qualityMultiplier = qualityBonus[land.quality] || 1;
       stealRate *= qualityMultiplier;
+
+      // 生长进度加成（成熟度越高偷得越多）
+      const progressMultiplier = Math.min(1.5, land.growthProgress || 1);
+      stealRate *= progressMultiplier;
 
       // 限制最大偷取比例
       stealRate = Math.min(maxRate, stealRate);
 
-      // 计算偷取数量（至少偷1个，如果有的话）
-      const stealAmount = Math.max(1, Math.floor(land.crop.quantity * stealRate));
+      // 计算偷取数量（基于作物基础产量，至少偷1个）
+      const stealAmount = Math.max(1, Math.floor(baseYield * stealRate));
 
-      return Math.min(stealAmount, land.crop.quantity);
+      return stealAmount;
     } catch (error) {
       logger.error(`[StealService] 计算偷取数量失败: ${error.message}`);
-      return 1; // 默认偷取1个
+      return 1;
     }
   }
 
