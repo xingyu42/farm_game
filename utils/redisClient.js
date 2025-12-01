@@ -89,7 +89,13 @@ class RedisClient {
     const serializedValue = this.serialize(value);
 
     if (ttl) {
-      await this.client.setEx(key, ttl, serializedValue);
+      if (typeof ttl === 'number') {
+        await this.client.setEx(key, ttl, serializedValue);
+      } else if (typeof ttl === 'object' && ttl !== null && typeof ttl.EX === 'number') {
+        await this.client.setEx(key, ttl.EX, serializedValue);
+      } else {
+        await this.client.set(key, serializedValue);
+      }
     } else {
       await this.client.set(key, serializedValue);
     }
@@ -764,8 +770,66 @@ class RedisClient {
     return this.multi();
   }
 
+  // ==========================================
+  // List操作方法 - 用于有序数据存储（如历史记录）
+  // ==========================================
 
+  /**
+   * 将元素推入列表头部
+   * @param {string} key Redis List Key
+   * @param {...string} values 要推入的值
+   * @returns {Promise<number>} 推入后列表长度
+   */
+  async lPush(key, ...values) {
+    try {
+      return await this.client.lPush(key, ...values);
+    } catch (error) {
+      throw new Error(`List push failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
 
+  /**
+   * 裁剪列表，只保留指定范围内的元素
+   * @param {string} key Redis List Key
+   * @param {number} start 起始索引
+   * @param {number} stop 结束索引
+   * @returns {Promise<string>} 操作结果
+   */
+  async lTrim(key, start, stop) {
+    try {
+      return await this.client.lTrim(key, start, stop);
+    } catch (error) {
+      throw new Error(`List trim failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取列表长度
+   * @param {string} key Redis List Key
+   * @returns {Promise<number>} 列表长度
+   */
+  async lLen(key) {
+    try {
+      return await this.client.lLen(key);
+    } catch (error) {
+      throw new Error(`List length failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
+
+  /**
+   * 获取列表指定范围内的元素
+   * @param {string} key Redis List Key
+   * @param {number} start 起始索引
+   * @param {number} stop 结束索引（-1 表示到末尾）
+   * @returns {Promise<Array<string>>} 元素数组
+   */
+  async lRange(key, start, stop) {
+    try {
+      return await this.client.lRange(key, start, stop);
+    } catch (error) {
+      throw new Error(`List range failed for key ${key}: ${error.message}`, { cause: error });
+    }
+  }
 
 
 

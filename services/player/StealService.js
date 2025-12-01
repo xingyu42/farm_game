@@ -189,7 +189,7 @@ export class StealService {
 
     if (penalty > 0) {
       // 扣除偷窃者金币
-      await this.playerService.updateEconomyField(attackerId, 'coins', -penalty);
+      await this.playerService.deductCoins(attackerId, penalty);
 
     }
 
@@ -443,7 +443,7 @@ export class StealService {
 
       // 获取玩家金币
       const playerData = await this.playerService.getDataService().getPlayer(attackerId);
-      const currentCoins = playerData.economy.coins;
+      const currentCoins = playerData.coins;
 
       // 计算惩罚金额
       let penalty = Math.floor(currentCoins * penaltyRate);

@@ -148,6 +148,9 @@ export class ShopService {
         const catKey = cat.key;
         const catName = cat.name;
 
+        // 作物不可购买，只能通过种植获得
+        if (catKey === 'crops') continue;
+
         // 过滤：如果指定了类别，仅当键或显示名匹配时处理
         if (category && !(category === catKey || category === catName)) {
           continue;
@@ -246,6 +249,14 @@ export class ShopService {
         return {
           success: false,
           message: `物品 "${itemName}" 信息不完整或无法购买`
+        };
+      }
+
+      // 作物不可购买，只能通过种植获得
+      if (itemInfo.category === 'crops' || itemInfo.originalCategory === 'crops') {
+        return {
+          success: false,
+          message: `"${itemInfo.name}" 是作物，无法购买，请通过种植获得`
         };
       }
 
