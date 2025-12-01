@@ -24,7 +24,6 @@ floating_items:
   # 基于类别的物品
   categories:
     - crops # 作物类别
-    - seeds # 种子类别（可通过items.yaml的category字段匹配）
 
   # 特定物品ID列表（如果需要特别指定某些物品）
   items:

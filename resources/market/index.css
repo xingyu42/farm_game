@@ -376,7 +376,7 @@ body {
 
 .list-header {
   display: grid;
-  grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 0.8fr 1.2fr 1fr;
   padding: 8px 12px;
   background: linear-gradient(180deg, var(--wood-light) 0%, var(--wood-mid) 100%);
   border-bottom: 2px solid var(--wood-dark);
@@ -393,7 +393,7 @@ body {
 
 .list-row {
   display: grid;
-  grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 0.8fr 1.2fr 1fr;
   padding: 6px 12px;
   font-size: 13px;
   align-items: center;

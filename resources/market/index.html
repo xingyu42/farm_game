@@ -58,16 +58,12 @@
                         </div>
                         <div class="trend-badge {{item.priceTrend}}">
                             {{if item.priceTrend == 'rising'}}▲{{else if item.priceTrend == 'falling'}}▼{{else}}━{{/if}}
-                            {{if item.buyPriceChange >= 0}}+{{/if}}{{item.buyPriceChange}}%
+                            {{if item.sellPriceChange >= 0}}+{{/if}}{{item.sellPriceChange}}%
                         </div>
                     </div>
                     <div class="card-prices">
                         <div class="price-row">
-                            <span class="price-label">买入</span>
-                            <span class="price-value buy">{{item.currentBuyPrice}}</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="price-label">卖出</span>
+                            <span class="price-label">收购价</span>
                             <span class="price-value sell">{{item.currentSellPrice}}</span>
                         </div>
                     </div>
@@ -96,8 +92,7 @@
                 <div class="list-header">
                     <span class="col col-name">商品</span>
                     <span class="col col-trend">趋势</span>
-                    <span class="col col-buy">买入价</span>
-                    <span class="col col-sell">卖出价</span>
+                    <span class="col col-sell">收购价</span>
                     <span class="col col-change">涨跌</span>
                 </div>
                 <div class="list-body">
@@ -110,10 +105,9 @@
                         <span class="col col-trend">
                             {{if item.priceTrend == 'rising'}}📈{{else if item.priceTrend == 'falling'}}📉{{else}}➖{{/if}}
                         </span>
-                        <span class="col col-buy price-buy">{{item.currentBuyPrice}}</span>
                         <span class="col col-sell price-sell">{{item.currentSellPrice}}</span>
-                        <span class="col col-change {{if item.buyPriceChange > 0}}positive{{else if item.buyPriceChange < 0}}negative{{else}}neutral{{/if}}">
-                            {{if item.buyPriceChange > 0}}+{{/if}}{{item.buyPriceChange}}%
+                        <span class="col col-change {{if item.sellPriceChange > 0}}positive{{else if item.sellPriceChange < 0}}negative{{else}}neutral{{/if}}">
+                            {{if item.sellPriceChange > 0}}+{{/if}}{{item.sellPriceChange}}%
                         </span>
                     </div>
                     {{/each}}
@@ -132,10 +126,6 @@
 
         <!-- Footer -->
         <div class="market-footer">
-            <div class="tip-row">
-                <span class="tip-cmd">#nc购买 [商品] [数量]</span>
-                <span class="tip-desc">按市场价购买</span>
-            </div>
             <div class="tip-row">
                 <span class="tip-cmd">#nc出售 [商品] [数量]</span>
                 <span class="tip-desc">按市场价出售</span>

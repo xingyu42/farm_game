@@ -271,7 +271,7 @@ export class MarketService {
           );
 
           if (!priceResult.degraded) {
-            const trend = this.priceCalculator.analyzePriceTrend(stats.currentPrice, priceResult.buyPrice);
+            const trend = this.priceCalculator.analyzePriceTrend(stats.basePrice, priceResult.buyPrice);
             const history = this.priceCalculator.updatePriceHistory(
               JSON.stringify(stats.priceHistory),
               priceResult.buyPrice

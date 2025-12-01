@@ -8,7 +8,6 @@ seeds:
     price: 5
     sellPrice: 2
     category: "seeds"
-    is_dynamic_price: true # 启用动态定价
     description: "常见的蔬菜种子"
     requiredLevel: 1
     maxStack: 99
@@ -19,7 +18,6 @@ seeds:
     price: 8
     sellPrice: 3
     category: "seeds"
-    is_dynamic_price: true # 启用动态定价
     description: "营养丰富的蔬菜种子"
     requiredLevel: 3
     maxStack: 99
@@ -30,7 +28,6 @@ seeds:
     price: 3
     sellPrice: 1
     category: "seeds"
-    is_dynamic_price: true # 启用动态定价
     description: "基础的谷物种子"
     requiredLevel: 2
     maxStack: 99
@@ -41,7 +38,6 @@ seeds:
     price: 6
     sellPrice: 2
     category: "seeds"
-    is_dynamic_price: true
     description: "生菜的播种用种子"
     requiredLevel: 2
     maxStack: 99
@@ -52,7 +48,6 @@ seeds:
     price: 10
     sellPrice: 4
     category: "seeds"
-    is_dynamic_price: true
     description: "土豆的播种用种子"
     requiredLevel: 4
     maxStack: 99
@@ -63,7 +58,6 @@ seeds:
     price: 14
     sellPrice: 5
     category: "seeds"
-    is_dynamic_price: true
     description: "玉米的播种用种子"
     requiredLevel: 6
     maxStack: 99
@@ -74,7 +68,6 @@ seeds:
     price: 16
     sellPrice: 6
     category: "seeds"
-    is_dynamic_price: true
     description: "草莓的播种用种子"
     requiredLevel: 8
     maxStack: 99
@@ -85,7 +78,6 @@ seeds:
     price: 28
     sellPrice: 11
     category: "seeds"
-    is_dynamic_price: true
     description: "葡萄的播种用种子"
     requiredLevel: 12
     maxStack: 99
@@ -96,7 +88,6 @@ seeds:
     price: 35
     sellPrice: 13
     category: "seeds"
-    is_dynamic_price: true
     description: "南瓜的播种用种子"
     requiredLevel: 14
     maxStack: 99
