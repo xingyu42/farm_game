@@ -200,45 +200,43 @@ export class PriceCalculator {
    * @returns {Array<number>} 更新后的价格历史数组
    */
   updatePriceHistory(historyString, newPrice) {
-    return CommonUtils.safeCalculation(() => {
-      // 验证新价格
-      CommonUtils.validatePrice(newPrice, 'new price in history update');
+    // 验证新价格（不使用 safeCalculation，因为本函数返回数组而非数字）
+    const validPrice = (typeof newPrice === 'number' && isFinite(newPrice) && newPrice >= 0)
+      ? newPrice
+      : 0;
 
-      let history = [];
+    let history = [];
 
-      // 解析现有历史数据
-      try {
-        const parsed = JSON.parse(historyString);
-        if (Array.isArray(parsed)) {
-          // 过滤有效的数值价格
-          history = parsed.filter(price =>
-            typeof price === 'number' &&
-            isFinite(price) &&
-            price >= 0
-          );
-        }
-      } catch (error) {
-        logger.warn('[PriceCalculator] 解析价格历史数据失败，重新创建历史数组', {
-          error: error.message,
-          historyString
-        });
-        history = [];
+    // 解析现有历史数据
+    try {
+      const parsed = JSON.parse(historyString);
+      if (Array.isArray(parsed)) {
+        history = parsed.filter(price =>
+          typeof price === 'number' &&
+          isFinite(price) &&
+          price >= 0
+        );
       }
+    } catch (error) {
+      logger.warn('[PriceCalculator] 解析价格历史数据失败，重新创建历史数组', {
+        error: error.message,
+        historyString
+      });
+      history = [];
+    }
 
-      // 添加新价格
-      history.push(newPrice);
+    // 添加新价格
+    history.push(validPrice);
 
-      // 获取最大记录数配置
-      const maxRecords = this.config.market?.history?.max_records || 168;
-      
+    // 获取最大记录数配置
+    const maxRecords = this.config.market?.history?.max_records || 168;
 
-      // 清理过期记录（FIFO）
-      if (history.length > maxRecords) {
-        history = history.slice(-maxRecords);
-      }
+    // 清理过期记录（FIFO）
+    if (history.length > maxRecords) {
+      history = history.slice(-maxRecords);
+    }
 
-      return history;
-    }, [newPrice]);
+    return history;
   }
 
   /**
