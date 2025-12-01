@@ -8,7 +8,8 @@ carrot:
   price: 16 # 作物购买价格（商店/市场基准价）
   sellPrice: 8 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
-  growTime: 300 # 生长时间（秒）
+  growTime: 600 # 生长时间（秒）
+  baseYield: 3 # 基础产量
   experience: 5 # 获得经验
   description: "营养丰富的胡萝卜，生长速度快"
 
@@ -20,6 +21,7 @@ tomato:
   sellPrice: 22 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
   growTime: 900 # 生长时间（秒）
+  baseYield: 5 # 基础产量
   experience: 15 # 获得经验
   description: "酸甜可口的西红柿，深受喜爱"
 
@@ -30,7 +32,8 @@ wheat:
   price: 20 # 作物购买价格（商店/市场基准价）
   sellPrice: 10 # 作物出售基准价
   is_dynamic_price: true # 启用动态定价
-  growTime: 600 # 生长时间（秒）
+  growTime: 800 # 生长时间（秒）
+  baseYield: 6 # 基础产量（谷物高产）
   experience: 10 # 获得经验
   description: "基础粮食作物，用途广泛"
 
@@ -42,6 +45,7 @@ lettuce:
   sellPrice: 10
   is_dynamic_price: true
   growTime: 360
+  baseYield: 2 # 基础产量（快速但产量低）
   experience: 6
   description: "爽脆可口的生菜，极短生长期"
 
@@ -53,6 +57,7 @@ potato:
   sellPrice: 21
   is_dynamic_price: true
   growTime: 720
+  baseYield: 4 # 基础产量
   experience: 12
   description: "淀粉丰富的块茎作物，稳健收益"
 
@@ -64,6 +69,7 @@ corn:
   sellPrice: 34
   is_dynamic_price: true
   growTime: 1200
+  baseYield: 6 # 基础产量（高产谷物）
   experience: 20
   description: "高产谷物，广泛用途"
 
@@ -75,6 +81,7 @@ strawberry:
   sellPrice: 52
   is_dynamic_price: true
   growTime: 1800
+  baseYield: 8 # 基础产量（一株多果）
   experience: 33
   description: "香甜多汁的人气水果"
 
@@ -86,6 +93,7 @@ grape:
   sellPrice: 172
   is_dynamic_price: true
   growTime: 5400
+  baseYield: 12 # 基础产量（葡萄串产量高）
   experience: 100
   description: "可酿造的优质水果，长周期高收益"
 
@@ -97,5 +105,6 @@ pumpkin:
   sellPrice: 251
   is_dynamic_price: true
   growTime: 7200
+  baseYield: 3 # 基础产量（单个大但数量少）
   experience: 130
   description: "体积硕大，价值不俗的长周期作物"

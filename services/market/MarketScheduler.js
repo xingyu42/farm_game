@@ -29,13 +29,13 @@ export class MarketScheduler {
   /**
    * 启动所有定时任务 - 向后兼容API
    */
-  start() {
+  async start() {
     if (this.isRunning) {
       logger.warn('[MarketScheduler] 调度器已在运行中');
       return;
     }
     logger.info('[MarketScheduler] 启动市场任务调度器');
-    this.scheduler.start();
+    await this.scheduler.start();
     this.isRunning = true;
     logger.info('[MarketScheduler] 任务调度器启动成功');
   }

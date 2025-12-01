@@ -230,7 +230,7 @@ class ServiceContainer {
       // 启动市场定时任务（增强版本）
       if (this.services.marketScheduler) {
         try {
-          this.services.marketScheduler.start();
+          await this.services.marketScheduler.start();
           logger.info('市场任务调度器已启动');
         } catch (error) {
           logger.error('市场任务调度器启动失败', { error: error.message });

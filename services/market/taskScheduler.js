@@ -92,16 +92,66 @@ export class TaskScheduler {
     /**
      * 启动调度器 - 原 SimpleTaskScheduler.start 逻辑
      */
-    start() {
+    async start() {
         if (this.isRunning) {
             logger.warn('[TaskScheduler] 调度器已在运行中');
             return;
         }
 
         logger.info(`[TaskScheduler] 启动调度器，任务数量: ${this.taskDefinitions.length}`);
+
+        // 检查并补执行错过的每日任务
+        await this._checkMissedDailyTasks();
+
         this.taskDefinitions.forEach(task => this._scheduleTask(task));
         this.isRunning = true;
         logger.info(`[TaskScheduler] 调度器启动成功，活跃任务: ${Array.from(this.jobs.keys()).join(', ')}`);
+    }
+
+    /**
+     * 检查并补执行错过的每日任务
+     * @private
+     */
+    async _checkMissedDailyTasks() {
+        const dailyTasks = this.taskDefinitions.filter(t => t.type === 'daily');
+        const now = new Date();
+        const today = now.toDateString();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        for (const taskDef of dailyTasks) {
+            const taskMinutes = taskDef.hour * 60 + (taskDef.minute || 0);
+
+            // 只有当前时间已过任务执行时间时才检查
+            if (currentMinutes <= taskMinutes) continue;
+
+            const redisKey = this._getTaskExecuteDateKey(taskDef.name);
+            const lastExecuteDate = await this.lockManager.get(redisKey);
+
+            if (lastExecuteDate === today) {
+                logger.debug(`[TaskScheduler] 每日任务 ${taskDef.name} 今日已执行，跳过`);
+                continue;
+            }
+
+            logger.info(`[TaskScheduler] 检测到错过的每日任务: ${taskDef.name}，立即补执行`);
+
+            try {
+                await this._execute(taskDef.name, taskDef.timeout);
+                await this.lockManager.set(redisKey, today, { EX: 86400 * 2 });
+                logger.info(`[TaskScheduler] 补执行任务 ${taskDef.name} 完成`);
+            } catch (error) {
+                logger.error(`[TaskScheduler] 补执行任务 ${taskDef.name} 失败`, { error: error.message });
+            }
+        }
+    }
+
+    /**
+     * 获取任务执行日期的 Redis key
+     * @param {string} taskName 任务名称
+     * @returns {string} Redis key
+     * @private
+     */
+    _getTaskExecuteDateKey(taskName) {
+        return `farm_game:scheduler:lastExecuteDate:${taskName}`;
     }
 
     /**
@@ -135,14 +185,15 @@ export class TaskScheduler {
 
                 // 检查是否到达指定时间
                 if (currentHour === taskDef.hour && currentMinute === taskDef.minute) {
-                    // 检查今天是否已执行
-                    const lastExecuteKey = `lastExecute_${taskDef.name}`;
-                    if (this[lastExecuteKey] === today) {
+                    // 检查今天是否已执行（从 Redis 读取）
+                    const redisKey = this._getTaskExecuteDateKey(taskDef.name);
+                    const lastExecuteDate = await this.lockManager.get(redisKey);
+                    if (lastExecuteDate === today) {
                         return;
                     }
 
-                    // 标记今天已执行
-                    this[lastExecuteKey] = today;
+                    // 标记今天已执行（持久化到 Redis）
+                    await this.lockManager.set(redisKey, today, { EX: 86400 * 2 });
                     logger.info(`[TaskScheduler] 每日任务触发: ${taskDef.name} @ ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
 
                     await this._execute(taskDef.name, taskDef.timeout);
