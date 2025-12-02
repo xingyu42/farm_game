@@ -295,3 +295,52 @@ inventory:
       cost: 15000
     - capacity: 200
       cost: 25000
+
+# 效果字段映射配置（用于物品详情展示）
+# format 类型: percent(小数转%), percent_raw(直接加%), plus_percent(+%), minus_percent(-%), plus(+数值), minutes(分钟), time_seconds(秒转时分), number(原样), xp(经验), boolean(布尔)
+effectMappings:
+  # 肥料效果
+  "effect.speedBonus":
+    label: "生长加速"
+    format: "percent"
+  # 杀虫剂效果
+  "effects.health":
+    label: "恢复健康"
+    format: "plus"
+  # 防御效果
+  "defenseBonus":
+    label: "防御加成"
+    format: "percent_raw"
+  "duration":
+    label: "持续时间"
+    format: "minutes"
+  # 工具效果
+  "effect.successRateBonus":
+    label: "成功率"
+    format: "plus_percent"
+  "effect.stealthBonus":
+    label: "隐匿加成"
+    format: "plus_percent"
+  "effect.rewardBonus":
+    label: "收益加成"
+    format: "plus_percent"
+  "effect.cooldownReduction":
+    label: "冷却缩减"
+    format: "minus_percent"
+  "effect.duration":
+    label: "持续时间"
+    format: "minutes"
+  # 作物效果
+  "growTime":
+    label: "生长时间"
+    format: "time_seconds"
+  "baseYield":
+    label: "基础产量"
+    format: "number"
+  "experience":
+    label: "收获经验"
+    format: "xp"
+  "is_dynamic_price":
+    label: "价格类型"
+    format: "boolean"
+    trueValue: "动态浮动"

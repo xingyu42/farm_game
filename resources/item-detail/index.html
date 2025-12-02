@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{pluResPath}}item-detail/index.css">
+    <title>Item Detail</title>
+</head>
+<body>
+    <div class="container">
+        <div class="wood-panel">
+            <div class="screw top-left"></div>
+            <div class="screw top-right"></div>
+            <div class="screw bottom-left"></div>
+            <div class="screw bottom-right"></div>
+
+            <div class="panel-title-container">
+                <div class="panel-title">物品详情</div>
+            </div>
+
+            <div class="parchment-area">
+                <div class="header-section">
+                    <div class="item-icon-frame">
+                        <div class="item-icon">{{item.icon}}</div>
+                    </div>
+                    <div class="item-basic-info">
+                        <div class="category-badge">{{item.categoryName}}</div>
+                        <div class="item-name">{{item.name}}</div>
+                    </div>
+                </div>
+
+                <div class="pixel-divider"></div>
+
+                <div class="description-section">
+                    <p>{{item.description}}</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-row">
+                        <span class="stat-label">购买价格</span>
+                        <span class="stat-value price-buy">{{item.price}} G</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">出售价格</span>
+                        <span class="stat-value price-sell">{{item.sellPrice}} G</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">等级要求</span>
+                        <span class="stat-value">Lv.{{item.requiredLevel}}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">堆叠上限</span>
+                        <span class="stat-value">{{item.maxStack}}</span>
+                    </div>
+                </div>
+
+                {{if item.effects && item.effects.length > 0}}
+                <div class="pixel-divider"></div>
+                <div class="effects-section">
+                    <div class="section-header">特殊效果</div>
+                    <div class="effects-list">
+                        {{each item.effects effect}}
+                        <div class="effect-tag">
+                            <span class="effect-icon">★</span>
+                            <span class="effect-label">{{effect.label}}:</span>
+                            <span class="effect-value">{{effect.value}}</span>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{if linkedCrop}}
+                <div class="pixel-divider"></div>
+                <div class="crop-section">
+                    <div class="section-header">种植信息</div>
+                    <div class="crop-preview">
+                        <div class="crop-icon">{{linkedCrop.icon}}</div>
+                        <div class="crop-details">
+                            <div class="crop-name">{{linkedCrop.name}}</div>
+                            <div class="crop-stats">
+                                <div class="crop-stat">
+                                    <span class="stat-emoji">⏳</span> {{linkedCrop.growTime}}
+                                </div>
+                                <div class="crop-stat">
+                                    <span class="stat-emoji">📦</span> {{linkedCrop.baseYield}}
+                                </div>
+                                <div class="crop-stat">
+                                    <span class="stat-emoji">✨</span> {{linkedCrop.experience}} XP
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="crop-desc">{{linkedCrop.description}}</div>
+                </div>
+                {{/if}}
+            </div>
+
+            <div class="footer-tip">Miao-Yunzai Farm</div>
+        </div>
+    </div>
+</body>
+</html>
