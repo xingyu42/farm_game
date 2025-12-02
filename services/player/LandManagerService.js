@@ -4,6 +4,7 @@
  */
 
 import PlayerDataService from './PlayerDataService.js';
+import EconomyService from './EconomyService.js';
 
 class LandManagerService {
     constructor(redisClient, config) {
@@ -52,8 +53,8 @@ class LandManagerService {
                     throw new Error(`金币不足！需要 ${landConfig.goldCost} 金币，当前拥有: ${playerData.coins}`);
                 }
 
-                // 扣除金币（使用内部方法确保逻辑一致性）
-                this._updateCoinsInTransaction(playerData, -landConfig.goldCost);
+                // 扣除金币
+                EconomyService.updateCoinsInTransaction(playerData, -landConfig.goldCost);
 
                 // 增加土地数量
                 playerData.landCount += 1;
@@ -402,37 +403,6 @@ class LandManagerService {
             logger.error(`[LandManagerService] 获取土地系统配置失败: ${error.message}`);
             return null;
         }
-    }
-
-    /**
-     * 在事务上下文中更新金币和统计数据（内部方法）
-     * 该方法用于在已有事务中直接操作玩家数据，避免事务嵌套
-     * @param {Object} playerData 玩家数据对象
-     * @param {number} amount 金币变化量（可为负数）
-     * @returns {number} 实际变化量
-     * @private
-     */
-    _updateCoinsInTransaction(playerData, amount) {
-        if (!playerData) {
-            throw new Error('玩家数据不能为空');
-        }
-
-        // 计算新的金币数量（确保不为负数）
-        const newCoins = Math.max(0, playerData.coins + amount);
-        const actualChange = newCoins - playerData.coins;
-
-        // 更新统计数据
-        if (actualChange > 0) {
-            playerData.statistics.totalMoneyEarned += actualChange;
-        } else if (actualChange < 0) {
-            playerData.statistics.totalMoneySpent += Math.abs(actualChange);
-        }
-
-        // 更新金币数量
-        playerData.coins = newCoins;
-        playerData.lastUpdated = Date.now();
-
-        return actualChange;
     }
 }
 

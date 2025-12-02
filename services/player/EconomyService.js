@@ -257,30 +257,31 @@ class EconomyService {
         }
     }
 
+    /** @private */
+    _updateCoinsInTransaction(playerData, amount) {
+        return EconomyService.updateCoinsInTransaction(playerData, amount);
+    }
+
     /**
-     * 更新金币数量
+     * 事务内更新金币（静态方法，供其他服务复用）
      * @param {Object} playerData 玩家数据对象
      * @param {number} amount 金币变化量（可为负数）
      * @returns {number} 实际变化量
-     * @private
      */
-    _updateCoinsInTransaction(playerData, amount) {
+    static updateCoinsInTransaction(playerData, amount) {
         if (!playerData) {
             throw new Error('玩家数据不能为空');
         }
 
-        // 计算新的金币数量（确保不为负数）
-        const newCoins = Math.max(0, playerData.coins + amount);
+        const newCoins = Math.floor(Math.max(0, playerData.coins + amount));
         const actualChange = newCoins - playerData.coins;
 
-        // 更新统计数据
         if (actualChange > 0) {
             playerData.statistics.totalMoneyEarned += actualChange;
         } else if (actualChange < 0) {
             playerData.statistics.totalMoneySpent += Math.abs(actualChange);
         }
 
-        // 更新金币数量
         playerData.coins = newCoins;
         playerData.lastUpdated = Date.now();
 

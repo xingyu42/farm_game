@@ -1,9 +1,9 @@
 body {
-    width: 540px;
+    width: 700px;
 }
 
 .container {
-    width: 540px;
+    width: 700px;
     padding: 20px 15px 10px 15px;
     overflow: hidden;
     background-image: url(../help/bg.jpg);
