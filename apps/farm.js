@@ -535,10 +535,14 @@ export class farm extends plugin {
 
       if (result.success) {
         const details = []
-        if (result.data?.cropName) details.push(`作物: ${result.data.cropName}`)
-        if (result.data?.quantity) details.push(`数量: ${result.data.quantity}`)
-        if (result.data?.gold) details.push(`金币: +${result.data.gold}`)
-        if (result.data?.exp) details.push(`经验: +${result.data.exp}`)
+        const harvestedCrops = result.data?.harvestedCrops || []
+
+        if (harvestedCrops.length > 0) {
+          const crop = harvestedCrops[0]
+          details.push(`作物: ${crop.cropName}`)
+          details.push(`数量: ${crop.yield}`)
+          if (crop.experience) details.push(`经验: +${crop.experience}`)
+        }
 
         await this._renderFarmWithResult(e, userId, {
           type: 'success',
@@ -547,7 +551,22 @@ export class farm extends plugin {
           details: details.length > 0 ? details : [`#${landIdNum}号土地已收获`]
         })
       } else {
-        e.reply(result.message)
+        // 仓库空间不足时的特殊提示
+        const skippedCrops = result.data?.skippedCrops || []
+        if (skippedCrops.length > 0) {
+          const inventoryInfo = result.data?.inventoryInfo || {}
+          await this._renderFarmWithResult(e, userId, {
+            type: 'warning',
+            icon: '⚠️',
+            title: '仓库空间不足',
+            details: [
+              `当前仓库: ${inventoryInfo.currentUsage}/${inventoryInfo.capacity}`,
+              `请清理或升级仓库后再收获`
+            ]
+          })
+        } else {
+          e.reply(result.message)
+        }
       }
       return true
     } catch (error) {
@@ -567,11 +586,40 @@ export class farm extends plugin {
 
       const result = await this.plantingService.harvestCrop(userId)
 
-      if (result.success) {
+      const harvestedCrops = result.data?.harvestedCrops || []
+      const skippedCrops = result.data?.skippedCrops || []
+      const isPartialHarvest = result.data?.isPartialHarvest
+
+      // 优先处理部分收获（包括全部跳过的情况）
+      if (isPartialHarvest && skippedCrops.length > 0) {
         const details = []
-        if (result.data?.totalCount) details.push(`收获: ${result.data.totalCount}块土地`)
-        if (result.data?.totalGold) details.push(`金币: +${result.data.totalGold}`)
-        if (result.data?.totalExp) details.push(`经验: +${result.data.totalExp}`)
+        const inventoryInfo = result.data?.inventoryInfo || {}
+
+        if (harvestedCrops.length > 0) {
+          details.push(`收获: ${harvestedCrops.length}块土地`)
+          if (result.data?.totalExperience) {
+            details.push(`经验: +${result.data.totalExperience}`)
+          }
+          details.push(``)
+        }
+
+        details.push(`⚠️ 仓库已满 (${inventoryInfo.currentUsage}/${inventoryInfo.capacity})`)
+        details.push(`请清理或升级仓库后再收获`)
+
+        await this._renderFarmWithResult(e, userId, {
+          type: 'warning',
+          icon: '⚠️',
+          title: harvestedCrops.length > 0 ? '部分收获完成' : '仓库空间不足',
+          details
+        })
+      } else if (result.success) {
+        const details = []
+        if (harvestedCrops.length > 0) {
+          details.push(`收获: ${harvestedCrops.length}块土地`)
+        }
+        if (result.data?.totalExperience) {
+          details.push(`经验: +${result.data.totalExperience}`)
+        }
 
         await this._renderFarmWithResult(e, userId, {
           type: 'success',

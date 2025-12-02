@@ -125,6 +125,27 @@ class PlantingMessageBuilder {
   }
 
   /**
+   * 构建部分收获响应（仓库空间不足时）
+   * @param {Array} harvestedCrops 已收获的作物列表
+   * @param {Array} skippedCrops 因空间不足跳过的作物列表
+   * @param {number} totalExp 已获得的总经验值
+   * @param {Object} inventoryInfo 仓库信息 {currentUsage, capacity}
+   * @returns {Object} 部分收获响应
+   */
+  buildPartialHarvestMessage(harvestedCrops, skippedCrops, totalExp = 0, inventoryInfo = {}) {
+    return {
+      success: harvestedCrops.length > 0,
+      data: {
+        harvestedCrops,
+        skippedCrops,
+        totalExperience: totalExp,
+        inventoryInfo,
+        isPartialHarvest: true
+      }
+    };
+  }
+
+  /**
    * 构建护理成功消息
    * @param {string} careType 护理类型 (water, fertilizer, pesticide)
    * @param {string} cropName 作物名称
