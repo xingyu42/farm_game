@@ -48,6 +48,11 @@ export class StealService {
       throw new Error('不能偷窃自己的农场');
     }
 
+    // 前置检查：冷却状态（无需锁保护，提前拦截避免无效锁获取）
+    const cooldownStatus = await this.getStealCooldownStatus(attackerId);
+    if (!cooldownStatus.canSteal) {
+      throw new Error(`偷窃冷却中，剩余时间: ${Math.ceil(cooldownStatus.remainingTime / 60000)} 分钟`);
+    }
 
     // 使用批量锁：确保操作原子性，避免嵌套锁冲突
     const lockTimeout = Math.ceil(this.stealConfig.locks.timeout / 1000); // 转换为秒
@@ -73,34 +78,28 @@ export class StealService {
    * @private
    */
   async _executeStealCore(attackerId, targetId) {
-    // 1. 检查偷窃者冷却状态
-    const cooldownStatus = await this.getStealCooldownStatus(attackerId);
-    if (!cooldownStatus.canSteal) {
-      throw new Error(`偷窃冷却中，剩余时间: ${Math.ceil(cooldownStatus.remainingTime / 60000)} 分钟`);
-    }
-
-    // 2. 检查目标可偷状态
+    // 1. 检查目标可偷状态
     const targetStatus = await this.getStealableStatus(targetId);
     if (!targetStatus.canBeStolen) {
       throw new Error(targetStatus.reason);
     }
 
-    // 3. 检查防重复偷取
+    // 2. 检查防重复偷取
     const repeatStatus = await this._checkAntiRepeat(attackerId, targetId);
     if (!repeatStatus.allowed) {
       throw new Error(repeatStatus.reason);
     }
 
-    // 4. 获取可偷取的土地
+    // 3. 获取可偷取的土地
     const stealableLands = await this._getStealableLands(targetId);
     if (stealableLands.length === 0) {
       throw new Error('目标没有可偷取的作物');
     }
 
-    // 5. 计算偷窃成功率
+    // 4. 计算偷窃成功率
     const successRate = await this._calculateSuccessRate(attackerId, targetId);
 
-    // 6. 执行偷窃判定
+    // 5. 执行偷窃判定
     const isSuccess = Math.random() * 100 < successRate;
 
     if (isSuccess) {

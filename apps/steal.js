@@ -67,7 +67,14 @@ export class steal extends plugin {
       e.reply(replyMessage)
       return true
     } catch (error) {
-      logger.error('[偷菜与防御] 偷菜失败:', error)
+      // 区分业务拒绝和系统错误
+      const isBusinessReject = ['冷却', '保护', '不能偷窃自己', '没有可偷取', '未注册', '重复偷取'].some(
+        keyword => error.message.includes(keyword)
+      )
+
+      if (!isBusinessReject) {
+        logger.error('[偷菜与防御] 偷菜失败:', error)
+      }
 
       // 根据错误类型提供友好的错误信息
       let errorMessage = '偷菜失败，请稍后重试'
