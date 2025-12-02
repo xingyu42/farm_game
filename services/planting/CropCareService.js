@@ -415,7 +415,7 @@ class CropCareService {
    * @private
    */
   async _getBestAvailableFertilizer(userId) {
-    const fertilizerTypes = ['premium_fertilizer', 'organic_fertilizer', 'basic_fertilizer'];
+    const fertilizerTypes = ['fertilizer_deluxe', 'fertilizer_premium', 'fertilizer_normal'];
 
     for (const fertilizerType of fertilizerTypes) {
       const hasItem = await this.inventoryService.hasItem(userId, fertilizerType, 1);
@@ -434,7 +434,7 @@ class CropCareService {
    * @private
    */
   async _getBestAvailablePesticide(userId) {
-    const pesticideTypes = ['premium_pesticide', 'organic_pesticide', 'basic_pesticide'];
+    const pesticideTypes = ['pesticide_basic'];
 
     for (const pesticideType of pesticideTypes) {
       const hasItem = await this.inventoryService.hasItem(userId, pesticideType, 1);

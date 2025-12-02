@@ -148,7 +148,7 @@ export class steal extends plugin {
         `防御加成：+${result.defenseBonus}%`,
         `持续时间：${result.durationMinutes}分钟`,
         `━━━━━━━━━━━━━━━━━━`,
-        `💡 防护状态可通过 #防护状态 查看`
+        `💡 防护状态可通过 #信息 查看`
       ]
 
       e.reply(message.join('\n'))
@@ -230,7 +230,7 @@ export class steal extends plugin {
       const dogFoodPriority = ['deluxe', 'premium', 'normal']
 
       for (const dogFoodId of dogFoodPriority) {
-        if (inventory[dogFoodId] && inventory[dogFoodId].quantity > 0) {
+        if (inventory.items[dogFoodId] && inventory.items[dogFoodId].quantity > 0) {
           return dogFoodId
         }
       }
