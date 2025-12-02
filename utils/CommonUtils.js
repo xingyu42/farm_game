@@ -87,8 +87,18 @@ export class CommonUtils {
   }
 
   /**
+   * 计算金币（解决浮点精度问题）
+   * @param {number} price - 单价
+   * @param {number} qty - 数量
+   * @returns {number} 总价（保留2位小数）
+   */
+  static calcCoins(price, qty) {
+    return Math.round((price * qty + Number.EPSILON) * 100) / 100;
+  }
+
+  /**
    * 验证数量参数
-   * 
+   *
    * 统一数量验证逻辑，确保数量数据的有效性。
    * 
    * @param {number} quantity - 数量值

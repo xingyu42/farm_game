@@ -4,6 +4,7 @@
  */
 
 import ItemResolver from '../utils/ItemResolver.js';
+import { CommonUtils } from '../utils/CommonUtils.js';
 
 class Item {
   constructor(data = {}, config) {
@@ -331,8 +332,8 @@ class Item {
       quantity: this.quantity,
       buyPrice: this.buyPrice,
       sellPrice: this.sellPrice,
-      totalBuyValue: this.buyPrice * this.quantity,
-      totalSellValue: this.sellPrice * this.quantity,
+      totalBuyValue: CommonUtils.calcCoins(this.buyPrice, this.quantity),
+      totalSellValue: CommonUtils.calcCoins(this.sellPrice, this.quantity),
       canSell: this.canSell()
     };
   }

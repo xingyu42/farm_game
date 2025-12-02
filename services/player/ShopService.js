@@ -262,7 +262,7 @@ export class ShopService {
 
       // 获取当前价格
       const unitPrice = await this._getItemPrice(itemId, 'buy');
-      const totalCost = unitPrice * quantity;
+      const totalCost = CommonUtils.calcCoins(unitPrice, quantity);
 
       // 获取玩家数据
       const player = await this.playerService.getPlayer(userId);
@@ -416,7 +416,7 @@ export class ShopService {
 
       // 获取当前出售价格
       const unitPrice = await this._getItemPrice(itemId, 'sell');
-      const totalValue = unitPrice * quantity;
+      const totalValue = CommonUtils.calcCoins(unitPrice, quantity);
 
       // 获取玩家数据
       const player = await this.playerService.getPlayer(userId);
@@ -564,7 +564,7 @@ export class ShopService {
       }
 
       // 计算总价值
-      const totalValue = cropItems.reduce((sum, crop) => sum + (crop.unitPrice * crop.quantity), 0);
+      const totalValue = cropItems.reduce((sum, crop) => sum + CommonUtils.calcCoins(crop.unitPrice, crop.quantity), 0);
 
       // 执行批量出售事务：移除所有作物 + 增加金币
       return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
@@ -588,7 +588,7 @@ export class ShopService {
             itemName: itemInfo.name,
             quantity: crop.quantity,
             unitPrice: crop.unitPrice,
-            totalValue: crop.unitPrice * crop.quantity
+            totalValue: CommonUtils.calcCoins(crop.unitPrice, crop.quantity)
           });
 
           // 记录交易统计（不影响主流程）

@@ -4,6 +4,7 @@
  */
 
 import ItemResolver from './ItemResolver.js';
+import { CommonUtils } from './CommonUtils.js';
 
 // {{CHENGQI:
 // Action: Created; Timestamp: 2025-06-30T14:41:00+08:00; Reason: Shrimp Task ID: #5492e748, implementing calculator utilities with land quality bonuses for T8;
@@ -285,7 +286,7 @@ class Calculator {
     const bulkDiscount = this._calculateBulkDiscount(quantity, operation);
 
     const finalPrice = Math.floor(basePrice * levelDiscount * bulkDiscount);
-    const totalPrice = finalPrice * quantity;
+    const totalPrice = CommonUtils.calcCoins(finalPrice, quantity);
 
     return {
       success: true,
@@ -297,7 +298,7 @@ class Calculator {
       totalPrice,
       levelDiscount: (1 - levelDiscount) * 100,
       bulkDiscount: (1 - bulkDiscount) * 100,
-      savings: (basePrice - finalPrice) * quantity
+      savings: CommonUtils.calcCoins(basePrice - finalPrice, quantity)
     };
   }
 

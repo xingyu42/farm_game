@@ -3,6 +3,7 @@
 import Calculator from '../../utils/calculator.js';
 import Item from '../../models/Item.js';
 import ItemResolver from '../../utils/ItemResolver.js';
+import { CommonUtils } from '../../utils/CommonUtils.js';
 
 /**
  * 仓库服务 - 管理玩家物品仓库（根据PRD v3.2设计）
@@ -368,7 +369,7 @@ export class InventoryService {
           category: targetItem.category
         },
         remaining: targetItem.quantity,
-        totalValue: economicInfo.sellPrice * quantity
+        totalValue: CommonUtils.calcCoins(economicInfo.sellPrice, quantity)
       };
     } catch (error) {
       logger.error(`移除物品失败 [${userId}]: ${error.message}`);
