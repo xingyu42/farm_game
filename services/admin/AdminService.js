@@ -129,18 +129,6 @@ class AdminService {
       return { success: false, message: `设置土地品质失败: ${error.message}` };
     }
   }
-
-  /**
-   * 重载配置文件
-   * @returns {Object} 操作结果
-   */
-  async reloadConfigs() {
-    // This typically needs to be handled at a higher level, 
-    // where the config object is initially loaded and passed to services.
-    // For now, we simulate this by logging.
-    logger.info('[AdminService] 请求重载配置文件。实际操作需在主插件逻辑中实现。');
-    return { success: true, message: '已发送重载配置请求。' };
-  }
 }
 
 export default AdminService;

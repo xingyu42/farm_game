@@ -18,7 +18,7 @@ export class steal extends plugin {
           fnc: 'stealCrop'
         },
         {
-          reg: '^#(nc)?使用狗粮(.+)?$',
+          reg: '^#(nc)?狗粮(.+)?$',
           fnc: 'useDogFood'
         }
       ]
@@ -99,9 +99,9 @@ export class steal extends plugin {
    */
   async useDogFood(e) {
     try {
-      const match = e.msg.match(/^#(nc)?使用狗粮(.+)?$/)
+      const match = e.msg.match(/^#(nc)?狗粮(.+)?$/)
       if (!match) {
-        e.reply('❌ 格式错误！使用: #使用狗粮[狗粮类型]')
+        e.reply('❌ 格式错误！使用: #狗粮[狗粮类型]')
         return true
       }
 
@@ -143,11 +143,11 @@ export class steal extends plugin {
 
       const message = [
         `🛡️ 防护激活成功！`,
-        `━━━━━━━━━━━━━━━━━━`,
+        `\n`,
         `使用物品：${result.itemName}`,
         `防御加成：+${result.defenseBonus}%`,
         `持续时间：${result.durationMinutes}分钟`,
-        `━━━━━━━━━━━━━━━━━━`,
+        `\n`,
         `💡 防护状态可通过 #信息 查看`
       ]
 
