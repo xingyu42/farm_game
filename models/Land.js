@@ -268,17 +268,17 @@ class Land {
     }
 
     const nextQuality = qualityOrder[currentIndex + 1];
-    const upgradeConfig = this.config.land?.quality?.[nextQuality]?.upgrade;
+    const qualityConfig = this.config.land?.quality?.[nextQuality];
 
-    if (!upgradeConfig) {
+    if (!qualityConfig || !qualityConfig.levelRequired) {
       return null;
     }
 
     return {
       targetQuality: nextQuality,
-      levelRequired: upgradeConfig.levelRequired,
-      goldCost: upgradeConfig.goldCost,
-      materials: upgradeConfig.materials,
+      levelRequired: qualityConfig.levelRequired,
+      goldCost: qualityConfig.goldCost,
+      materials: qualityConfig.materials,
       canUpgrade: true
     };
   }

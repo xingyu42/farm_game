@@ -50,7 +50,7 @@ export class ProtectionService {
       }
 
       // 获取狗粮配置
-      const dogFoodConfig = this.config.items?.dogFood?.[itemId];
+      const dogFoodConfig = this.config.items?.defense?.[itemId];
       if (!dogFoodConfig) {
         throw new Error(`未找到狗粮配置: ${itemId}`);
       }
@@ -341,7 +341,7 @@ export class ProtectionService {
    */
   getAvailableDogFoodTypes() {
     try {
-      const dogFoodConfig = this.config.items.dogFood;
+      const dogFoodConfig = this.config.items.defense;
 
       return Object.keys(dogFoodConfig).map(type => ({
         type,
