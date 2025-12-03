@@ -882,8 +882,8 @@ export class farm extends plugin {
    * @returns {number} 作物评分
    */
   calculateCropScore(cropType, cropConfig, seedConfig, inventory) {
-    // 收益率 = (售价 - 种子价格) / 种子价格
-    const profitRatio = (cropConfig.sellPrice - seedConfig.price) / seedConfig.price;
+    // 收益率 = (作物价格 - 种子价格) / 种子价格
+    const profitRatio = (cropConfig.price - seedConfig.price) / seedConfig.price;
 
     // 生长时间转换为小时
     const growTimeHours = cropConfig.growTime / 3600;
@@ -932,7 +932,7 @@ export class farm extends plugin {
           cropName: cropConfig.name,
           score,
           inventory,
-          profitRatio: (cropConfig.sellPrice - seedConfig.price) / seedConfig.price,
+          profitRatio: (cropConfig.price - seedConfig.price) / seedConfig.price,
           growTimeHours: cropConfig.growTime / 3600
         };
       }

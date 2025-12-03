@@ -18,7 +18,6 @@ export class PriceCalculator {
     this.sensitivity = this.pricingConfig.sensitivity
     this.minRatio = this.pricingConfig.min_ratio
     this.maxRatio = this.pricingConfig.max_ratio
-    this.sellPriceRatio = this.pricingConfig.sell_price_ratio
     this.stabilityThreshold = this.pricingConfig.stability_threshold
     this.extremeRatioMax = this.pricingConfig.extreme_ratio_max
     this.extremeRatioMin = this.pricingConfig.extreme_ratio_min
@@ -49,18 +48,15 @@ export class PriceCalculator {
 
       // 计算新价格
       const calculatedPrice = this._calculatePriceFromSupply(basePrice, ratio);
-      const clampedBuyPrice = this._clampPrice(calculatedPrice, basePrice);
-      const newSellPrice = clampedBuyPrice * this.sellPriceRatio;
+      const clampedPrice = this._clampPrice(calculatedPrice, basePrice);
 
       // 验证最终价格
-      CommonUtils.validatePrice(clampedBuyPrice, `final buy price for ${itemId}`);
-      CommonUtils.validatePrice(newSellPrice, `final sell price for ${itemId}`);
+      CommonUtils.validatePrice(clampedPrice, `final price for ${itemId}`);
 
       const result = {
         itemId,
         basePrice,
-        buyPrice: clampedBuyPrice,
-        sellPrice: parseFloat(newSellPrice.toFixed(2)),
+        price: clampedPrice,
         baseSupply,
         supply: actualSupply,
         ratio,
@@ -78,8 +74,7 @@ export class PriceCalculator {
       return {
         itemId,
         basePrice,
-        buyPrice: basePrice,
-        sellPrice: basePrice * this.sellPriceRatio,
+        price: basePrice,
         baseSupply,
         supply: actualSupply,
         ratio: 1,

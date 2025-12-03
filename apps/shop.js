@@ -385,8 +385,7 @@ export class ShopCommands extends plugin {
       category: itemConfig.category,
       categoryName: categoryNameMap[itemConfig.category] || itemConfig.category,
       description: itemConfig.description || '暂无描述',
-      price: itemConfig.price ?? itemConfig.buyPrice ?? 0,
-      sellPrice: itemConfig.sellPrice ?? 0,
+      price: itemConfig.price ?? 0,
       requiredLevel: itemConfig.requiredLevel ?? 1,
       maxStack: itemConfig.maxStack ?? 99,
       effects: []

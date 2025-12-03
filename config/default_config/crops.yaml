@@ -5,8 +5,7 @@
 carrot:
   name: "胡萝卜"
   icon: "🥕"
-  price: 16 # 作物购买价格（商店/市场基准价）
-  sellPrice: 8 # 作物出售基准价
+  price: 8 # 作物购买价格（商店/市场基准价）
   is_dynamic_price: true # 启用动态定价
   growTime: 600 # 生长时间（秒）
   baseYield: 3 # 基础产量
@@ -17,8 +16,7 @@ carrot:
 tomato:
   name: "西红柿"
   icon: "🍅"
-  price: 44 # 作物购买价格（商店/市场基准价）
-  sellPrice: 22 # 作物出售基准价
+  price: 22 # 作物购买价格（商店/市场基准价）
   is_dynamic_price: true # 启用动态定价
   growTime: 900 # 生长时间（秒）
   baseYield: 5 # 基础产量
@@ -29,8 +27,7 @@ tomato:
 wheat:
   name: "小麦"
   icon: "🌾"
-  price: 20 # 作物购买价格（商店/市场基准价）
-  sellPrice: 10 # 作物出售基准价
+  price: 10 # 作物购买价格（商店/市场基准价）
   is_dynamic_price: true # 启用动态定价
   growTime: 800 # 生长时间（秒）
   baseYield: 6 # 基础产量（谷物高产）
@@ -41,8 +38,7 @@ wheat:
 lettuce:
   name: "生菜"
   icon: "🥬"
-  price: 20
-  sellPrice: 10
+  price: 10
   is_dynamic_price: true
   growTime: 360
   baseYield: 2 # 基础产量（快速但产量低）
@@ -53,8 +49,7 @@ lettuce:
 potato:
   name: "土豆"
   icon: "🥔"
-  price: 42
-  sellPrice: 21
+  price: 21
   is_dynamic_price: true
   growTime: 720
   baseYield: 4 # 基础产量
@@ -65,8 +60,7 @@ potato:
 corn:
   name: "玉米"
   icon: "🌽"
-  price: 68
-  sellPrice: 34
+  price: 34
   is_dynamic_price: true
   growTime: 1200
   baseYield: 6 # 基础产量（高产谷物）
@@ -77,8 +71,7 @@ corn:
 strawberry:
   name: "草莓"
   icon: "🍓"
-  price: 104
-  sellPrice: 52
+  price: 52
   is_dynamic_price: true
   growTime: 1800
   baseYield: 8 # 基础产量（一株多果）
@@ -89,8 +82,7 @@ strawberry:
 grape:
   name: "葡萄"
   icon: "🍇"
-  price: 344
-  sellPrice: 172
+  price: 172
   is_dynamic_price: true
   growTime: 5400
   baseYield: 12 # 基础产量（葡萄串产量高）
@@ -101,8 +93,7 @@ grape:
 pumpkin:
   name: "南瓜"
   icon: "🎃"
-  price: 502
-  sellPrice: 251
+  price: 251
   is_dynamic_price: true
   growTime: 7200
   baseYield: 3 # 基础产量（单个大但数量少）

@@ -270,12 +270,12 @@ class Calculator {
       };
     }
 
-    const basePrice = operation === 'buy' ? itemConfig.buyPrice : itemConfig.sellPrice;
+    const basePrice = itemConfig.price;
 
     if (!basePrice || basePrice <= 0) {
       return {
         success: false,
-        error: `物品 ${itemId} 不支持${operation === 'buy' ? '购买' : '出售'}`
+        error: `物品 ${itemId} 不支持交易`
       };
     }
 

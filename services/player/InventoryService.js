@@ -369,7 +369,7 @@ export class InventoryService {
           category: targetItem.category
         },
         remaining: targetItem.quantity,
-        totalValue: CommonUtils.calcCoins(economicInfo.sellPrice, quantity)
+        totalValue: CommonUtils.calcCoins(economicInfo.price, quantity)
       };
     } catch (error) {
       logger.error(`移除物品失败 [${userId}]: ${error.message}`);
@@ -522,8 +522,8 @@ export class InventoryService {
           shortName: displayInfo.name ? displayInfo.name[0] : '?',
 
           category: displayInfo.category,
-          sellPrice: economicInfo.sellPrice,
-          totalSellValue: economicInfo.totalSellValue,
+          price: economicInfo.price,
+          totalValue: economicInfo.totalValue,
           canSell: economicInfo.canSell,
           isExpired: displayInfo.isExpired,
           locked: Boolean(item.metadata.locked),

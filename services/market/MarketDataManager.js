@@ -43,15 +43,13 @@ export class MarketDataManager {
             const itemInfo = this.itemResolver.getItemInfo(itemId);
             if (itemInfo) {
               const basePrice = itemInfo.price;
-              const baseSellPrice = itemInfo.sellPrice;
 
               // 验证价格数据完整性
-              if (this._validatePriceData(basePrice, baseSellPrice, itemId)) {
+              if (this._validatePriceData(basePrice, itemId)) {
                 // 初始化市场统计数据
                 await this.redis.hSet(statsKey, {
                   base_price: basePrice.toString(),
                   current_price: basePrice.toString(),
-                  current_sell_price: baseSellPrice.toString(),
                   demand_24h: '0',
                   supply_24h: '0',
                   last_updated: Date.now().toString(),
@@ -346,22 +344,16 @@ export class MarketDataManager {
           const stats = await this.getMarketStats(itemId);
           if (stats && !stats.error) {
             // 计算价格变化百分比
-            const buyPriceChange = stats.basePrice > 0
+            const priceChange = stats.basePrice > 0
               ? ((stats.currentPrice - stats.basePrice) / stats.basePrice * 100)
-              : 0;
-            const sellPriceChange = stats.baseSellPrice > 0
-              ? ((stats.currentSellPrice - stats.baseSellPrice) / stats.baseSellPrice * 100)
               : 0;
 
             categoryGroups[categoryName].push({
               id: itemId,
               name: itemInfo.name,
-              currentBuyPrice: stats.currentPrice,
-              currentSellPrice: stats.currentSellPrice,
+              currentPrice: stats.currentPrice,
               basePrice: stats.basePrice,
-              baseSellPrice: stats.baseSellPrice,
-              buyPriceChange: parseFloat(buyPriceChange.toFixed(1)),
-              sellPriceChange: parseFloat(sellPriceChange.toFixed(1)),
+              priceChange: parseFloat(priceChange.toFixed(1)),
               priceTrend: stats.priceTrend,
               isDynamic: true
             });
@@ -405,26 +397,21 @@ export class MarketDataManager {
         try {
           const stats = await this.getMarketStats(itemId);
           if (stats && !stats.error) {
-            const buyPriceChange = stats.basePrice > 0
+            const priceChange = stats.basePrice > 0
               ? ((stats.currentPrice - stats.basePrice) / stats.basePrice * 100)
-              : 0;
-            const sellPriceChange = stats.baseSellPrice > 0
-              ? ((stats.currentSellPrice - stats.baseSellPrice) / stats.baseSellPrice * 100)
               : 0;
 
             allItems.push({
               id: itemId,
               name: itemInfo.name,
               icon: this.config.getItemIcon(itemId),
-              currentBuyPrice: Math.round(stats.currentPrice),
-              currentSellPrice: Math.round(stats.currentSellPrice),
+              currentPrice: Math.round(stats.currentPrice),
               basePrice: stats.basePrice,
-              buyPriceChange: parseFloat(buyPriceChange.toFixed(1)),
-              sellPriceChange: parseFloat(sellPriceChange.toFixed(1)),
+              priceChange: parseFloat(priceChange.toFixed(1)),
               priceTrend: stats.priceTrend,
               priceHistory: stats.priceHistory || [],
               supply24h: stats.supply24h || 0,
-              volatility: Math.abs(buyPriceChange)
+              volatility: Math.abs(priceChange)
             });
           }
         } catch (error) {
@@ -617,21 +604,18 @@ export class MarketDataManager {
   /**
    * 验证价格数据
    * @param {number} basePrice 基准价格
-   * @param {number} baseSellPrice 基准出售价格
    * @param {string} itemId 物品ID
    * @returns {boolean} 验证结果
    * @private
    */
-  _validatePriceData(basePrice, baseSellPrice, itemId) {
-    // 验证价格数据完整性
-    if (basePrice === undefined || baseSellPrice === undefined) {
-      logger.warn(`[MarketDataManager] 物品 ${itemId} 价格数据不完整: price=${basePrice}, sellPrice=${baseSellPrice}`);
+  _validatePriceData(basePrice, itemId) {
+    if (basePrice === undefined) {
+      logger.warn(`[MarketDataManager] 物品 ${itemId} 价格数据不完整`);
       return false;
     }
 
-    // 验证价格数据有效性
-    if (typeof basePrice !== 'number' || typeof baseSellPrice !== 'number' || basePrice <= 0 || baseSellPrice <= 0) {
-      logger.warn(`[MarketDataManager] 物品 ${itemId} 价格数据无效: price=${basePrice}, sellPrice=${baseSellPrice}`);
+    if (typeof basePrice !== 'number' || basePrice <= 0) {
+      logger.warn(`[MarketDataManager] 物品 ${itemId} 价格数据无效: price=${basePrice}`);
       return false;
     }
 
@@ -730,11 +714,19 @@ export class MarketDataManager {
    * @private
    */
   _parseStatsData(data) {
+    let basePrice = parseFloat(data.base_price) || 0;
+    let currentPrice = parseFloat(data.current_price) || 0;
+
+    // 如果只有一个价格字段可用，则将其作为两个价格的共同基准
+    if (basePrice <= 0 && currentPrice > 0) {
+      basePrice = currentPrice;
+    } else if (currentPrice <= 0 && basePrice > 0) {
+      currentPrice = basePrice;
+    }
+
     return {
-      basePrice: parseFloat(data.base_price) || 0,
-      currentPrice: parseFloat(data.current_price) || 0,
-      currentSellPrice: parseFloat(data.current_sell_price) || 0,
-      baseSellPrice: parseFloat(data.base_price) * 0.5, // 估算基准出售价
+      basePrice,
+      currentPrice,
       demand24h: parseInt(data.demand_24h) || 0,
       supply24h: parseInt(data.supply_24h) || 0,
       lastUpdated: parseInt(data.last_updated) || 0,

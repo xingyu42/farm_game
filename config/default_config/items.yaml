@@ -6,7 +6,6 @@ seeds:
   carrot_seed:
     name: "胡萝卜种子"
     price: 5
-    sellPrice: 2
     category: "seeds"
     description: "常见的蔬菜种子"
     requiredLevel: 1
@@ -16,7 +15,6 @@ seeds:
   tomato_seed:
     name: "西红柿种子"
     price: 8
-    sellPrice: 3
     category: "seeds"
     description: "营养丰富的蔬菜种子"
     requiredLevel: 3
@@ -26,7 +24,6 @@ seeds:
   wheat_seed:
     name: "小麦种子"
     price: 3
-    sellPrice: 1
     category: "seeds"
     description: "基础的谷物种子"
     requiredLevel: 2
@@ -36,7 +33,6 @@ seeds:
   lettuce_seed:
     name: "生菜种子"
     price: 6
-    sellPrice: 2
     category: "seeds"
     description: "生菜的播种用种子"
     requiredLevel: 2
@@ -46,7 +42,6 @@ seeds:
   potato_seed:
     name: "土豆种子"
     price: 10
-    sellPrice: 4
     category: "seeds"
     description: "土豆的播种用种子"
     requiredLevel: 4
@@ -56,7 +51,6 @@ seeds:
   corn_seed:
     name: "玉米种子"
     price: 14
-    sellPrice: 5
     category: "seeds"
     description: "玉米的播种用种子"
     requiredLevel: 6
@@ -66,7 +60,6 @@ seeds:
   strawberry_seed:
     name: "草莓种子"
     price: 16
-    sellPrice: 6
     category: "seeds"
     description: "草莓的播种用种子"
     requiredLevel: 8
@@ -76,7 +69,6 @@ seeds:
   grape_seed:
     name: "葡萄种子"
     price: 28
-    sellPrice: 11
     category: "seeds"
     description: "葡萄的播种用种子"
     requiredLevel: 12
@@ -86,7 +78,6 @@ seeds:
   pumpkin_seed:
     name: "南瓜种子"
     price: 35
-    sellPrice: 13
     category: "seeds"
     description: "南瓜的播种用种子"
     requiredLevel: 14
@@ -98,7 +89,6 @@ fertilizer:
   fertilizer_normal:
     name: "普通肥料"
     price: 10
-    sellPrice: 4
     category: "fertilizer"
     description: "加速作物生长"
     requiredLevel: 1
@@ -110,7 +100,6 @@ fertilizer:
   fertilizer_premium:
     name: "高级肥料"
     price: 25
-    sellPrice: 10
     category: "fertilizer"
     description: "显著加速作物生长"
     requiredLevel: 5
@@ -122,7 +111,6 @@ fertilizer:
   fertilizer_deluxe:
     name: "顶级肥料"
     price: 50
-    sellPrice: 20
     category: "fertilizer"
     description: "极大加速作物生长"
     requiredLevel: 10
@@ -136,7 +124,6 @@ pesticide:
   pesticide_basic:
     name: "基础杀虫剂"
     price: 8
-    sellPrice: 3
     category: "pesticide"
     description: "清除作物害虫，恢复健康"
     requiredLevel: 1
@@ -150,7 +137,6 @@ defense:
   normal:
     name: "普通狗粮"
     price: 30
-    sellPrice: 12
     category: "defense"
     description: "提供基础防御"
     requiredLevel: 1
@@ -161,7 +147,6 @@ defense:
   premium:
     name: "高级狗粮"
     price: 80
-    sellPrice: 32
     category: "defense"
     description: "提供中等防御"
     requiredLevel: 5
@@ -172,7 +157,6 @@ defense:
   deluxe:
     name: "优质狗粮"
     price: 150
-    sellPrice: 60
     category: "defense"
     description: "提供强力防御"
     requiredLevel: 10
@@ -185,7 +169,6 @@ tools:
   basic_lockpick:
     name: "基础开锁器"
     price: 100
-    sellPrice: 40
     category: "tools"
     description: "提高偷菜成功率的基础工具"
     requiredLevel: 5
@@ -197,7 +180,6 @@ tools:
   advanced_gloves:
     name: "隐形手套"
     price: 250
-    sellPrice: 100
     category: "tools"
     description: "减少被发现概率的高级工具"
     requiredLevel: 10
@@ -210,7 +192,6 @@ tools:
   master_toolkit:
     name: "大师工具包"
     price: 500
-    sellPrice: 200
     category: "tools"
     description: "专业偷菜者的终极装备"
     requiredLevel: 15
@@ -226,7 +207,6 @@ materials:
   copper_essence:
     name: "铜质精华"
     price: 10000 # 商店价格（稀有）
-    sellPrice: 3000
     category: "materials"
     description: "用于土地品质进阶的珍贵材料"
     requiredLevel: 10
@@ -235,7 +215,6 @@ materials:
   silver_essence:
     name: "银质精华"
     price: 50000 # 商店价格（超稀有）
-    sellPrice: 15000
     category: "materials"
     description: "用于土地品质进阶的传奇材料"
     requiredLevel: 15
@@ -244,7 +223,6 @@ materials:
   gold_essence:
     name: "金质精华"
     price: 200000 # 商店价格（传说）
-    sellPrice: 60000
     category: "materials"
     description: "用于土地品质进阶的神话材料"
     requiredLevel: 20

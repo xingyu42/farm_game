@@ -60,38 +60,35 @@ export class MarketService {
   }
 
   /**
-   * 获取物品当前价格 - 委托给PriceCalculator和MarketDataManager
+   * 获取物品当前价格 - 统一买卖同价
    * @param {string} itemId 物品ID
-   * @param {string} priceType 价格类型: 'buy' | 'sell'
    * @returns {Promise<number>} 当前价格
    */
-  async getItemPrice(itemId, priceType = 'buy') {
+  async getItemPrice(itemId) {
     try {
       // 检查是否为浮动价格物品
       const isFloating = await this.isFloatingPriceItem(itemId);
 
       if (!isFloating) {
-        // 使用静态价格
-        return this._getStaticPrice(itemId, priceType);
+        return this._getStaticPrice(itemId);
       }
 
       // 从MarketDataManager获取统计数据
       const stats = await this.dataManager.getMarketStats(itemId);
 
       if (stats && !stats.error) {
-        const price = priceType === 'buy' ? stats.currentPrice : stats.currentSellPrice;
-        if (price !== undefined && !isNaN(price)) {
+        const price = stats.currentPrice;
+        if (typeof price === 'number' && !isNaN(price) && price > 0) {
           return price;
         }
       }
 
       // 降级到静态价格
       logger.warn(`[MarketService] 获取动态价格失败，使用静态价格 [${itemId}]`);
-      return this._getStaticPrice(itemId, priceType);
+      return this._getStaticPrice(itemId);
     } catch (error) {
       logger.error(`[MarketService] 获取物品价格失败 [${itemId}]: ${error.message}`);
-      // 降级到静态价格
-      return this._getStaticPrice(itemId, priceType);
+      return this._getStaticPrice(itemId);
     }
   }
 
@@ -271,18 +268,17 @@ export class MarketService {
           );
 
           if (!priceResult.degraded) {
-            const trend = this.priceCalculator.analyzePriceTrend(stats.basePrice, priceResult.buyPrice);
+            const trend = this.priceCalculator.analyzePriceTrend(stats.basePrice, priceResult.price);
             const history = this.priceCalculator.updatePriceHistory(
               JSON.stringify(stats.priceHistory),
-              priceResult.buyPrice
+              priceResult.price
             );
 
             priceUpdates.push({
               type: 'hset',
               key: `farm_game:market:stats:${itemId}`,
               data: {
-                current_price: priceResult.buyPrice.toString(),
-                current_sell_price: priceResult.sellPrice.toString(),
+                current_price: priceResult.price.toString(),
                 price_trend: trend,
                 price_history: JSON.stringify(history),
                 last_updated: Date.now().toString()
@@ -290,13 +286,13 @@ export class MarketService {
             });
 
             // 记录价格变化
-            if (Math.abs(priceResult.buyPrice - stats.currentPrice) > 0.01) {
+            if (Math.abs(priceResult.price - stats.currentPrice) > 0.01) {
               priceChanges.push({
                 itemId,
                 oldPrice: stats.currentPrice,
-                newPrice: priceResult.buyPrice,
-                change: priceResult.buyPrice - stats.currentPrice,
-                changePercent: ((priceResult.buyPrice - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
+                newPrice: priceResult.price,
+                change: priceResult.price - stats.currentPrice,
+                changePercent: ((priceResult.price - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
                 baseSupply,
                 yesterdaySupply,
                 ratio: priceResult.ratio,
@@ -573,7 +569,7 @@ export class MarketService {
    * @param {string} priceType 价格类型
    * @private
    */
-  _getStaticPrice(itemId, priceType) {
+  _getStaticPrice(itemId) {
     try {
       const itemInfo = this.itemResolver.getItemInfo(itemId);
       if (!itemInfo) {
@@ -581,16 +577,16 @@ export class MarketService {
         return 0;
       }
 
-      const price = priceType === 'buy' ? itemInfo.price : itemInfo.sellPrice;
+      const price = itemInfo.price;
 
       // 检查价格是否存在且有效
       if (price === undefined || price === null) {
-        logger.warn(`[MarketService] 物品 ${itemId} 缺少 ${priceType} 价格配置`);
+        logger.warn(`[MarketService] 物品 ${itemId} 缺少价格配置`);
         return 0;
       }
 
       if (typeof price !== 'number' || price <= 0) {
-        logger.warn(`[MarketService] 物品 ${itemId} 的 ${priceType} 价格配置无效: ${price}`);
+        logger.warn(`[MarketService] 物品 ${itemId} 的价格配置无效: ${price}`);
         return 0;
       }
 

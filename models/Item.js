@@ -21,8 +21,7 @@ class Item {
     this.maxStack = data.maxStack;
 
     // 经济属性
-    this.buyPrice = data.buyPrice;
-    this.sellPrice = data.sellPrice;
+    this.price = data.price;
 
     // 扩展属性
     this.icon = data.icon;
@@ -57,8 +56,7 @@ class Item {
       category: itemConfig.category,
       name: itemConfig.name,
       description: itemConfig.description,
-      buyPrice: itemConfig.buyPrice ?? itemConfig.price,
-      sellPrice: itemConfig.sellPrice,
+      price: itemConfig.price,
       icon: itemConfig.icon,
       maxStack: itemConfig.maxStack,
       metadata: itemConfig.metadata
@@ -81,14 +79,14 @@ class Item {
     }
 
     // 确保metadata存在且为对象
-    const metadata = jsonData.metadata
+    const metadata = jsonData.metadata && typeof jsonData.metadata === 'object'
+      ? jsonData.metadata
+      : {};
 
-    // 直接使用JSON数据创建Item实例，因为JSON数据已经包含了完整的物品信息
     return new Item({
       ...jsonData,
       metadata: {
         ...metadata,
-        // 确保关键的metadata字段存在
         lastUpdated: metadata.lastUpdated || Date.now(),
         locked: Boolean(metadata.locked)
       }
@@ -140,7 +138,7 @@ class Item {
     }
 
     // 验证价格
-    if (this.buyPrice < 0 || this.sellPrice < 0) {
+    if (this.price < 0) {
       errors.push('物品价格不能为负数');
     }
 
@@ -166,11 +164,11 @@ class Item {
   }
 
   /**
-   * 检查是否可以出售 - 简化版本，只检查售价
+   * 检查是否可以出售
    * @returns {boolean}
    */
   canSell() {
-    return this.sellPrice > 0 && !this.isExpired() && this.quantity > 0;
+    return this.price > 0 && !this.isExpired() && this.quantity > 0;
   }
 
   /**
@@ -313,8 +311,7 @@ class Item {
       icon: this.icon,
       quantity: this.quantity,
       category: this.category,
-      buyPrice: this.buyPrice,
-      sellPrice: this.sellPrice,
+      price: this.price,
       canSell: this.canSell(),
       isExpired: this.isExpired(),
       displayText: `${this.icon}${this.name}${quantityText}${statusText}`,
@@ -330,10 +327,8 @@ class Item {
     return {
       id: this.id,
       quantity: this.quantity,
-      buyPrice: this.buyPrice,
-      sellPrice: this.sellPrice,
-      totalBuyValue: CommonUtils.calcCoins(this.buyPrice, this.quantity),
-      totalSellValue: CommonUtils.calcCoins(this.sellPrice, this.quantity),
+      price: this.price,
+      totalValue: CommonUtils.calcCoins(this.price, this.quantity),
       canSell: this.canSell()
     };
   }
@@ -350,8 +345,7 @@ class Item {
       description: this.description,
       quantity: this.quantity,
       maxStack: this.maxStack,
-      buyPrice: this.buyPrice,
-      sellPrice: this.sellPrice,
+      price: this.price,
       icon: this.icon,
       expiryTime: this.expiryTime,
       metadata: this.metadata

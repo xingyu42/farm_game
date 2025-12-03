@@ -33,14 +33,13 @@ export class ShopService {
   }
 
   /**
-   * 获取物品价格（集成动态定价，增强版本）
-   * 
+   * 获取物品价格（统一买卖同价）
+   *
    * @param {string} itemId 物品ID
-   * @param {string} priceType 价格类型: 'buy' | 'sell'
    * @returns {Promise<number>} 物品价格
    * @private
    */
-  async _getItemPrice(itemId, priceType = 'buy') {
+  async _getItemPrice(itemId) {
     try {
       // 检查是否有MarketService并且是浮动价格物品
       if (this.serviceContainer) {
@@ -50,17 +49,14 @@ export class ShopService {
 
           if (isFloating) {
             try {
-              const dynamicPrice = await marketService.getItemPrice(itemId, priceType);
-              // 使用CommonUtils验证动态价格
-              CommonUtils.validatePrice(dynamicPrice, `dynamic ${priceType} price for ${itemId}`);
+              const dynamicPrice = await marketService.getItemPrice(itemId);
+              CommonUtils.validatePrice(dynamicPrice, `dynamic price for ${itemId}`);
               return dynamicPrice;
             } catch (error) {
               logger.warn('获取动态价格失败，使用静态价格', {
                 itemId,
-                priceType,
                 error: error.message
               });
-              // 降级到静态价格
             }
           }
         }
@@ -72,18 +68,16 @@ export class ShopService {
         throw new Error(`物品不存在: ${itemId}`);
       }
 
-      const price = priceType === 'buy' ? itemInfo.price : itemInfo.sellPrice;
-      CommonUtils.validatePrice(price, `static ${priceType} price for ${itemId}`);
+      const price = itemInfo.price;
+      CommonUtils.validatePrice(price, `static price for ${itemId}`);
 
       return price;
     } catch (error) {
       logger.error('获取物品价格失败', {
         itemId,
-        priceType,
         error: error.message
       });
-      // 返回默认价格以避免交易中断
-      return priceType === 'buy' ? 1 : 0;
+      return 1;
     }
   }
   /**
@@ -165,8 +159,7 @@ export class ShopService {
             const itemId = item.id;
 
             // 获取当前价格（可能是动态价格）
-            const currentPrice = await this._getItemPrice(itemId, 'buy');
-            const currentSellPrice = await this._getItemPrice(itemId, 'sell');
+            const currentPrice = await this._getItemPrice(itemId);
 
             // 检查是否为动态价格物品
             let isDynamic = false;
@@ -192,7 +185,6 @@ export class ShopService {
               id: itemId,
               name: item.name,
               price: currentPrice,
-              sellPrice: currentSellPrice,
               basePrice: item.price,
               isDynamic,
               priceTrend,
@@ -261,7 +253,7 @@ export class ShopService {
       }
 
       // 获取当前价格
-      const unitPrice = await this._getItemPrice(itemId, 'buy');
+      const unitPrice = await this._getItemPrice(itemId);
       const totalCost = CommonUtils.calcCoins(unitPrice, quantity);
 
       // 获取玩家数据
@@ -407,7 +399,7 @@ export class ShopService {
       }
 
       // 检查物品是否可以出售
-      if (itemInfo.sellPrice === undefined || itemInfo.sellPrice <= 0) {
+      if (itemInfo.price === undefined || itemInfo.price <= 0) {
         return {
           success: false,
           message: `物品 "${itemName}" 不可出售`
@@ -415,7 +407,7 @@ export class ShopService {
       }
 
       // 获取当前出售价格
-      const unitPrice = await this._getItemPrice(itemId, 'sell');
+      const unitPrice = await this._getItemPrice(itemId);
       const totalValue = CommonUtils.calcCoins(unitPrice, quantity);
 
       // 获取玩家数据
@@ -541,12 +533,12 @@ export class ShopService {
           }
           // 检查物品是否可以出售
           const economicInfo = item.getEconomicInfo();
-          if (economicInfo.canSell && economicInfo.sellPrice > 0) {
+          if (economicInfo.canSell && economicInfo.price > 0) {
             cropItems.push({
               itemId,
               item,
               quantity: item.quantity,
-              unitPrice: await this._getItemPrice(itemId, 'sell')
+              unitPrice: await this._getItemPrice(itemId)
             });
           }
         }

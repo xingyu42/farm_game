@@ -127,19 +127,9 @@ class ItemResolver {
   }
 
   /**
-   * 获取物品售价
+   * 获取物品价格
    * @param {string} itemId 物品ID
-   * @returns {number} 售价，如果找不到返回0
-   */
-  getItemSellPrice(itemId) {
-    const itemConfig = this.findItemById(itemId);
-    return itemConfig?.sellPrice ?? 0;
-  }
-
-  /**
-   * 获取物品购买价格
-   * @param {string} itemId 物品ID
-   * @returns {number} 购买价格，如果找不到返回0
+   * @returns {number} 价格，如果找不到返回0
    */
   getItemPrice(itemId) {
     const itemConfig = this.findItemById(itemId);

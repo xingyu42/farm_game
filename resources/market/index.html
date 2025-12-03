@@ -58,13 +58,13 @@
                         </div>
                         <div class="trend-badge {{item.priceTrend}}">
                             {{if item.priceTrend == 'rising'}}▲{{else if item.priceTrend == 'falling'}}▼{{else}}━{{/if}}
-                            {{if item.sellPriceChange >= 0}}+{{/if}}{{item.sellPriceChange}}%
+                            {{if item.priceChange >= 0}}+{{/if}}{{item.priceChange}}%
                         </div>
                     </div>
                     <div class="card-prices">
                         <div class="price-row">
-                            <span class="price-label">收购价</span>
-                            <span class="price-value sell">{{item.currentSellPrice}}</span>
+                            <span class="price-label">当前价</span>
+                            <span class="price-value sell">{{item.currentPrice}}</span>
                         </div>
                     </div>
                     <div class="sparkline-container">
@@ -105,9 +105,9 @@
                         <span class="col col-trend">
                             {{if item.priceTrend == 'rising'}}📈{{else if item.priceTrend == 'falling'}}📉{{else}}➖{{/if}}
                         </span>
-                        <span class="col col-sell price-sell">{{item.currentSellPrice}}</span>
-                        <span class="col col-change {{if item.sellPriceChange > 0}}positive{{else if item.sellPriceChange < 0}}negative{{else}}neutral{{/if}}">
-                            {{if item.sellPriceChange > 0}}+{{/if}}{{item.sellPriceChange}}%
+                        <span class="col col-sell price-sell">{{item.currentPrice}}</span>
+                        <span class="col col-change {{if item.priceChange > 0}}positive{{else if item.priceChange < 0}}negative{{else}}neutral{{/if}}">
+                            {{if item.priceChange > 0}}+{{/if}}{{item.priceChange}}%
                         </span>
                     </div>
                     {{/each}}
