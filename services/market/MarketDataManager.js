@@ -441,7 +441,7 @@ export class MarketDataManager {
   }
 
   /**
-   * 生成 SVG Sparkline 路径
+   * 生成 SVG Sparkline 路径（平滑贝塞尔曲线）
    * @param {Array<number>} priceHistory 价格历史数组
    * @param {number} width SVG宽度，默认100
    * @param {number} height SVG高度，默认30
@@ -453,7 +453,6 @@ export class MarketDataManager {
       return `M 0 ${height / 2} L ${width} ${height / 2}`;
     }
 
-    // 取最近24个数据点（一天的数据）
     const data = priceHistory.slice(-24);
     if (data.length < 2) {
       return `M 0 ${height / 2} L ${width} ${height / 2}`;
@@ -465,15 +464,41 @@ export class MarketDataManager {
     const padding = 2;
     const effectiveHeight = height - padding * 2;
 
-    const points = data.map((price, i) => {
-      const x = (i / (data.length - 1)) * width;
-      const y = padding + effectiveHeight - ((price - min) / range * effectiveHeight);
-      return { x, y };
-    });
+    const points = data.map((price, i) => ({
+      x: (i / (data.length - 1)) * width,
+      y: padding + effectiveHeight - ((price - min) / range * effectiveHeight)
+    }));
+
+    return this._catmullRomToPath(points);
+  }
+
+  /**
+   * Catmull-Rom 样条转 SVG 贝塞尔路径
+   * @param {Array<{x: number, y: number}>} points 点数组
+   * @param {number} tension 张力系数（0-1，越小越平滑）
+   * @returns {string} SVG path d属性值
+   * @private
+   */
+  _catmullRomToPath(points, tension = 0.5) {
+    if (points.length < 2) return '';
+    if (points.length === 2) {
+      return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+    }
 
     let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
-    for (let i = 1; i < points.length; i++) {
-      d += ` L ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || points[points.length - 1];
+
+      const cp1x = p1.x + (p2.x - p0.x) * tension / 3;
+      const cp1y = p1.y + (p2.y - p0.y) * tension / 3;
+      const cp2x = p2.x - (p3.x - p1.x) * tension / 3;
+      const cp2y = p2.y - (p3.y - p1.y) * tension / 3;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
     }
 
     return d;
