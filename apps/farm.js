@@ -180,6 +180,12 @@ export class farm extends plugin {
         landData.cropName = cropConfig?.name || land.crop
         landData.cropIcon = this.config.getItemIcon(land.crop)
 
+        // 计算健康度并分级
+        const rawHealth = land.health != null ? Number(land.health) : 100
+        const health = Number.isFinite(rawHealth) ? Math.max(0, Math.min(100, rawHealth)) : 100
+        landData.health = health
+        landData.healthLevel = health >= 70 ? 'high' : (health >= 40 ? 'medium' : 'low')
+
         // 计算生长进度
         if (isMature) {
           landData.growthPercent = 100

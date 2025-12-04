@@ -79,19 +79,28 @@
                     <div class="crop-icon empty-state">🌱</div>
                     <div class="crop-name empty-name">闲置中</div>
                     {{else}}
+                    <!-- Health Bar -->
+                    <div class="health-bar-container">
+                        <span class="health-icon {{if land.healthLevel == 'low'}}pulse{{/if}}"></span>
+                        <div class="health-bar">
+                            <div class="health-fill health-{{land.healthLevel}}" style="width: {{land.health}}%;"></div>
+                        </div>
+                        <span class="health-value">{{land.health}}%</span>
+                    </div>
+                    <!-- Growth Bar -->
+                    <div class="growth-bar-container">
+                        <span class="growth-icon"></span>
+                        <div class="growth-bar">
+                            {{if land.status == 'mature'}}
+                            <div class="growth-fill growth-mature" style="width: 100%;"></div>
+                            {{else}}
+                            <div class="growth-fill {{if land.hasPests || land.needsWater}}growth-danger{{else}}growth-growing{{/if}}" style="width: {{land.growthPercent}}%;"></div>
+                            {{/if}}
+                        </div>
+                        <span class="growth-value">{{if land.status == 'mature'}}100%{{else}}{{land.growthPercent}}%{{/if}}</span>
+                    </div>
                     <div class="crop-icon">{{land.cropIcon}}</div>
                     <div class="crop-name">{{land.cropName}}</div>
-                    {{if land.status == 'mature'}}
-                    <div class="progress-container">
-                        <div class="progress-fill fill-mature" style="width: 100%;"></div>
-                    </div>
-                    <span class="time-text mature">✅ 已成熟</span>
-                    {{else}}
-                    <div class="progress-container">
-                        <div class="progress-fill {{if land.hasPests || land.needsWater}}fill-danger{{else}}fill-growing{{/if}}" style="width: {{land.growthPercent}}%;"></div>
-                    </div>
-                    <span class="time-text">⏳ {{land.timeRemaining}}</span>
-                    {{/if}}
                     {{/if}}
                 </div>
                 <div class="card-footer">
