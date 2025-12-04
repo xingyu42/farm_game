@@ -27,34 +27,30 @@ class CropCareService {
   async waterCrop(userId, landId) {
     try {
       return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
-        // 1. 获取土地数据
-        const landData = await this.landService.getLandById(userId, landId);
-        if (!landData) {
-          throw new Error(`土地 ${landId} 不存在`);
-        }
-
-                // 2. 验证护理条件
+        // 1. 获取玩家数据并验证护理条件
         const playerData = await this.landService.playerService.getPlayer(userId);
         if (!playerData) {
           throw new Error('获取玩家数据失败');
         }
-        
+
         const validation = this.validator.validateCareOperation(playerData, landId, 'water');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
 
+        // 2. 使用验证返回的 land 对象，确保数据一致性
+        const land = validation.land;
+
         // 3. 浇水效果：恢复健康度，移除缺水状态
         const landUpdates = {
           needsWater: false,
-          health: Math.min(100, (landData.health || 100) + 10) // 恢复10点健康度
+          health: Math.min(100, (land.health ?? 100) + 10)
         };
 
         // 4. 更新土地数据
         await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
 
-        const cropsConfig = this.config.crops;
-        const cropName = this._getCropName(landData.crop, cropsConfig);
+        const cropName = this._getCropName(land.crop, this.config.crops);
 
         // 5. 构建返回消息
         return this.messageBuilder.buildCareMessage('water', cropName, landId, {
@@ -79,21 +75,19 @@ class CropCareService {
   async fertilizeCrop(userId, landId, fertilizerType = null) {
     try {
       return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
-        // 1. 获取土地数据
-        const landData = await this.landService.getLandById(userId, landId);
-        if (!landData) {
-          throw new Error(`土地 ${landId} 不存在`);
-        }
-
-        // 2. 验证护理条件 - 需要完整的玩家数据
+        // 1. 获取玩家数据并验证护理条件
         const playerData = await this.landService.playerService.getPlayer(userId);
         if (!playerData) {
           throw new Error('获取玩家数据失败');
         }
+
         const validation = this.validator.validateCareOperation(playerData, landId, 'fertilize');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
+
+        // 2. 使用验证返回的 land 对象，确保数据一致性
+        const land = validation.land;
 
         // 3. 确定肥料类型
         const actualFertilizerType = fertilizerType || await this._getBestAvailableFertilizer(userId);
@@ -113,30 +107,35 @@ class CropCareService {
         const growthSpeedBonus = fertilizerConfig?.effects?.growthSpeed || 0.1;
 
         const landUpdates = {
-          health: Math.min(100, (landData.health || 100) + healthBonus),
+          health: Math.min(100, (land.health ?? 100) + healthBonus),
           lastFertilized: Date.now()
         };
 
         // 如果有加速效果，更新收获时间
-        if (growthSpeedBonus > 0 && landData.harvestTime) {
-          const remainingTime = landData.harvestTime - Date.now();
+        if (growthSpeedBonus > 0 && land.harvestTime) {
+          const remainingTime = land.harvestTime - Date.now();
           const speedUpTime = Math.floor(remainingTime * growthSpeedBonus);
-          landUpdates.harvestTime = landData.harvestTime - speedUpTime;
+          landUpdates.harvestTime = land.harvestTime - speedUpTime;
         }
 
-        // 6. 扣除肥料并更新土地
+        // 6. 扣除肥料并更新土地（带回滚机制保证原子性）
         await this.inventoryService.removeItem(userId, actualFertilizerType, 1);
-        await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
+        try {
+          await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
+        } catch (updateError) {
+          // 土地更新失败，回滚库存
+          await this.inventoryService.addItem(userId, actualFertilizerType, 1);
+          throw updateError;
+        }
 
         // 7. 如果收获时间更新了，同步更新收获计划
         if (landUpdates.harvestTime) {
           await this.cropMonitorService.updateHarvestSchedule(userId, landId, landUpdates.harvestTime);
         }
 
-        const cropsConfig = this.config.crops;
-        const cropName = this._getCropName(landData.crop, cropsConfig);
+        const cropName = this._getCropName(land.crop, this.config.crops);
 
-        // 7. 构建返回消息
+        // 8. 构建返回消息
         return this.messageBuilder.buildCareMessage('fertilize', cropName, landId, {
           health: landUpdates.health,
           fertilizerType: actualFertilizerType,
@@ -160,21 +159,19 @@ class CropCareService {
   async treatPests(userId, landId, pesticideType = null) {
     try {
       return await this.plantingDataService.executeWithTransaction(userId, async (_multi, _playerKey) => {
-        // 1. 获取土地数据
-        const landData = await this.landService.getLandById(userId, landId);
-        if (!landData) {
-          throw new Error(`土地 ${landId} 不存在`);
-        }
-
-        // 2. 验证护理条件 - 需要完整的玩家数据
+        // 1. 获取玩家数据并验证护理条件
         const playerData = await this.landService.playerService.getPlayer(userId);
         if (!playerData) {
           throw new Error('获取玩家数据失败');
         }
+
         const validation = this.validator.validateCareOperation(playerData, landId, 'pesticide');
         if (!validation.success) {
           throw new Error(validation.error.message);
         }
+
+        // 2. 使用验证返回的 land 对象，确保数据一致性
+        const land = validation.land;
 
         // 3. 确定杀虫剂类型
         const actualPesticideType = pesticideType || await this._getBestAvailablePesticide(userId);
@@ -194,16 +191,21 @@ class CropCareService {
 
         const landUpdates = {
           hasPests: false,
-          health: Math.min(100, (landData.health || 100) + healthRecovery),
+          health: Math.min(100, (land.health ?? 100) + healthRecovery),
           lastTreated: Date.now()
         };
 
-        // 6. 扣除杀虫剂并更新土地
+        // 6. 扣除杀虫剂并更新土地（带回滚机制保证原子性）
         await this.inventoryService.removeItem(userId, actualPesticideType, 1);
-        await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
+        try {
+          await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
+        } catch (updateError) {
+          // 土地更新失败，回滚库存
+          await this.inventoryService.addItem(userId, actualPesticideType, 1);
+          throw updateError;
+        }
 
-        const cropsConfig = this.config.crops;
-        const cropName = this._getCropName(landData.crop, cropsConfig);
+        const cropName = this._getCropName(land.crop, this.config.crops);
 
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('pesticide', cropName, landId, {
