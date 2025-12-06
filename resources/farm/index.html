@@ -1,131 +1,276 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-
+<html lang="zh-CN" data-theme="garden">
 <head>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{pluResPath}}farm/index.css" />
-    <link rel="shortcut icon" href="#" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的农场</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
     <style>
-        #container {
-            background: url("{{pluResPath}}help/bg.jpg") center !important;
-            background-size: cover !important;
+        [v-cloak] { display: none; }
+
+        .bg-simple-dark { background-color: #263238; }
+
+        .bg-wood-panel {
+            background-color: #6d4c41;
+            background-image:
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px),
+                linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+            border: 3px solid #3e2723;
+            border-top-color: #8d6e63;
+            border-left-color: #795548;
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.4);
+            border-radius: 1rem;
         }
+
+        .hud-panel::before, .hud-panel::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            background: #3e2723;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.2);
+            z-index: 20;
+        }
+        .hud-panel::before { left: 10px; }
+        .hud-panel::after { right: 10px; }
+
+        .farm-bg { background-color: #85be8c; }
+
+        .farm-grid-wrapper {
+            position: relative;
+            background-color: #c29979;
+            border: 24px solid transparent;
+            border-image-source: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath fill='%2385be8c' fill-rule='evenodd' d='M0 0h120v120H0z M40 30 Q45 40 50 30 Q55 22 60 30 Q65 38 70 30 Q75 28 80 30 Q90 30 90 40 Q80 45 90 50 Q98 55 90 60 Q78 65 90 70 Q95 75 90 80 Q90 90 80 90 Q75 82 70 90 Q65 98 60 90 Q55 78 50 90 Q45 95 40 90 Q30 90 30 80 Q40 75 30 70 Q22 65 30 60 Q42 55 30 50 Q25 45 30 40 Q30 30 40 30z'/%3E%3Cpath fill='none' stroke='%232B2524' stroke-width='3' d='M40 30 Q45 40 50 30 Q55 22 60 30 Q65 38 70 30 Q75 28 80 30 Q90 30 90 40 Q80 45 90 50 Q98 55 90 60 Q78 65 90 70 Q95 75 90 80 Q90 90 80 90 Q75 82 70 90 Q65 98 60 90 Q55 78 50 90 Q45 95 40 90 Q30 90 30 80 Q40 75 30 70 Q22 65 30 60 Q42 55 30 50 Q25 45 30 40 Q30 30 40 30z'/%3E%3C/svg%3E");
+            border-image-slice: 40 fill;
+            border-image-repeat: round;
+            padding: 16px;
+        }
+
+        .plot-base {
+            position: relative;
+            border-radius: 2px;
+            background-color: #a2786a;
+        }
+
+        .plot-ready {
+            position: relative;
+            border-radius: 2px;
+            background-color: #a2786a;
+            box-shadow: 0 0 0 2px #FFD700;
+        }
+
+        .plot-locked {
+            position: relative;
+            border-radius: 2px;
+            background-color: #5d4037;
+            opacity: 0.5;
+        }
+
+        .health-bar {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 3px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .health-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        .health-high { background: #84cc16; }
+        .health-medium { background: #fb923c; }
+        .health-low { background: #ef4444; }
     </style>
 </head>
+<body class="bg-simple-dark min-h-screen flex items-center justify-center font-sans overflow-hidden">
 
-<body>
-    <div class="container" id="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="title">
-                <span class="title-icon">{{if isOwner}}🌾{{else}}👀{{/if}}</span>
-                {{if isOwner}}我的农场{{else}}{{playerName}} 的农场{{/if}}
-            </div>
-        </div>
+<div id="app" v-cloak class="w-[600px] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative border-4 border-[#3e2723] bg-[#85be8c]">
 
-        <!-- Operation Result (conditional) -->
-        {{if operationResult}}
-        <div class="operation-result result-{{operationResult.type}}">
-            <div class="result-icon">{{operationResult.icon}}</div>
-            <div class="result-content">
-                <div class="result-title">{{operationResult.title}}</div>
-                <div class="result-details">
-                    {{each operationResult.details detail}}
-                    <span class="result-detail">{{detail}}</span>
-                    {{/each}}
+    <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#81d4fa] to-[#b3e5fc] -z-10"></div>
+
+    <!-- HUD Panel -->
+    <div class="hud-panel bg-wood-panel p-4 z-10 relative text-white shadow-lg">
+        <div class="flex items-center gap-4 relative z-10">
+            <div class="avatar placeholder indicator">
+                 <span class="indicator-item badge badge-warning font-bold border-2 border-white shadow-md text-stone-800">{{ user.level }}</span>
+                <div class="bg-neutral text-neutral-content rounded-xl w-16 h-16 ring-2 ring-warning ring-offset-2 ring-offset-[#5d4037] shadow-lg bg-gradient-to-br from-white to-orange-100 flex items-center justify-center">
+                    <span class="text-4xl filter drop-shadow-sm">🤠</span>
                 </div>
             </div>
-        </div>
-        {{/if}}
 
-        <!-- Status Panel -->
-        <div class="status-panel">
-            <div class="user-info">
-                <div class="stat-box">
-                    <span class="stat-icon">👤</span>
-                    <div class="stat-content">
-                        <div class="stat-value">Lv.{{level}}</div>
-                        <div class="stat-label">等级</div>
-                    </div>
+            <div class="flex flex-col h-14 justify-around flex-1">
+                <div class="font-extrabold text-xl drop-shadow-md tracking-wide text-white flex items-center gap-2">
+                    {{ user.name }}
                 </div>
-                <div class="stat-box">
-                    <span class="stat-icon">💰</span>
-                    <div class="stat-content">
-                        <div class="stat-value">{{gold}}</div>
-                        <div class="stat-label">金币</div>
-                    </div>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-icon">🏞️</span>
-                    <div class="stat-content">
-                        <div class="stat-value">{{landCount}} / {{maxLandCount}}</div>
-                        <div class="stat-label">土地</div>
-                    </div>
+                <div class="badge badge-lg gap-2 bg-black/40 border-white/10 text-yellow-300 font-bold px-3 shadow-inner h-8 w-fit backdrop-blur-sm">
+                    <span class="iconify text-lg" data-icon="emojione:money-bag"></span>
+                    <span class="tracking-widest">{{ user.gold.toLocaleString() }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Land Grid -->
-        <div class="land-grid">
-            {{each lands land}}
-            <div class="land-card quality-{{land.quality}}">
-                <div class="card-header">
-                    <span class="land-id">#{{land.id}}</span>
-                    <span class="quality-badge q-{{land.quality}}">{{land.qualityIcon}} {{land.qualityName}}</span>
-                </div>
-                <div class="card-body">
-                    {{if land.isEmpty}}
-                    <div class="crop-icon empty-state">🌱</div>
-                    <div class="crop-name empty-name">闲置中</div>
-                    {{else}}
-                    <!-- Health Bar -->
-                    <div class="health-bar-container">
-                        <span class="health-icon {{if land.healthLevel == 'low'}}pulse{{/if}}"></span>
-                        <div class="health-bar">
-                            <div class="health-fill health-{{land.healthLevel}}" style="width: {{land.health}}%;"></div>
-                        </div>
-                        <span class="health-value">{{land.health}}%</span>
-                    </div>
-                    <!-- Growth Bar -->
-                    <div class="growth-bar-container">
-                        <span class="growth-icon"></span>
-                        <div class="growth-bar">
-                            {{if land.status == 'mature'}}
-                            <div class="growth-fill growth-mature" style="width: 100%;"></div>
-                            {{else}}
-                            <div class="growth-fill {{if land.hasPests || land.needsWater}}growth-danger{{else}}growth-growing{{/if}}" style="width: {{land.growthPercent}}%;"></div>
-                            {{/if}}
-                        </div>
-                        <span class="growth-value">{{if land.status == 'mature'}}100%{{else}}{{land.growthPercent}}%{{/if}}</span>
-                    </div>
-                    <div class="crop-icon">{{land.cropIcon}}</div>
-                    <div class="crop-name">{{land.cropName}}</div>
-                    {{/if}}
-                </div>
-                <div class="card-footer">
-                    {{if land.needsWater}}
-                    <span class="status-badge bg-water">💧 缺水</span>
-                    {{/if}}
-                    {{if land.hasPests}}
-                    <span class="status-badge bg-pest">🐛 害虫</span>
-                    {{/if}}
-                    {{if land.stealable && !isOwner}}
-                    <span class="status-badge bg-steal">🖐️ 可偷</span>
-                    {{/if}}
-                </div>
-            </div>
-            {{/each}}
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <span>💡 提示：</span>
-            <span class="key-tip">#nc种植[作物][地块]</span>
-            <span class="key-tip">#nc收获</span>
-            <span class="key-tip">#nc浇水全部</span>
+        <!-- EXP Bar -->
+        <div class="w-full h-3 bg-[#3e2723] rounded-full mt-4 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+            <div class="h-full bg-[linear-gradient(to_right,#a3e635,#65a30d)]" :style="{ width: user.exp + '%' }"></div>
         </div>
     </div>
-</body>
 
+    <!-- Farm Grid -->
+    <div class="farm-area farm-bg p-5 shadow-[inset_0_10px_20px_rgba(0,0,0,0.1)] min-h-[440px] relative z-0">
+        <div class="farm-grid-wrapper">
+            <div class="grid grid-cols-6 gap-4 relative z-10">
+            <div v-for="plot in plots" :key="plot.id"
+                 class="aspect-square rounded-xl relative flex justify-center items-center"
+                 :class="getPlotClass(plot)">
+
+                <span class="absolute top-0.5 left-1 text-[10px] font-bold text-stone-700/70 select-none">{{ plot.id }}</span>
+
+                <!-- Locked -->
+                <div v-if="plot.isLocked" class="flex items-center justify-center opacity-40">
+                    <span class="iconify text-xl text-stone-900" data-icon="fa6-solid:lock"></span>
+                </div>
+
+                <!-- Crop -->
+                <div v-else-if="plot.crop" class="relative w-full h-full flex justify-center items-center">
+                    <div v-if="plot.state === 'growing'" class="absolute w-11 h-11 rounded-full opacity-60"
+                         :style="getProgressStyle(plot.progress, plot.alert)"></div>
+                    <div class="text-2xl z-10 drop-shadow-sm filter select-none" :class="{'scale-110': plot.state === 'ready'}">
+                        {{ plot.cropIcon }}
+                    </div>
+                    <!-- Health Bar -->
+                    <div v-if="plot.health < 100" class="health-bar">
+                        <div class="health-fill" :class="'health-' + plot.healthLevel" :style="{ width: plot.health + '%' }"></div>
+                    </div>
+                </div>
+
+                <!-- Quality Star -->
+                <span v-if="plot.quality !== 'normal' && !plot.isLocked"
+                      class="iconify absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-sm drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] z-20"
+                      data-icon="fa6-solid:star"
+                      :style="{ color: getQualityStarColor(plot.quality) }"></span>
+
+                <!-- Status Badges -->
+                <div v-if="plot.state === 'ready'" class="absolute -top-1.5 -right-1.5 badge badge-xs badge-warning w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
+                    <span class="iconify text-[10px] text-stone-800" data-icon="fa6-solid:check"></span>
+                </div>
+                <div v-if="plot.alert === 'water'" class="absolute -bottom-1.5 -right-1.5 badge badge-xs badge-info w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
+                    <span class="iconify text-[10px] text-white" data-icon="ion:water"></span>
+                </div>
+                <div v-if="plot.alert === 'pest'" class="absolute -bottom-1.5 -right-1.5 badge badge-xs badge-error w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
+                    <span class="iconify text-[10px] text-white" data-icon="fa6-solid:bug"></span>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Footer Stats -->
+    <div class="bg-wood-panel py-3 px-6 flex justify-between text-white font-bold text-sm shadow-[0_-4px_10px_rgba(0,0,0,0.1)] relative border-t-4 border-[#5d4037] z-20">
+        <div class="absolute top-1/2 left-3 w-2.5 h-2.5 bg-[#3e2723] rounded-full -translate-y-1/2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.2)]"></div>
+        <div class="absolute top-1/2 right-3 w-2.5 h-2.5 bg-[#3e2723] rounded-full -translate-y-1/2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.2)]"></div>
+
+        <div class="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+            <span class="iconify text-lg text-lime-300 filter drop-shadow" data-icon="lucide:sprout"></span>
+            <span class="text-lime-50 text-shadow-sm">种植: {{ stats.planted }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+            <span class="iconify text-lg text-amber-300 filter drop-shadow" data-icon="lucide:package"></span>
+            <span class="text-amber-50 text-shadow-sm">待收: {{ stats.ready }}</span>
+        </div>
+         <div class="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5" :class="stats.issues > 0 ? 'text-red-200 bg-red-900/20' : 'text-stone-300'">
+            <span class="iconify text-lg filter drop-shadow" data-icon="lucide:alert-triangle"></span>
+            <span class="text-shadow-sm">异常: {{ stats.issues }}</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, computed, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            // === 数据注入 ===
+            const s = window.FARM_DATA || {};
+
+            const user = ref({
+                name: s.playerName || '未知',
+                level: s.level || 1,
+                gold: s.gold || 0,
+                exp: s.expPercent || 0
+            });
+
+            const lands = Array.isArray(s.lands) ? s.lands : [];
+            const maxSlots = s.maxLandCount || 24;
+            const initialPlots = [];
+
+            for (let i = 1; i <= maxSlots; i++) {
+                const land = lands.find(l => l.id === i);
+                if (land) {
+                    initialPlots.push({
+                        id: land.id,
+                        quality: land.quality || 'normal',
+                        state: land.isEmpty ? 'empty' : (land.status === 'mature' ? 'ready' : 'growing'),
+                        crop: land.isEmpty ? null : (land.cropName || 'crop'),
+                        cropIcon: land.cropIcon || '',
+                        progress: land.growthPercent ?? 0,
+                        alert: land.hasPests ? 'pest' : (land.needsWater ? 'water' : null),
+                        health: land.health ?? 100,
+                        healthLevel: land.healthLevel || 'high',
+                        isLocked: false
+                    });
+                } else {
+                    initialPlots.push({ id: i, state: 'locked', quality: 'normal', isLocked: true, crop: null, alert: null, health: 100, healthLevel: 'high', progress: 0, cropIcon: '' });
+                }
+            }
+
+            const plots = ref(initialPlots);
+
+            const stats = computed(() => ({
+                planted: plots.value.filter(p => p.state === 'growing' || p.state === 'ready').length,
+                ready: plots.value.filter(p => p.state === 'ready').length,
+                issues: plots.value.filter(p => p.alert).length
+            }));
+
+            const getPlotClass = (plot) => {
+                if (plot.isLocked) return 'plot-locked';
+                if (plot.state === 'ready') return 'plot-ready';
+                return plot.state === 'growing' ? 'plot-base wet' : 'plot-base dry';
+            };
+
+            const getProgressStyle = (percent, alert) => {
+                let color = '#76ff03';
+                if (alert === 'water') color = '#fb923c';
+                if (alert === 'pest') color = '#ef4444';
+                return {
+                    background: `conic-gradient(${color} ${percent}%, transparent 0)`,
+                    '-webkit-mask': 'radial-gradient(transparent 58%, black 60%)',
+                    'mask': 'radial-gradient(transparent 58%, black 60%)'
+                };
+            };
+
+            const getQualityStarColor = (quality) => {
+                const map = { red: '#C75B39', black: '#2D2D2D', gold: '#FFB300' };
+                return map[quality] || '#888';
+            };
+
+            onMounted(() => {
+                document.body.classList.add('ready');
+            });
+
+            return { user, plots, stats, getPlotClass, getProgressStyle, getQualityStarColor };
+        }
+    }).mount('#app');
+</script>
+
+</body>
 </html>

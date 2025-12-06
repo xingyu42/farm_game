@@ -101,7 +101,7 @@ export class farm extends plugin {
 
       // 构建渲染数据并渲染图片
       const renderData = this._buildFarmRenderData(playerData, true)
-      await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
+      await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
       logger.error('[农场游戏] 显示我的农场失败:', error)
@@ -131,7 +131,7 @@ export class farm extends plugin {
 
       // 构建渲染数据并渲染图片
       const renderData = this._buildFarmRenderData(targetPlayerData, false)
-      await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
+      await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
       logger.error('[农场游戏] 显示他人农场失败:', error)
@@ -213,11 +213,20 @@ export class farm extends plugin {
       return landData
     })
 
+    // 计算经验百分比
+    const levelReqs = this.config.levels.requirements
+    const currentLevelExp = levelReqs[playerData.level]?.experience ?? 0
+    const nextLevelExp = levelReqs[playerData.level + 1]?.experience
+    const expPercent = nextLevelExp !== undefined
+      ? Math.round(Math.min((playerData.experience - currentLevelExp) / (nextLevelExp - currentLevelExp) * 100, 100))
+      : 100
+
     const renderData = {
       isOwner,
       playerName: playerData.name,
       level: playerData.level,
       gold: playerData.gold,
+      expPercent,
       landCount: playerData.lands.length,
       maxLandCount: playerData.maxLandCount || 24,
       lands
@@ -239,7 +248,7 @@ export class farm extends plugin {
   async _renderFarmWithResult(e, userId, operationResult) {
     const playerData = await this.playerService.getPlayer(userId)
     const renderData = this._buildFarmRenderData(playerData, true, operationResult)
-    await Puppeteer.render('farm/index', renderData, { e, scale: 2.0 })
+    await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
   }
 
   /**

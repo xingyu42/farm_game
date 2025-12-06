@@ -24,24 +24,14 @@ class Puppeteer {
     /** 重启锁，防止竞态条件 */
     this.restartLock = false
     this.config = {
-      executablePath: '',
-      puppeteerWS: '',
       headless: 'new',
+      userDataDir: path.join(_path, 'temp', 'puppeteer_cache'),
       args: [
         '--disable-gpu',
-        '--disable-setuid-sandbox',
-        '--no-sandbox',
-        '--no-zygote',
-        '--font-render-hinting=medium',
-        '--disable-application-cache',
-        '--disable-dev-shm-usage', // 禁用/dev/shm使用
-        '--disable-extensions', // 禁用扩展
-        '--disable-infobars', // 禁用信息栏
-        '--disable-notifications', // 禁用通知
-        '--disable-offline-load-stale-cache', // 禁用离线加载过期缓存
-        '--dns-prefetch-disable', // 禁用DNS预取
-        '--enable-features=NetworkService', // 启用网络服务特性
-        '--enable-automation' // 启用自动化
+        '--disable-extensions',
+        '--no-sandbox',            // Docker/Linux 必需
+        '--disable-setuid-sandbox', // Docker/Linux 必需
+        '--disable-dev-shm-usage'  // Docker 必需（共享内存限制）
       ]
     }
   }
@@ -55,31 +45,22 @@ class Puppeteer {
     if (this.lock) return false
     this.lock = true
 
-    const maxRetries = 3
-    let retryCount = 0
-
     this.logger.mark('[农场游戏] Puppeteer 启动中...')
 
-    while (retryCount < maxRetries) {
-      try {
-        // 尝试连接已存在的浏览器实例
-        const browserURL = 'http://127.0.0.1:51777'
-        this.browser = await puppeteer.connect({
-          browserURL,
-          timeout: 10000 // 10秒超时
-        })
-        break
-      } catch (connectError) {
-        this.logger.debug(`连接现有浏览器失败 (尝试 ${retryCount + 1}/${maxRetries}): ${connectError.message}`)
-
-        // 连接失败，启动新的浏览器实例
-        this.browser = await puppeteer.launch({
-          ...this.config,
-          timeout: 30000 // 30秒启动超时
-        })
-        break
-
-      }
+    try {
+      // 尝试连接已存在的浏览器实例
+      const browserURL = 'http://127.0.0.1:51777'
+      this.browser = await puppeteer.connect({
+        browserURL,
+        timeout: 10000
+      })
+    } catch (connectError) {
+      this.logger.debug(`连接现有浏览器失败: ${connectError.message}`)
+      // 连接失败，启动新的浏览器实例
+      this.browser = await puppeteer.launch({
+        ...this.config,
+        timeout: 30000
+      })
     }
 
     this.lock = false
@@ -145,34 +126,19 @@ class Puppeteer {
    * @param {Page} page 页面实例
    */
   async closePage(page) {
-    if (page && typeof page.close === 'function') {
-      try {
-        // 先移除页面事件监听器，防止内存泄漏
-        if (typeof page.removeAllListeners === 'function') {
-          page.removeAllListeners()
-        }
+    if (!page || typeof page.close !== 'function') return
 
-        // 关闭页面
-        await page.close()
-        this.renderNum += 1
+    try {
+      // 检查页面是否已关闭
+      if (page.isClosed && page.isClosed()) return
 
-        // 检查是否需要重启浏览器
-        this.restart()
-      } catch (err) {
-        this.logger.error('[农场游戏] 页面关闭出错：' + err)
-
-        // 页面关闭失败时，强制标记为已关闭
-        try {
-          if (page.isClosed && !page.isClosed()) {
-            this.logger.warn('[农场游戏] 页面关闭失败，但继续处理')
-          }
-        } catch (checkError) {
-          this.logger.debug('[农场游戏] 无法检查页面状态:', checkError.message)
-        }
-
-        this.renderNum += 1
-        this.restart()
-      }
+      page.removeAllListeners?.()
+      await page.close()
+    } catch {
+      // 页面可能已被关闭，忽略错误
+    } finally {
+      this.renderNum += 1
+      this.restart()
     }
   }
 
@@ -245,6 +211,61 @@ class Puppeteer {
   }
 
   /**
+   * 渲染 Vue 模板（客户端渲染）
+   * @param {string} tplPath 模板路径，相对于 plugin resources 目录
+   * @param {Object} data 渲染数据，将注入为 window.FARM_DATA
+   * @param {Object} cfg 渲染配置
+   * @returns {Promise<boolean>} 是否成功
+   */
+  async renderVue(tplPath, data = {}, cfg = {}) {
+    this.shoting.push(true)
+    let page = null
+
+    try {
+      const { e, scale = 2.0 } = cfg
+      const tplFile = path.join(_path, 'plugins', PLUGIN_NAME, 'resources', `${tplPath}.html`)
+
+      if (!fs.existsSync(tplFile)) {
+        this.logger.error(`[农场游戏] 模板文件不存在: ${tplFile}`)
+        return false
+      }
+
+      page = await this.newPage()
+      if (!page) return false
+
+      // 在页面脚本执行前注入数据
+      await page.evaluateOnNewDocument((d) => { window.FARM_DATA = d }, data)
+      await page.setViewport({ width: 800, height: 600, deviceScaleFactor: scale })
+      await page.goto(tplFile, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+      // 等待 Vue 渲染完成
+      await page.waitForSelector('body.ready', { timeout: 10000 }).catch(() => {
+        this.logger.warn('[农场游戏] 等待 Vue 渲染超时，继续截图')
+      })
+
+      // 等待 iconify 图标加载（networkidle 更可靠）
+      await page.waitForNetworkIdle({ idleTime: 300, timeout: 3000 }).catch(() => {})
+
+      const box = await page.$('#app').then(el => el?.boundingBox())
+      if (!box) {
+        this.logger.error('[农场游戏] #app 元素不存在或无布局')
+        return false
+      }
+
+      const base64 = await page.screenshot({ encoding: 'base64', clip: box })
+      if (e) await e.reply({ type: 'image', file: `base64://${base64}` })
+
+      return true
+    } catch (error) {
+      this.logger.error('[农场游戏] Vue 渲染失败:', error)
+      return false
+    } finally {
+      if (page) await this.closePage(page)
+      this.shoting.pop()
+    }
+  }
+
+  /**
    * 渲染HTML模板
    * @param {string} tplPath 模板路径，相对于plugin resources目录
    * @param {Object} data 渲染数据
@@ -268,6 +289,7 @@ class Puppeteer {
 
       // 计算资源路径
       let pluResPath = `../../../${_.repeat('../', paths.length)}plugins/${PLUGIN_NAME}/resources/`
+      let pluPath = `../../../${_.repeat('../', paths.length)}plugins/${PLUGIN_NAME}/`
 
       // 渲染数据
       data = {
@@ -277,6 +299,7 @@ class Puppeteer {
         _plugin: PLUGIN_NAME,
         _htmlPath: tplPath,
         pluResPath,
+        pluPath,
         tplFile: `./plugins/${PLUGIN_NAME}/resources/${tplPath}.html`,
         saveId: data.saveId || data.save_id || paths[paths.length - 1],
 
