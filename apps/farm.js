@@ -52,10 +52,6 @@ export class farm extends plugin {
           fnc: 'pesticideCrop'
         },
         {
-          reg: '^#(nc)?收获(\\d+)$',
-          fnc: 'harvestCrop'
-        },
-        {
           reg: '^#(nc)?收获$',
           fnc: 'harvestAllCrops'
         }
@@ -88,14 +84,26 @@ export class farm extends plugin {
   }
 
   /**
+   * 验证玩家已注册，返回 userId 或 null
+   * @param {Object} e 消息事件
+   * @returns {Promise<string|null>} 已注册返回 userId，未注册返回 null
+   */
+  async _requirePlayer(e) {
+    const userId = e.user_id;
+    if (!(await this.playerService.isPlayer(userId))) {
+      await e.reply('您未注册，请先"#nc注册"');
+      return null;
+    }
+    return userId;
+  }
+
+  /**
    * 显示我的农场状态
    */
   async showMyFarm(e) {
     try {
-      const userId = e.user_id
-
-      // 确保玩家已注册
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       const playerData = await this.playerService.getPlayer(userId)
 
@@ -298,8 +306,8 @@ export class farm extends plugin {
         return true;
       }
 
-      const userId = e.user_id
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       const cropType = await this._parseCropType(cropName)
       if (!cropType) {
@@ -334,12 +342,11 @@ export class farm extends plugin {
       }
 
       const landParam = match[2];
-      const userId = e.user_id;
-
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       if (landParam === '全部') {
-        return await this.handleSmartWaterAll(userId, e);
+        return await this.handleBatchCare(userId, e, 'water');
       }
 
       const landIdNum = parseInt(landParam);
@@ -376,9 +383,8 @@ export class farm extends plugin {
 
       const landParam = match[2];
       const fertilizer = match[3];
-      const userId = e.user_id;
-
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       let fertilizerType = null;
       if (fertilizer) {
@@ -390,7 +396,7 @@ export class farm extends plugin {
       }
 
       if (landParam === '全部') {
-        return await this.handleSmartFertilize(userId, e, fertilizerType);
+        return await this.handleBatchCare(userId, e, 'fertilize', fertilizerType);
       }
 
       const landIdNum = parseInt(landParam);
@@ -426,12 +432,11 @@ export class farm extends plugin {
       }
 
       const landParam = match[2];
-      const userId = e.user_id;
-
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       if (landParam === '全部') {
-        return await this.handleSmartPestControl(userId, e);
+        return await this.handleBatchCare(userId, e, 'pesticide');
       }
 
       const landIdNum = parseInt(landParam);
@@ -468,12 +473,8 @@ export class farm extends plugin {
       }
 
       const cropName = match[2]; // 可选的作物名称
-      const userId = e.user_id;
-
-      // 验证玩家注册状态
-      if (!(await this.playerService.isPlayer(userId))) {
-        return e.reply('您未注册，请先"#nc注册"');
-      }
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       // 获取空闲土地
       let emptyLands;
@@ -506,78 +507,12 @@ export class farm extends plugin {
   }
 
   /**
-   * 收获作物
-   */
-  async harvestCrop(e) {
-    try {
-      const match = e.msg.match(/^#(nc)?收获(\d+)$/);
-      if (!match) {
-        await e.reply('格式错误！使用: #收获[土地编号]');
-        return true;
-      }
-
-      const landId = match[2];
-      const landIdNum = parseInt(landId);
-
-      if (isNaN(landIdNum) || landIdNum <= 0) {
-        await e.reply('土地编号必须为正整数');
-        return true;
-      }
-
-      const userId = e.user_id
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
-
-      const result = await this.plantingService.harvestCrop(userId, landIdNum)
-
-      if (result.success) {
-        const details = []
-        const harvestedCrops = result.data?.harvestedCrops || []
-
-        if (harvestedCrops.length > 0) {
-          const crop = harvestedCrops[0]
-          details.push(`作物: ${crop.cropName}`)
-          details.push(`数量: ${crop.yield}`)
-        }
-
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '🎉',
-          title: '收获成功',
-          details: details.length > 0 ? details : [`#${landIdNum}号土地已收获`]
-        })
-      } else {
-        // 仓库空间不足时的特殊提示
-        const skippedCrops = result.data?.skippedCrops || []
-        if (skippedCrops.length > 0) {
-          const inventoryInfo = result.data?.inventoryInfo || {}
-          await this._renderFarmWithResult(e, userId, {
-            type: 'warning',
-            icon: '⚠️',
-            title: '仓库空间不足',
-            details: [
-              `当前仓库: ${inventoryInfo.currentUsage}/${inventoryInfo.capacity}`,
-              `请清理或升级仓库后再收获`
-            ]
-          })
-        } else {
-          e.reply(result.message)
-        }
-      }
-      return true
-    } catch (error) {
-      logger.error('[农场游戏] 收获作物失败:', error)
-      e.reply('收获失败，请稍后重试')
-      return true
-    }
-  }
-
-  /**
    * 收获全部成熟作物
    */
   async harvestAllCrops(e) {
     try {
-      const userId = e.user_id
-      if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
       const result = await this.plantingService.harvestCrop(userId)
 
@@ -697,9 +632,13 @@ export class farm extends plugin {
   }
 
   /**
-   * 处理智能浇水全部命令
+   * 统一的批量护理处理器
+   * @param {string} userId 用户ID
+   * @param {Object} e 消息事件
+   * @param {string} careType 护理类型: 'water' | 'fertilize' | 'pesticide'
+   * @param {string} itemType 物品类型（施肥/除虫需要，null时自动选择）
    */
-  async handleSmartWaterAll(userId, e) {
+  async handleBatchCare(userId, e, careType, itemType = null) {
     try {
       const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
       if (!cropsStatusResult.success) {
@@ -707,120 +646,55 @@ export class farm extends plugin {
         return true;
       }
 
-      const waterTargets = cropsStatusResult.data.crops
-        .filter(crop => crop.needsWater)
-        .map(crop => crop.landId);
+      const filterMap = {
+        water: crop => crop.needsWater,
+        fertilize: crop => crop.status === 'growing',
+        pesticide: crop => crop.hasPests
+      };
 
-      if (waterTargets.length === 0) {
-        await e.reply('没有需要浇水的作物，您的农场很健康！');
+      const emptyMsgMap = {
+        water: '没有需要浇水的作物，您的农场很健康！',
+        fertilize: '没有生长中的作物需要施肥！',
+        pesticide: '没有发现害虫，您的作物很健康！'
+      };
+
+      const crops = cropsStatusResult.data?.crops || [];
+      const filteredCrops = crops.filter(filterMap[careType]);
+
+      if (filteredCrops.length === 0) {
+        await e.reply(emptyMsgMap[careType]);
         return true;
       }
 
-      let successCount = 0;
-      for (const landId of waterTargets) {
-        try {
-          const result = await this.plantingService.waterCrop(userId, landId);
-          if (result.success) successCount++;
-        } catch (error) {
-          logger.error(`[农场游戏] 批量浇水失败 [${userId}][${landId}]:`, error);
+      // 施肥/除虫时，若未指定物品则通过 canCare 获取最佳可用物品
+      let actualItemType = itemType;
+      if (!actualItemType && careType !== 'water') {
+        const canCareResult = await this.plantingService.canCare(userId, filteredCrops[0].landId, careType);
+        if (!canCareResult.success || !canCareResult.requiredItem) {
+          const noItemMsg = careType === 'fertilize' ? '没有可用的肥料' : '没有可用的杀虫剂';
+          await e.reply(canCareResult.message || noItemMsg);
+          return true;
         }
+        actualItemType = canCareResult.requiredItem;
       }
 
-      if (successCount > 0) {
-        await this._renderFarmWithResult(e, userId)
+      const targets = filteredCrops.map(crop => ({
+        landId: crop.landId,
+        action: careType,
+        itemType: actualItemType
+      }));
+
+      const result = await this.plantingService.batchCareCrops(userId, targets);
+
+      if (result.success) {
+        await this._renderFarmWithResult(e, userId);
       } else {
-        await e.reply('批量浇水失败，请稍后重试')
+        await e.reply(result.message || '批量操作失败，请稍后重试');
       }
       return true;
     } catch (error) {
-      logger.error('[农场游戏] 智能浇水失败:', error);
-      await e.reply('智能浇水失败，请稍后重试');
-      return true;
-    }
-  }
-
-  /**
-   * 处理智能除虫全部命令
-   */
-  async handleSmartPestControl(userId, e) {
-    try {
-      const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
-      if (!cropsStatusResult.success) {
-        await e.reply('获取农场状态失败，请稍后重试');
-        return true;
-      }
-
-      const pestTargets = cropsStatusResult.data.crops
-        .filter(crop => crop.hasPests)
-        .map(crop => crop.landId);
-
-      if (pestTargets.length === 0) {
-        await e.reply('没有发现害虫，您的作物很健康！');
-        return true;
-      }
-
-      let successCount = 0;
-      for (const landId of pestTargets) {
-        try {
-          const result = await this.plantingService.treatPests(userId, landId);
-          if (result.success) successCount++;
-        } catch (error) {
-          logger.error(`[农场游戏] 批量除虫失败 [${userId}][${landId}]:`, error);
-        }
-      }
-
-      if (successCount > 0) {
-        await this._renderFarmWithResult(e, userId)
-      } else {
-        await e.reply('批量除虫失败，请稍后重试')
-      }
-      return true;
-    } catch (error) {
-      logger.error('[农场游戏] 智能除虫失败:', error);
-      await e.reply('智能除虫失败，请稍后重试');
-      return true;
-    }
-  }
-
-  /**
-   * 处理智能施肥全部命令
-   */
-  async handleSmartFertilize(userId, e, fertilizerType = null) {
-    try {
-      const cropsStatusResult = await this.plantingService.getPlayerCropsStatus(userId);
-      if (!cropsStatusResult.success) {
-        await e.reply('获取农场状态失败，请稍后重试');
-        return true;
-      }
-
-      const fertilizeTargets = cropsStatusResult.data.crops
-        .filter(crop => crop.status === 'growing')
-        .map(crop => crop.landId);
-
-      if (fertilizeTargets.length === 0) {
-        await e.reply('没有生长中的作物需要施肥！');
-        return true;
-      }
-
-      let successCount = 0;
-      for (const landId of fertilizeTargets) {
-        try {
-          const result = await this.plantingService.fertilizeCrop(userId, landId, fertilizerType);
-          if (result.success) successCount++;
-        } catch (error) {
-          logger.error(`[农场游戏] 批量施肥失败 [${userId}][${landId}]:`, error);
-        }
-      }
-
-      if (successCount > 0) {
-        await this._renderFarmWithResult(e, userId)
-      } else {
-        await e.reply('批量施肥失败，请稍后重试')
-      }
-      return true;
-    } catch (error) {
-      logger.error('[农场游戏] 智能施肥失败:', error);
-      await e.reply('智能施肥失败，请稍后重试');
+      logger.error(`[农场游戏] 批量${careType}失败:`, error);
+      await e.reply('批量操作失败，请稍后重试');
       return true;
     }
   }
