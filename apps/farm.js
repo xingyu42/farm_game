@@ -100,7 +100,7 @@ export class farm extends plugin {
       const playerData = await this.playerService.getPlayer(userId)
 
       // 构建渲染数据并渲染图片
-      const renderData = this._buildFarmRenderData(playerData, true)
+      const renderData = this._buildFarmRenderData(playerData, userId, true)
       await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
@@ -130,7 +130,7 @@ export class farm extends plugin {
       const targetPlayerData = await this.playerService.getPlayer(targetUserId)
 
       // 构建渲染数据并渲染图片
-      const renderData = this._buildFarmRenderData(targetPlayerData, false)
+      const renderData = this._buildFarmRenderData(targetPlayerData, targetUserId, false)
       await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
       return true
     } catch (error) {
@@ -143,11 +143,12 @@ export class farm extends plugin {
   /**
    * 构建农场渲染数据（用于图片渲染）
    * @param {Object} playerData 玩家数据
+   * @param {string} userId 用户ID
    * @param {boolean} isOwner 是否为农场主本人
    * @param {Object} operationResult 操作结果提示（可选）
    * @returns {Object} 渲染数据
    */
-  _buildFarmRenderData(playerData, isOwner = true, operationResult = null) {
+  _buildFarmRenderData(playerData, userId, isOwner = true, operationResult = null) {
     const cropsConfig = this.config.crops
     const now = Date.now()
 
@@ -224,6 +225,7 @@ export class farm extends plugin {
     const renderData = {
       isOwner,
       playerName: playerData.name,
+      avatarUrl: `https://q.qlogo.cn/headimg_dl?dst_uin=${userId}&spec=640`,
       level: playerData.level,
       gold: playerData.gold,
       expPercent,
@@ -247,7 +249,7 @@ export class farm extends plugin {
    */
   async _renderFarmWithResult(e, userId, operationResult) {
     const playerData = await this.playerService.getPlayer(userId)
-    const renderData = this._buildFarmRenderData(playerData, true, operationResult)
+    const renderData = this._buildFarmRenderData(playerData, userId, true, operationResult)
     await Puppeteer.renderVue('farm/index', renderData, { e, scale: 2.0 })
   }
 
@@ -308,13 +310,7 @@ export class farm extends plugin {
       const result = await this.plantingService.plantCrop(userId, landIdNum, cropType)
 
       if (result.success) {
-        const cropConfig = this.config.crops[cropType]
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '🌱',
-          title: '种植成功',
-          details: [`${cropConfig?.name || cropName} → #${landIdNum}`]
-        })
+        await this._renderFarmWithResult(e, userId)
       } else {
         e.reply(result.message)
       }
@@ -355,12 +351,7 @@ export class farm extends plugin {
       const result = await this.plantingService.waterCrop(userId, landIdNum)
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '💧',
-          title: '浇水成功',
-          details: [`#${landIdNum}号土地已浇水`]
-        })
+        await this._renderFarmWithResult(e, userId)
       } else {
         e.reply(result.message)
       }
@@ -411,12 +402,7 @@ export class farm extends plugin {
       const result = await this.plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '🧪',
-          title: '施肥成功',
-          details: [`#${landIdNum}号土地已施肥`]
-        })
+        await this._renderFarmWithResult(e, userId)
       } else {
         await e.reply(result.message);
       }
@@ -457,12 +443,7 @@ export class farm extends plugin {
       const result = await this.plantingService.treatPests(userId, landIdNum)
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '🐛',
-          title: '除虫成功',
-          details: [`#${landIdNum}号土地已除虫`]
-        })
+        await this._renderFarmWithResult(e, userId)
       } else {
         await e.reply(result.message)
       }
@@ -556,7 +537,6 @@ export class farm extends plugin {
           const crop = harvestedCrops[0]
           details.push(`作物: ${crop.cropName}`)
           details.push(`数量: ${crop.yield}`)
-          if (crop.experience) details.push(`经验: +${crop.experience}`)
         }
 
         await this._renderFarmWithResult(e, userId, {
@@ -612,9 +592,6 @@ export class farm extends plugin {
 
         if (harvestedCrops.length > 0) {
           details.push(`收获: ${harvestedCrops.length}块土地`)
-          if (result.data?.totalExperience) {
-            details.push(`经验: +${result.data.totalExperience}`)
-          }
           details.push(``)
         }
 
@@ -630,16 +607,15 @@ export class farm extends plugin {
       } else if (result.success) {
         const details = []
         if (harvestedCrops.length > 0) {
-          details.push(`收获: ${harvestedCrops.length}块土地`)
-        }
-        if (result.data?.totalExperience) {
-          details.push(`经验: +${result.data.totalExperience}`)
+          const totalYield = harvestedCrops.reduce((sum, c) => sum + (c.yield || 0), 0)
+          details.push(`土地: ${harvestedCrops.length}块`)
+          details.push(`数量: ${totalYield}`)
         }
 
         await this._renderFarmWithResult(e, userId, {
           type: 'success',
           icon: '🎊',
-          title: '批量收获完成',
+          title: '收获完成',
           details: details.length > 0 ? details : ['所有成熟作物已收获']
         })
       } else {
@@ -750,17 +726,11 @@ export class farm extends plugin {
         }
       }
 
-      const details = [`成功: ${successCount}块土地`]
-      if (successCount < waterTargets.length) {
-        details.push(`失败: ${waterTargets.length - successCount}块`)
+      if (successCount > 0) {
+        await this._renderFarmWithResult(e, userId)
+      } else {
+        await e.reply('批量浇水失败，请稍后重试')
       }
-
-      await this._renderFarmWithResult(e, userId, {
-        type: successCount > 0 ? 'success' : 'warning',
-        icon: '💧',
-        title: '批量浇水完成',
-        details
-      })
       return true;
     } catch (error) {
       logger.error('[农场游戏] 智能浇水失败:', error);
@@ -799,17 +769,11 @@ export class farm extends plugin {
         }
       }
 
-      const details = [`成功: ${successCount}块土地`]
-      if (successCount < pestTargets.length) {
-        details.push(`失败: ${pestTargets.length - successCount}块`)
+      if (successCount > 0) {
+        await this._renderFarmWithResult(e, userId)
+      } else {
+        await e.reply('批量除虫失败，请稍后重试')
       }
-
-      await this._renderFarmWithResult(e, userId, {
-        type: successCount > 0 ? 'success' : 'warning',
-        icon: '🐛',
-        title: '批量除虫完成',
-        details
-      })
       return true;
     } catch (error) {
       logger.error('[农场游戏] 智能除虫失败:', error);
@@ -848,17 +812,11 @@ export class farm extends plugin {
         }
       }
 
-      const details = [`成功: ${successCount}块土地`]
-      if (successCount < fertilizeTargets.length) {
-        details.push(`失败: ${fertilizeTargets.length - successCount}块`)
+      if (successCount > 0) {
+        await this._renderFarmWithResult(e, userId)
+      } else {
+        await e.reply('批量施肥失败，请稍后重试')
       }
-
-      await this._renderFarmWithResult(e, userId, {
-        type: successCount > 0 ? 'success' : 'warning',
-        icon: '🧪',
-        title: '批量施肥完成',
-        details
-      })
       return true;
     } catch (error) {
       logger.error('[农场游戏] 智能施肥失败:', error);
@@ -980,16 +938,11 @@ export class farm extends plugin {
       const landIds = emptyLands.slice(0, plantCount);
       const results = await this.executeBatchPlanting(userId, landIds, selectedCrop.cropType);
 
-      const details = [`作物: ${selectedCrop.cropName}`, `成功: ${results.successCount}块土地`]
-      if (results.failCount > 0) details.push(`失败: ${results.failCount}块`)
-      if (plantCount < emptyLands.length) details.push(`剩余空地: ${emptyLands.length - plantCount}块`)
-
-      await this._renderFarmWithResult(e, userId, {
-        type: results.successCount > 0 ? 'success' : 'warning',
-        icon: '🌱',
-        title: '智能种植完成',
-        details
-      })
+      if (results.successCount > 0) {
+        await this._renderFarmWithResult(e, userId)
+      } else {
+        await e.reply('智能种植失败，请稍后重试')
+      }
       return true;
     } catch (error) {
       logger.error('[农场游戏] 智能种植失败:', error);
@@ -1020,17 +973,11 @@ export class farm extends plugin {
       const landIds = emptyLands.slice(0, plantCount);
       const results = await this.executeBatchPlanting(userId, landIds, cropType);
 
-      const cropConfig = this.config.crops[cropType]
-      const details = [`作物: ${cropConfig?.name || cropName}`, `成功: ${results.successCount}块土地`]
-      if (results.failCount > 0) details.push(`失败: ${results.failCount}块`)
-      if (plantCount < emptyLands.length) details.push(`剩余空地: ${emptyLands.length - plantCount}块`)
-
-      await this._renderFarmWithResult(e, userId, {
-        type: results.successCount > 0 ? 'success' : 'warning',
-        icon: '🌾',
-        title: '批量种植完成',
-        details
-      })
+      if (results.successCount > 0) {
+        await this._renderFarmWithResult(e, userId)
+      } else {
+        await e.reply('批量种植失败，请稍后重试')
+      }
       return true;
     } catch (error) {
       logger.error('[农场游戏] 指定作物种植失败:', error);

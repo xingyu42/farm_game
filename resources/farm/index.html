@@ -70,26 +70,6 @@
             background-color: #5d4037;
             opacity: 0.5;
         }
-
-        .health-bar {
-            position: absolute;
-            bottom: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 70%;
-            height: 3px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        .health-fill {
-            height: 100%;
-            border-radius: 2px;
-            transition: width 0.3s;
-        }
-        .health-high { background: #84cc16; }
-        .health-medium { background: #fb923c; }
-        .health-low { background: #ef4444; }
     </style>
 </head>
 <body class="bg-simple-dark min-h-screen flex items-center justify-center font-sans overflow-hidden">
@@ -101,10 +81,10 @@
     <!-- HUD Panel -->
     <div class="hud-panel bg-wood-panel p-4 z-10 relative text-white shadow-lg">
         <div class="flex items-center gap-4 relative z-10">
-            <div class="avatar placeholder indicator">
+            <div class="avatar indicator">
                  <span class="indicator-item badge badge-warning font-bold border-2 border-white shadow-md text-stone-800">{{ user.level }}</span>
-                <div class="bg-neutral text-neutral-content rounded-xl w-16 h-16 ring-2 ring-warning ring-offset-2 ring-offset-[#5d4037] shadow-lg bg-gradient-to-br from-white to-orange-100 flex items-center justify-center">
-                    <span class="text-4xl filter drop-shadow-sm">🤠</span>
+                <div class="rounded-xl w-16 h-16 ring-2 ring-warning ring-offset-2 ring-offset-[#5d4037] shadow-lg overflow-hidden">
+                    <img :src="user.avatar" class="w-full h-full object-cover" />
                 </div>
             </div>
 
@@ -116,6 +96,16 @@
                     <span class="iconify text-lg" data-icon="emojione:money-bag"></span>
                     <span class="tracking-widest">{{ user.gold.toLocaleString() }}</span>
                 </div>
+            </div>
+
+            <!-- Operation Result -->
+            <div v-if="opResult" class="flex flex-col items-end gap-0.5 text-right px-3 py-2 rounded-lg min-w-[100px]"
+                 :class="opResult.type === 'warning' ? 'bg-amber-900/40 border border-amber-600/50' : 'bg-lime-900/40 border border-lime-600/50'">
+                <div class="flex items-center gap-1.5 text-sm font-bold" :class="opResult.type === 'warning' ? 'text-amber-300' : 'text-lime-300'">
+                    <span>{{ opResult.icon }}</span>
+                    <span>{{ opResult.title }}</span>
+                </div>
+                <div v-for="(line, i) in opResult.details" :key="i" class="text-xs text-stone-200/90">{{ line }}</div>
             </div>
         </div>
 
@@ -146,10 +136,6 @@
                          :style="getProgressStyle(plot.progress, plot.alert)"></div>
                     <div class="text-2xl z-10 drop-shadow-sm filter select-none" :class="{'scale-110': plot.state === 'ready'}">
                         {{ plot.cropIcon }}
-                    </div>
-                    <!-- Health Bar -->
-                    <div v-if="plot.health < 100" class="health-bar">
-                        <div class="health-fill" :class="'health-' + plot.healthLevel" :style="{ width: plot.health + '%' }"></div>
                     </div>
                 </div>
 
@@ -204,6 +190,7 @@
 
             const user = ref({
                 name: s.playerName || '未知',
+                avatar: s.avatarUrl || '',
                 level: s.level || 1,
                 gold: s.gold || 0,
                 exp: s.expPercent || 0
@@ -224,16 +211,16 @@
                         cropIcon: land.cropIcon || '',
                         progress: land.growthPercent ?? 0,
                         alert: land.hasPests ? 'pest' : (land.needsWater ? 'water' : null),
-                        health: land.health ?? 100,
-                        healthLevel: land.healthLevel || 'high',
                         isLocked: false
                     });
                 } else {
-                    initialPlots.push({ id: i, state: 'locked', quality: 'normal', isLocked: true, crop: null, alert: null, health: 100, healthLevel: 'high', progress: 0, cropIcon: '' });
+                    initialPlots.push({ id: i, state: 'locked', quality: 'normal', isLocked: true, crop: null, alert: null, progress: 0, cropIcon: '' });
                 }
             }
 
             const plots = ref(initialPlots);
+
+            const opResult = s.operationResult ? ref(s.operationResult) : ref(null);
 
             const stats = computed(() => ({
                 planted: plots.value.filter(p => p.state === 'growing' || p.state === 'ready').length,
@@ -267,7 +254,7 @@
                 document.body.classList.add('ready');
             });
 
-            return { user, plots, stats, getPlotClass, getProgressStyle, getQualityStarColor };
+            return { user, plots, stats, opResult, getPlotClass, getProgressStyle, getQualityStarColor };
         }
     }).mount('#app');
 </script>
