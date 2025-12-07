@@ -2,15 +2,6 @@ import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
 import { Puppeteer } from '../models/services.js'
 
-
-// Quality config
-const QUALITY_CONFIG = {
-  normal: { icon: '🟫', name: '普通' },
-  copper: { icon: '🟠', name: '红土' },
-  silver: { icon: '⚪', name: '黑土' },
-  gold: { icon: '🟡', name: '金土' }
-}
-
 /**
  * 农场管理功能模块
  * 处理种植、收获、农场信息查看等核心农场操作
@@ -32,11 +23,7 @@ export class farm extends plugin {
           fnc: 'showOtherFarm'
         },
         {
-          reg: '^#(nc)?种植全部(?:(.+))?$',
-          fnc: 'plantAll'
-        },
-        {
-          reg: '^#(nc)?种植(.+?)(\\d+)$',
+          reg: '^#(nc)?种植(.*?)(\\d+|全部)$',
           fnc: 'plantCrop'
         },
         {
@@ -163,7 +150,6 @@ export class farm extends plugin {
     // 处理土地数据
     const lands = playerData.lands.map(land => {
       const quality = land.quality || 'normal'
-      const qualityInfo = QUALITY_CONFIG[quality] || QUALITY_CONFIG.normal
       const isEmpty = !land.crop || land.status === 'empty'
 
       // 先计算实时成熟状态
@@ -175,8 +161,6 @@ export class farm extends plugin {
       let landData = {
         id: land.id,
         quality,
-        qualityIcon: qualityInfo.icon,
-        qualityName: qualityInfo.name,
         isEmpty,
         needsWater: land.needsWater || false,
         hasPests: land.hasPests || false,
@@ -282,51 +266,59 @@ export class farm extends plugin {
   }
 
   /**
-   * 种植作物
+   * 种植作物 - 统一处理单块种植和批量种植
+   * 命令格式：#种植[作物名][土地号] | #种植[作物名]全部 | #种植全部
    */
   async plantCrop(e) {
     try {
-      const match = e.msg.match(/^#(nc)?种植(.+)(\d+)$/);
+      const match = e.msg.match(/^#(nc)?种植(.*?)(\d+|全部)$/);
       if (!match) {
-        await e.reply('格式错误！使用: #种植[作物名称][土地编号]');
+        await e.reply('格式错误！使用: #种植[作物名][土地号] 或 #种植[作物名]全部');
         return true;
       }
 
-      const cropName = match[2];
-      const landId = match[3];
-      const landIdNum = parseInt(landId);
+      const cropName = match[2].trim();
+      const target = match[3];
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
 
-      if (isNaN(landIdNum) || landIdNum <= 0) {
+      // 批量种植分支
+      if (target === '全部') {
+        const emptyLands = await this.getEmptyLands(userId);
+        if (emptyLands.length === 0) {
+          return e.reply('所有土地都已种植，没有空闲土地');
+        }
+        return cropName
+          ? await this.plantSpecificCrop(userId, e, emptyLands, cropName)
+          : await this.plantWithSmartSelection(userId, e, emptyLands);
+      }
+
+      // 单块种植分支
+      const landId = parseInt(target);
+      if (isNaN(landId) || landId <= 0) {
         await e.reply('土地编号必须为正整数');
         return true;
       }
-
-      if (!cropName.trim()) {
+      if (!cropName) {
         await e.reply('作物名称不能为空');
         return true;
       }
 
-      const userId = await this._requirePlayer(e);
-      if (!userId) return true;
-
-      const cropType = await this._parseCropType(cropName)
+      const cropType = await this._parseCropType(cropName);
       if (!cropType) {
-        e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`)
-        return true
+        e.reply(`未知的作物类型: ${cropName}，请检查名称是否正确`);
+        return true;
       }
 
-      const result = await this.plantingService.plantCrop(userId, landIdNum, cropType)
-
-      if (result.success) {
-        await this._renderFarmWithResult(e, userId)
-      } else {
-        e.reply(result.message)
-      }
-      return true
+      const result = await this.plantingService.plantCrop(userId, landId, cropType);
+      result.success
+        ? await this._renderFarmWithResult(e, userId)
+        : e.reply(result.message);
+      return true;
     } catch (error) {
-      logger.error('[农场游戏] 种植作物失败:', error)
-      e.reply('种植失败，请稍后重试')
-      return true
+      logger.error('[农场游戏] 种植失败:', error);
+      e.reply('种植失败，请稍后重试');
+      return true;
     }
   }
 
@@ -457,52 +449,6 @@ export class farm extends plugin {
       logger.error('[农场游戏] 除虫失败:', error)
       e.reply('除虫失败，请稍后重试')
       return true
-    }
-  }
-
-  /**
-   * 种植全部作物 - 统一入口方法
-   */
-  async plantAll(e) {
-    try {
-      // 解析命令参数
-      const match = e.msg.match(/^#(nc)?种植全部(?:(.+))?$/);
-      if (!match) {
-        await e.reply('❌ 格式错误！\n使用方法：\n#种植全部 - 智能自动种植\n#种植全部[作物名称] - 指定作物种植');
-        return true;
-      }
-
-      const cropName = match[2]; // 可选的作物名称
-      const userId = await this._requirePlayer(e);
-      if (!userId) return true;
-
-      // 获取空闲土地
-      let emptyLands;
-      try {
-        emptyLands = await this.getEmptyLands(userId);
-      } catch (error) {
-        logger.error('[农场游戏] 获取空闲土地失败:', error);
-        return e.reply('获取农场状态失败，请稍后重试');
-      }
-
-      // 检查是否有空闲土地
-      if (emptyLands.length === 0) {
-        return e.reply('🌾 所有土地都已种植，没有空闲土地可用！');
-      }
-
-      // 根据参数路由到不同的处理逻辑
-      if (cropName) {
-        // 指定作物批量种植
-        return await this.plantSpecificCrop(userId, e, emptyLands, cropName);
-      } else {
-        // 智能选择作物批量种植
-        return await this.plantWithSmartSelection(userId, e, emptyLands);
-      }
-
-    } catch (error) {
-      logger.error('[农场游戏] 批量种植失败:', error);
-      e.reply('批量种植失败，请稍后重试');
-      return true;
     }
   }
 
@@ -861,36 +807,25 @@ export class farm extends plugin {
   }
 
   /**
-   * 执行批量种植
+   * 执行批量种植 - 使用事务API
    * @param {string} userId 用户ID
    * @param {Array} landIds 土地ID列表
    * @param {string} cropType 作物类型
    * @returns {Promise<Object>} 批量操作结果
    */
   async executeBatchPlanting(userId, landIds, cropType) {
-    const results = {
-      successCount: 0,
-      failCount: 0,
-      results: []
-    };
+    const plantingPlans = landIds.map(landId => ({ landId, cropType }));
 
-    // 遍历土地列表，逐个调用现有的种植方法
-    for (const landId of landIds) {
-      try {
-        const result = await this.plantingService.plantCrop(userId, landId, cropType);
-        if (result.success) {
-          results.successCount++;
-        } else {
-          results.failCount++;
-          results.results.push(`土地${landId}: ${result.message}`);
-        }
-      } catch (error) {
-        results.failCount++;
-        results.results.push(`土地${landId}: 种植失败`);
-        logger.error(`[农场游戏] 批量种植失败 [${userId}][${landId}]:`, error);
-      }
+    try {
+      const result = await this.plantingService.batchPlantCrop(userId, plantingPlans);
+      return {
+        successCount: result.success ? result.results.length : 0,
+        failCount: result.success ? 0 : landIds.length,
+        results: result.success ? [] : [result.message]
+      };
+    } catch (error) {
+      logger.error(`[农场游戏] 批量种植异常 [${userId}]:`, error);
+      return { successCount: 0, failCount: landIds.length, results: ['系统异常'] };
     }
-
-    return results;
   }
 }
