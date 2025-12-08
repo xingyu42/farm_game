@@ -82,8 +82,8 @@ export class ShopCommands extends plugin {
       // 构建渲染数据
       const renderData = this._buildShopRenderData(shopItems, playerData);
 
-      // 使用 Puppeteer 渲染图片
-      const result = await Puppeteer.render('shop/index', renderData, { e, scale: 2.0 });
+      // 使用 Puppeteer 渲染图片（Vue客户端渲染）
+      const result = await Puppeteer.renderVue('shop/index', renderData, { e, scale: 2.0 });
 
       if (!result) {
         await e.reply('❌ 生成商店图片失败，请稍后再试');

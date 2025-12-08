@@ -1,76 +1,185 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{pluResPath}}shop/index.css" />
-    <link rel="shortcut icon" href="#" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商店</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
 </head>
+<body class="bg-transparent w-250">
 
-<body>
-    <div class="container" id="container">
-        <!-- 商店招牌 -->
-        <div class="shop-sign">
-            <div class="sign-decoration left"></div>
-            <span class="sign-text">皮埃尔杂货店</span>
-            <div class="sign-decoration right"></div>
+<div id="app" v-cloak class="w-250 bg-[#ffcd9c] border-4 border-[#4a281a] relative
+    shadow-[inset_0_0_0_4px_#eebea0,inset_0_0_0_10px_#b97a57,inset_0_0_0_14px_#5a3014,0_6px_0_#3e2515,0_8px_20px_rgba(0,0,0,0.4)]
+    rounded-3 p-5 m-2 font-sans">
+
+    <!-- 商店招牌 (增强版) -->
+    <div class="relative mb-6">
+        <!-- 悬挂链条 -->
+        <div class="absolute -top-4 left-12 w-1.5 h-6 bg-[#333] shadow-[2px_2px_0_rgba(255,255,255,0.2)] rounded-sm"></div>
+        <div class="absolute -top-4 right-12 w-1.5 h-6 bg-[#333] shadow-[2px_2px_0_rgba(255,255,255,0.2)] rounded-sm"></div>
+
+        <!-- 主招牌 -->
+        <div class="relative bg-[#a0522d] border-4 border-[#4a281a] h-16 flex items-center justify-center overflow-hidden
+            shadow-[0_6px_0_rgba(0,0,0,0.4),inset_0_2px_0_#cd853f,inset_0_-2px_0_#5d2906]">
+
+            <!-- 木纹纹理 -->
+            <div class="absolute inset-0 opacity-15 pointer-events-none"
+                style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, #4a281a 9px, transparent 10px)"></div>
+
+            <!-- 四角铆钉 -->
+            <div class="absolute top-2 left-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute top-2 right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute bottom-2 left-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute bottom-2 right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+
+            <!-- 招牌文字 -->
+            <span class="relative z-10 text-8 font-black text-[#ffe4b5] tracking-2 drop-shadow-[3px_3px_0_#4a281a]">皮埃尔杂货店</span>
+        </div>
+    </div>
+
+    <!-- 玩家信息栏 (宝石镶嵌风格) -->
+    <div class="flex justify-center items-center gap-6 bg-[#5e3a2a] border-3 border-[#8b4513] rounded-1 p-2.5 mb-5
+        shadow-[inset_0_3px_6px_rgba(0,0,0,0.5),0_3px_0_#3e2515]">
+
+        <!-- 金币槽 -->
+        <div class="flex items-center gap-2 bg-[#2a1a10] px-4 py-1.5 rounded-sm border-2 border-[#1a0a04]
+            shadow-[inset_2px_2px_0_rgba(0,0,0,0.6),inset_-1px_-1px_0_rgba(255,255,255,0.1)]">
+            <span class="text-6 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">💰</span>
+            <span class="text-6 font-black text-[#ffd700] tracking-wide drop-shadow-[2px_2px_0_#000]">{{ playerCoins }}</span>
         </div>
 
-        <!-- 玩家信息栏 -->
-        <div class="player-bar">
-            <div class="player-stat">
-                <span class="stat-icon">💰</span>
-                <span class="stat-value">{{playerCoins}}</span>
-            </div>
-            <div class="player-stat">
-                <span class="stat-icon">⭐</span>
-                <span class="stat-label">Lv.</span>
-                <span class="stat-value">{{playerLevel}}</span>
-            </div>
-        </div>
+        <!-- 分隔装饰 -->
+        <div class="w-1 h-8 bg-gradient-to-b from-transparent via-[#8b4513] to-transparent"></div>
 
-        <!-- 商品区域 -->
-        <div class="shop-content">
-            {{each categories category}}
-            <div class="category-section">
-                <div class="category-title">
-                    <span class="category-icon">{{if category.key == 'seeds'}}🌱{{else if category.key == 'fertilizer'}}💊{{else if category.key == 'pesticide'}}🐛{{else if category.key == 'defense'}}🐕{{else if category.key == 'tools'}}🔧{{else if category.key == 'materials'}}💎{{else}}📦{{/if}}</span>
-                    <span>{{category.name}}</span>
+        <!-- 等级徽章 -->
+        <div class="relative flex items-center gap-1 bg-gradient-to-b from-[#d94844] to-[#a03030] px-4 py-1.5 rounded-sm border-2 border-[#8b0000]
+            shadow-[inset_0_2px_0_rgba(255,255,255,0.3),0_3px_0_#5a0000]">
+            <span class="text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">⭐</span>
+            <span class="text-5 font-black text-white drop-shadow-[2px_2px_0_#4a0000]">Lv.{{ playerLevel }}</span>
+            <!-- 高光效果 -->
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/20 to-transparent rounded-r-sm"></div>
+        </div>
+    </div>
+
+    <!-- 商品区域 -->
+    <div class="flex flex-col gap-5">
+        <div v-for="category in categories" :key="category.key" class="relative bg-[#fff8e7]/60 p-4 rounded-1 border-2 border-[#c27d53]
+            shadow-[inset_0_0_10px_rgba(139,69,19,0.1),0_3px_0_#8b4513]">
+
+            <!-- 装饰性角落括号 -->
+            <div class="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-3 border-l-3 border-[#8b4513]"></div>
+            <div class="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-3 border-r-3 border-[#8b4513]"></div>
+            <div class="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-3 border-l-3 border-[#8b4513]"></div>
+            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-3 border-r-3 border-[#8b4513]"></div>
+
+            <!-- 分类标题 -->
+            <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-dashed border-[#8b4513]/40">
+                <div class="w-10 h-10 flex items-center justify-center bg-[#8b4513] rounded-1 border-2 border-[#5a2d0a]
+                    shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_2px_0_#3e1a05]">
+                    <span class="text-6">{{ getCategoryIcon(category.key) }}</span>
                 </div>
-                <div class="items-grid">
-                    {{each category.items item}}
-                    <div class="item-slot {{if item.isLocked}}locked{{/if}}">
-                        {{if item.isLocked}}
-                        <div class="lock-badge">🔒</div>
-                        {{/if}}
-                        <div class="item-icon">{{item.icon}}</div>
-                        <div class="item-name">{{item.name}}</div>
-                        <div class="item-prices">
-                            <span class="buy-price">💰{{item.price}}</span>
-                        </div>
-                        {{if item.requiredLevel > 1}}
-                        <div class="level-req">Lv.{{item.requiredLevel}}</div>
-                        {{/if}}
+                <span class="text-5.5 font-black text-[#4a281a] drop-shadow-[1px_1px_0_rgba(255,255,255,0.5)]">{{ category.name }}</span>
+                <div class="flex-1 h-0.5 bg-gradient-to-r from-[#8b4513]/30 to-transparent ml-2"></div>
+            </div>
+
+            <!-- 商品网格 -->
+            <div class="grid grid-cols-4 gap-3">
+                <div v-for="item in category.items" :key="item.name"
+                    class="group relative bg-[#fff8e7] p-2.5 flex flex-col items-center min-h-32 overflow-hidden
+                    border-3 border-[#8b4513] rounded-1
+                    shadow-[4px_4px_0_#c27d53,inset_0_0_8px_rgba(139,69,19,0.08)]
+                    transition-all duration-75"
+                    :class="item.isLocked
+                        ? 'bg-[#d0c8b8] border-[#8c7a66] shadow-[2px_2px_0_#a09080]'
+                        : 'hover:shadow-[2px_2px_0_#c27d53] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'">
+
+                    <!-- 锁定遮罩 -->
+                    <div v-if="item.isLocked" class="absolute inset-0 bg-black/10 z-5"></div>
+
+                    <!-- 锁定徽章 -->
+                    <div v-if="item.isLocked" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-15
+                        w-11 h-11 rounded-full bg-gradient-to-br from-[#555] to-[#222] border-3 border-[#111]
+                        flex items-center justify-center text-5.5
+                        shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_4px_0_#000]">🔒</div>
+
+                    <!-- 等级要求徽章 -->
+                    <div v-if="item.requiredLevel > 1" class="absolute top-1 left-1 z-20
+                        bg-[#cc0000] text-white border-3 border-[#660000]
+                        px-2 py-1 rounded-1 text-3.5 font-black
+                        shadow-[0_3px_0_#440000]">Lv.{{ item.requiredLevel }}</div>
+
+                    <!-- 商品图标 -->
+                    <div class="text-10 mb-1.5 drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-transform"
+                        :class="item.isLocked ? 'opacity-40 grayscale' : 'group-hover:-translate-y-1'">{{ item.icon }}</div>
+
+                    <!-- 商品名称 -->
+                    <div class="text-3.5 font-bold text-[#4a281a] text-center leading-tight mb-auto line-clamp-2"
+                        :class="item.isLocked ? 'opacity-50' : ''">{{ item.name }}</div>
+
+                    <!-- 价格标签 -->
+                    <div class="mt-2 bg-[#ffcd9c] px-3 py-1 rounded-full border-2 border-[#8b4513] font-black text-3
+                        shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_2px_0_#5a2d0a]"
+                        :class="item.isLocked ? 'opacity-50' : ''">
+                        <span class="text-[#c41e1e]">💰 {{ item.price }}</span>
                     </div>
-                    {{/each}}
                 </div>
-            </div>
-            {{/each}}
-        </div>
-
-        <!-- 底部提示 -->
-        <div class="shop-footer">
-            <div class="tip-row">
-                <span class="tip-cmd">#nc购买 [物品] [数量]</span>
-                <span class="tip-desc">购买商品</span>
-            </div>
-            <div class="tip-row">
-                <span class="tip-cmd">#nc出售 [物品] [数量]</span>
-                <span class="tip-desc">出售物品</span>
             </div>
         </div>
     </div>
-</body>
 
+    <!-- 底部提示 (木板风格) -->
+    <div class="relative mt-6 mx-2 bg-[#a0522d] border-4 border-[#4a281a] p-4 overflow-hidden
+        shadow-[0_6px_0_rgba(0,0,0,0.4),inset_0_2px_0_#cd853f,inset_0_-2px_0_#5d2906]">
+
+        <!-- 木纹纹理 -->
+        <div class="absolute inset-0 opacity-15 pointer-events-none"
+            style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, #4a281a 9px, transparent 10px)"></div>
+
+        <!-- 四角铆钉 -->
+        <div class="absolute top-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+
+        <!-- 内容 -->
+        <div class="relative z-10 flex justify-center gap-12">
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-[#ffe4b5] bg-[#2a1508] px-4 py-2 border-3 border-[#1a0a04] rounded-1 text-4 font-black
+                    shadow-[inset_2px_2px_0_rgba(0,0,0,0.5),0_3px_0_#000]">#nc购买 [物品] [数量]</span>
+                <span class="text-5 text-[#ffe4b5] font-black drop-shadow-[2px_2px_0_#4a281a]">购买商品</span>
+            </div>
+            <div class="w-1 h-10 bg-gradient-to-b from-transparent via-[#4a281a] to-transparent"></div>
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-[#ffe4b5] bg-[#2a1508] px-4 py-2 border-3 border-[#1a0a04] rounded-1 text-4 font-black
+                    shadow-[inset_2px_2px_0_rgba(0,0,0,0.5),0_3px_0_#000]">#nc出售 [物品] [数量]</span>
+                <span class="text-5 text-[#ffe4b5] font-black drop-shadow-[2px_2px_0_#4a281a]">出售物品</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const data = window.FARM_DATA || {};
+        const iconMap = { seeds: '🌱', fertilizer: '💊', pesticide: '🐛', defense: '🐕', tools: '🔧', materials: '💎' };
+        const getCategoryIcon = (key) => iconMap[key] || '📦';
+
+        onMounted(() => document.body.classList.add('ready'));
+
+        return {
+            playerCoins: data.playerCoins ?? 0,
+            playerLevel: data.playerLevel ?? 1,
+            categories: data.categories || [],
+            getCategoryIcon
+        };
+    }
+}).mount('#app');
+</script>
+
+</body>
 </html>

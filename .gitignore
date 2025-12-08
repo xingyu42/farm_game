@@ -16,3 +16,6 @@ data/
 temp/
 .kilocodemodes
 CLAUDE.md
+.mcp.json
+AGENTS.md
+.proDocs
