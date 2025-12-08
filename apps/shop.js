@@ -172,8 +172,8 @@ export class ShopCommands extends plugin {
         otherItems: renderData.otherItems
       };
 
-      // 使用 Puppeteer 渲染图片
-      const result = await Puppeteer.render('market/index', fullRenderData, { e, scale: 2.0 });
+      // 使用 Puppeteer 渲染图片（Vue 客户端渲染）
+      const result = await Puppeteer.renderVue('market/index', fullRenderData, { e, scale: 2.0 });
 
       if (!result) {
         await e.reply('❌ 生成市场图片失败，请稍后再试');

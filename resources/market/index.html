@@ -1,137 +1,212 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{pluResPath}}market/index.css" />
-    <link rel="shortcut icon" href="#" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农产品交易所</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
 </head>
+<body class="bg-transparent w-250">
 
-<body>
-    <div class="container" id="container">
-        <!-- Header -->
-        <div class="market-header">
-            <div class="header-left">
-                <div class="header-decoration left"></div>
-                <span class="header-title">农产品交易所</span>
-                <div class="header-decoration right"></div>
+<div id="app" v-cloak class="w-250 bg-[#ffcd9c] border-4 border-[#4a281a] relative
+    shadow-[inset_0_0_0_4px_#eebea0,inset_0_0_0_10px_#b97a57,inset_0_0_0_14px_#5a3014,0_6px_0_#3e2515,0_8px_20px_rgba(0,0,0,0.4)]
+    rounded-3 p-5 m-2 font-sans">
+
+    <!-- 交易所招牌 -->
+    <div class="relative mb-5">
+        <div class="absolute -top-4 left-12 w-1.5 h-6 bg-[#333] shadow-[2px_2px_0_rgba(255,255,255,0.2)] rounded-sm"></div>
+        <div class="absolute -top-4 right-12 w-1.5 h-6 bg-[#333] shadow-[2px_2px_0_rgba(255,255,255,0.2)] rounded-sm"></div>
+        <div class="relative bg-[#a0522d] border-4 border-[#4a281a] h-14 flex items-center justify-between px-5 overflow-hidden
+            shadow-[0_6px_0_rgba(0,0,0,0.4),inset_0_2px_0_#cd853f,inset_0_-2px_0_#5d2906]">
+            <div class="absolute inset-0 opacity-15 pointer-events-none"
+                style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, #4a281a 9px, transparent 10px)"></div>
+            <div class="absolute top-2 left-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute top-2 right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute bottom-2 left-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <div class="absolute bottom-2 right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+            <span class="relative z-10 text-7 font-black text-[#ffe4b5] tracking-2 drop-shadow-[3px_3px_0_#4a281a]">农产品交易所</span>
+        </div>
+    </div>
+
+    <!-- 信息栏 -->
+    <div class="flex justify-center items-center gap-8 bg-[#5e3a2a] border-3 border-[#8b4513] rounded-1 p-2.5 mb-5
+        shadow-[inset_0_3px_6px_rgba(0,0,0,0.5),0_3px_0_#3e2515]">
+        <div class="flex items-center gap-2 bg-[#2a1a10] px-4 py-1.5 rounded-sm border-2 border-[#1a0a04]
+            shadow-[inset_2px_2px_0_rgba(0,0,0,0.6),inset_-1px_-1px_0_rgba(255,255,255,0.1)]">
+            <span class="text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">💰</span>
+            <span class="text-5 font-black text-[#ffd700] tracking-wide drop-shadow-[2px_2px_0_#000]">{{ playerCoins }}</span>
+        </div>
+        <div class="w-0.5 h-8 bg-gradient-to-b from-transparent via-[#8b4513] to-transparent"></div>
+        <div class="flex items-center gap-2 bg-[#2a1a10] px-4 py-1.5 rounded-sm border-2 border-[#1a0a04]
+            shadow-[inset_2px_2px_0_rgba(0,0,0,0.6),inset_-1px_-1px_0_rgba(255,255,255,0.1)]">
+            <span class="text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">📊</span>
+            <span class="text-3.5 text-[#c4a678]">动态商品</span>
+            <span class="text-5 font-black text-[#ffe4b5] drop-shadow-[1px_1px_0_#000]">{{ totalItems }}</span>
+        </div>
+        <div class="w-0.5 h-8 bg-gradient-to-b from-transparent via-[#8b4513] to-transparent"></div>
+        <div class="flex items-center gap-2 bg-[#2a1a10] px-4 py-1.5 rounded-sm border-2 border-[#1a0a04]
+            shadow-[inset_2px_2px_0_rgba(0,0,0,0.6),inset_-1px_-1px_0_rgba(255,255,255,0.1)]">
+            <span class="text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">🕐</span>
+            <span class="text-3.5 text-[#c4a678]">更新</span>
+            <span class="text-4 font-bold text-[#ffe4b5] drop-shadow-[1px_1px_0_#000]">{{ updateTime }}</span>
+        </div>
+    </div>
+
+    <!-- 热门波动区块 -->
+    <div v-if="topVolatileItems.length > 0" class="relative bg-[#fff8e7]/60 p-4 rounded-1 border-2 border-[#c27d53] mb-4
+        shadow-[inset_0_0_10px_rgba(139,69,19,0.1),0_3px_0_#8b4513]">
+        <div class="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-3 border-l-3 border-[#8b4513]"></div>
+        <div class="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-3 border-r-3 border-[#8b4513]"></div>
+        <div class="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-3 border-l-3 border-[#8b4513]"></div>
+        <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-3 border-r-3 border-[#8b4513]"></div>
+
+        <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-dashed border-[#8b4513]/40">
+            <div class="w-9 h-9 flex items-center justify-center bg-[#8b4513] rounded-1 border-2 border-[#5a2d0a]
+                shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_2px_0_#3e1a05]">
+                <span class="text-5">🔥</span>
             </div>
-            <div class="market-status">
-                <span class="status-dot"></span>
-                <span class="status-text">实时行情</span>
-            </div>
+            <span class="text-5 font-black text-[#4a281a] drop-shadow-[1px_1px_0_rgba(255,255,255,0.5)]">热门波动 TOP {{ topVolatileItems.length }}</span>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-[#8b4513]/30 to-transparent ml-2"></div>
         </div>
 
-        <!-- Player Info Bar -->
-        <div class="info-bar">
-            <div class="info-item">
-                <span class="info-icon">💰</span>
-                <span class="info-value">{{playerCoins}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-icon">📊</span>
-                <span class="info-label">动态商品</span>
-                <span class="info-value">{{totalItems}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-icon">🕐</span>
-                <span class="info-label">更新</span>
-                <span class="info-value">{{updateTime}}</span>
-            </div>
-        </div>
-
-        <!-- Section 1: Top 10 Volatile Items with Charts -->
-        {{if topVolatileItems.length > 0}}
-        <div class="section">
-            <div class="section-title">
-                <span class="section-icon">🔥</span>
-                <span>热门波动 TOP {{topVolatileItems.length}}</span>
-            </div>
-            <div class="ticker-grid">
-                {{each topVolatileItems item}}
-                <div class="ticker-card {{item.priceTrend}}">
-                    <div class="card-header">
-                        <div class="item-info">
-                            <span class="item-icon">{{item.icon}}</span>
-                            <span class="item-name">{{item.name}}</span>
-                        </div>
-                        <div class="trend-badge {{item.priceTrend}}">
-                            {{if item.priceTrend == 'rising'}}▲{{else if item.priceTrend == 'falling'}}▼{{else}}━{{/if}}
-                            {{if item.priceChange >= 0}}+{{/if}}{{item.priceChange}}%
-                        </div>
+        <div class="grid grid-cols-5 gap-3">
+            <div v-for="item in topVolatileItems" :key="item.name"
+                class="bg-[#fffae8] border-3 border-[#c27d53] rounded-1 p-2.5 flex flex-col relative
+                shadow-[inset_2px_2px_0_0_#fff8e0,inset_-2px_-2px_0_0_#d4a86a,0_3px_0_0_rgba(0,0,0,0.2)]">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-7 leading-none drop-shadow-[1px_1px_0_rgba(0,0,0,0.15)]">{{ item.icon }}</span>
+                        <span class="text-3 font-bold text-[#4a281a] max-w-20 truncate">{{ item.name }}</span>
                     </div>
-                    <div class="card-prices">
-                        <div class="price-row">
-                            <span class="price-label">当前价</span>
-                            <span class="price-value sell">{{item.currentPrice}}</span>
-                        </div>
-                    </div>
-                    <div class="sparkline-container">
-                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
-                            <path class="sparkline-path {{item.priceTrend}}" d="{{item.sparklinePath}}" fill="none" stroke-width="2" vector-effect="non-scaling-stroke"/>
-                        </svg>
-                    </div>
-                    <div class="card-footer">
-                        <span class="supply-info">今日供应 {{item.supply24h}}</span>
-                    </div>
+                    <span class="text-2.5 px-1.5 py-0.5 rounded-sm font-bold font-mono"
+                        :class="{
+                            'text-[#16c784] bg-[#16c784]/15 border border-[#16c784]/30': item.priceChange > 0,
+                            'text-[#ea3943] bg-[#ea3943]/15 border border-[#ea3943]/30': item.priceChange < 0,
+                            'text-[#848e9c] bg-[#848e9c]/15 border border-[#848e9c]/30': item.priceChange === 0
+                        }">
+                        {{ item.priceChange > 0 ? '+' : '' }}{{ item.priceChange }}%
+                    </span>
                 </div>
-                {{/each}}
-            </div>
-        </div>
-        {{/if}}
-
-        <!-- Section 2: Other Items Compact List -->
-        {{if otherItems.length > 0}}
-        <div class="section">
-            <div class="section-title">
-                <span class="section-icon">📋</span>
-                <span>其他商品</span>
-            </div>
-            <div class="compact-list">
-                <div class="list-header">
-                    <span class="col col-name">商品</span>
-                    <span class="col col-trend">趋势</span>
-                    <span class="col col-sell">收购价</span>
-                    <span class="col col-change">涨跌</span>
+                <div class="flex justify-between items-center text-3 mb-2">
+                    <span class="text-[#8b5e3c]">当前价</span>
+                    <span class="font-bold font-mono text-[#2d7a1e]">{{ item.currentPrice }}</span>
                 </div>
-                <div class="list-body">
-                    {{each otherItems item}}
-                    <div class="list-row">
-                        <span class="col col-name">
-                            <span class="mini-icon">{{item.icon}}</span>
-                            {{item.name}}
-                        </span>
-                        <span class="col col-trend">
-                            {{if item.priceTrend == 'rising'}}📈{{else if item.priceTrend == 'falling'}}📉{{else}}➖{{/if}}
-                        </span>
-                        <span class="col col-sell price-sell">{{item.currentPrice}}</span>
-                        <span class="col col-change {{if item.priceChange > 0}}positive{{else if item.priceChange < 0}}negative{{else}}neutral{{/if}}">
-                            {{if item.priceChange > 0}}+{{/if}}{{item.priceChange}}%
-                        </span>
-                    </div>
-                    {{/each}}
+                <div class="h-7 w-full border-t border-dashed border-[#eac086] pt-1 mb-1.5">
+                    <svg class="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
+                        <!-- 基准线 -->
+                        <line x1="0" y1="15" x2="100" y2="15" stroke="#8b5e3c" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" vector-effect="non-scaling-stroke"/>
+                        <!-- 价格曲线 -->
+                        <path :d="item.sparklinePath" fill="none" stroke-width="2" vector-effect="non-scaling-stroke"
+                            stroke-linecap="round" stroke-linejoin="round"
+                            class="stroke-[#8b5e3c]"/>
+                    </svg>
                 </div>
-            </div>
-        </div>
-        {{/if}}
-
-        <!-- Empty State -->
-        {{if topVolatileItems.length == 0 && otherItems.length == 0}}
-        <div class="empty-state">
-            <span class="empty-icon">📭</span>
-            <span class="empty-text">暂无动态价格商品</span>
-        </div>
-        {{/if}}
-
-        <!-- Footer -->
-        <div class="market-footer">
-            <div class="tip-row">
-                <span class="tip-cmd">#nc出售 [商品] [数量]</span>
-                <span class="tip-desc">按市场价出售</span>
+                <div class="text-center">
+                    <span class="text-2.5 text-[#8b5e3c] bg-black/5 px-2 py-0.5 rounded-sm">今日供应 {{ item.supply24h }}</span>
+                </div>
             </div>
         </div>
     </div>
-</body>
 
+    <!-- 其他商品列表 -->
+    <div v-if="otherItems.length > 0" class="relative bg-[#fff8e7]/60 p-4 rounded-1 border-2 border-[#c27d53] mb-4
+        shadow-[inset_0_0_10px_rgba(139,69,19,0.1),0_3px_0_#8b4513]">
+        <div class="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-3 border-l-3 border-[#8b4513]"></div>
+        <div class="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-3 border-r-3 border-[#8b4513]"></div>
+        <div class="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-3 border-l-3 border-[#8b4513]"></div>
+        <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-3 border-r-3 border-[#8b4513]"></div>
+
+        <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-dashed border-[#8b4513]/40">
+            <div class="w-9 h-9 flex items-center justify-center bg-[#8b4513] rounded-1 border-2 border-[#5a2d0a]
+                shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_2px_0_#3e1a05]">
+                <span class="text-5">📋</span>
+            </div>
+            <span class="text-5 font-black text-[#4a281a] drop-shadow-[1px_1px_0_rgba(255,255,255,0.5)]">其他商品</span>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-[#8b4513]/30 to-transparent ml-2"></div>
+        </div>
+
+        <div class="bg-[#fffae8] border-2 border-[#c27d53] rounded-1 overflow-hidden">
+            <div class="grid grid-cols-[2fr_0.8fr_1.2fr_1fr] px-3 py-2 bg-gradient-to-b from-[#c27d53] to-[#9c5a3c]
+                border-b-2 border-[#4a281a] text-3 font-bold text-[#ffe4b5] drop-shadow-[1px_1px_0_rgba(0,0,0,0.3)]">
+                <span>商品</span>
+                <span class="text-center">趋势</span>
+                <span class="text-right">收购价</span>
+                <span class="text-right">涨跌</span>
+            </div>
+            <div class="max-h-75 overflow-y-auto">
+                <div v-for="(item, idx) in otherItems" :key="item.name"
+                    class="grid grid-cols-[2fr_0.8fr_1.2fr_1fr] px-3 py-1.5 text-3.5 items-center border-b border-[#522516]/10"
+                    :class="{ 'bg-black/2': idx % 2 === 1 }">
+                    <span class="flex items-center gap-1.5 font-bold text-[#4a281a]">
+                        <span class="text-4">{{ item.icon }}</span>
+                        {{ item.name }}
+                    </span>
+                    <span class="text-center text-4">
+                        <span v-if="item.priceChange > 0">📈</span>
+                        <span v-else-if="item.priceChange < 0">📉</span>
+                        <span v-else>➖</span>
+                    </span>
+                    <span class="text-right font-mono text-[#2d7a1e]">{{ item.currentPrice }}</span>
+                    <span class="text-right font-mono font-bold"
+                        :class="{
+                            'text-[#16c784]': item.priceChange > 0,
+                            'text-[#ea3943]': item.priceChange < 0,
+                            'text-[#848e9c]': item.priceChange === 0
+                        }">
+                        {{ item.priceChange > 0 ? '+' : '' }}{{ item.priceChange }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-if="topVolatileItems.length === 0 && otherItems.length === 0"
+        class="flex flex-col items-center justify-center py-15 text-[#8b5e3c]">
+        <span class="text-12 mb-3 opacity-60">📭</span>
+        <span class="text-4">暂无动态价格商品</span>
+    </div>
+
+    <!-- 底部提示 -->
+    <div class="relative mt-4 mx-2 bg-[#a0522d] border-4 border-[#4a281a] p-4 overflow-hidden
+        shadow-[0_6px_0_rgba(0,0,0,0.4),inset_0_2px_0_#cd853f,inset_0_-2px_0_#5d2906]">
+        <div class="absolute inset-0 opacity-15 pointer-events-none"
+            style="background: repeating-linear-gradient(90deg, transparent, transparent 8px, #4a281a 9px, transparent 10px)"></div>
+        <div class="absolute top-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] border-2 border-[#8b6914] shadow-[1px_1px_0_rgba(0,0,0,0.5)]"></div>
+        <div class="relative z-10 flex justify-center">
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-[#ffe4b5] bg-[#2a1508] px-4 py-2 border-3 border-[#1a0a04] rounded-1 text-4 font-black
+                    shadow-[inset_2px_2px_0_rgba(0,0,0,0.5),0_3px_0_#000]">#nc出售 [商品] [数量]</span>
+                <span class="text-5 text-[#ffe4b5] font-black drop-shadow-[2px_2px_0_#4a281a]">按市场价出售</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const data = window.FARM_DATA || {};
+
+        onMounted(() => document.body.classList.add('ready'));
+
+        return {
+            playerCoins: data.playerCoins ?? 0,
+            totalItems: data.totalItems ?? 0,
+            updateTime: data.updateTime ?? '--:--',
+            topVolatileItems: data.topVolatileItems || [],
+            otherItems: data.otherItems || []
+        };
+    }
+}).mount('#app');
+</script>
+
+</body>
 </html>
