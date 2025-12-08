@@ -547,7 +547,7 @@ export class InventoryService {
             categoryKey: categoryKey,
             items: sortedItems,
             totalItems: sortedItems.length,
-            totalValue: sortedItems.reduce((sum, item) => sum + item.totalSellValue, 0)
+            totalValue: sortedItems.reduce((sum, item) => sum + (item.totalValue || 0), 0)
           });
         }
       }

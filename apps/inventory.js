@@ -83,8 +83,8 @@ export class InventoryCommands extends plugin {
         upgradeCost: upgradeInfo.cost
       };
 
-      // 使用Puppeteer渲染图片
-      const result = await Puppeteer.render('inventory/index', renderData, {
+      // 使用Puppeteer渲染图片（Vue客户端渲染）
+      const result = await Puppeteer.renderVue('inventory/index', renderData, {
         e,
         scale: 2.0
       });
@@ -168,7 +168,7 @@ export class InventoryCommands extends plugin {
       upgradeCost: upgradeInfo.cost
     };
 
-    return await Puppeteer.render('inventory/index', renderData, { e, scale: 2.0 });
+    return await Puppeteer.renderVue('inventory/index', renderData, { e, scale: 2.0 });
   }
 
   /**

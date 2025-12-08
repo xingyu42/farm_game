@@ -1,97 +1,193 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{pluResPath}}inventory/index.css" />
-    <link rel="shortcut icon" href="#" />
-    <style>
-        #container {
-            background: url("{{pluResPath}}help/bg.jpg") center !important;
-            background-size: cover !important;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
 </head>
+<body class="bg-transparent w-130">
 
-<body>
-    <div class="container" id="container">
-        <!-- 头部 -->
-        <div class="header">
-            <div class="title">
-                <span class="title-icon">🎒</span>
-                我的仓库
-            </div>
+
+<div id="app" v-cloak
+     class="w-130 bg-[#d4a574] border-4 border-[#5d3a1a] relative shadow-[inset_0_0_0_2px_#e7c49a,0_6px_0_#3e2515,0_8px_20px_rgba(0,0,0,0.4)]">
+
+    <!-- Corner Nails -->
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 top-2 left-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 top-2 right-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 bottom-2 left-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 bottom-2 right-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+
+    <!-- Header -->
+    <div class="bg-gradient-to-b from-[#8b5a2b] to-[#6d4c41] px-5 py-3 border-b-3 border-[#3e2515] flex justify-between items-center relative shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)]">
+
+        <div class="flex items-center gap-2.5">
+            <span class="iconify text-2xl text-[#ffd700] drop-shadow-[1px_1px_0_#5d3a1a]" data-icon="mdi:treasure-chest"></span>
+            <span class="text-lg font-bold text-[#fff8dc] tracking-wider text-shadow-[2px_2px_0_#3e2515]">仓 库</span>
         </div>
 
-        <!-- 状态区 -->
-        <div class="status-panel">
-            <div class="capacity-wrapper">
-                <div class="capacity-label">
-                    <span>仓库容量</span>
-                    <span>{{usage}} / {{capacity}}</span>
-                </div>
-                <div class="progress-track">
-                    <div class="progress-bar {{if usagePercentage > 85}}critical{{else if usagePercentage > 50}}warning{{/if}}" style="width: {{usagePercentage}}%;"></div>
+        <div class="flex items-center gap-3">
+            <div class="text-right">
+                <div class="text-[10px] text-[#d4c4a8]">容量</div>
+                <div class="text-sm font-bold text-shadow-[1px_1px_0_#3e2515]"
+                     :class="capacityClass === 'full' ? 'text-red-300' : capacityClass === 'warning' ? 'text-orange-300' : 'text-[#fff8dc]'">
+                    {{ data.usage }} / {{ data.capacity }}
                 </div>
             </div>
-
-            {{if canUpgrade}}
-            <div class="upgrade-btn">
-                <span>⬆ 扩容</span>
-                <span class="upgrade-cost">({{upgradeCost}} 💰)</span>
-            </div>
-            {{/if}}
-        </div>
-
-        <!-- 内容列表 -->
-        <div class="content-area">
-            {{if isEmpty}}
-            <!-- 空仓库状态 -->
-            <div class="empty-box">
-                <div class="empty-icon">📦</div>
-                <div class="empty-text">仓库空空如也</div>
-                <div class="empty-tips">快去种植作物或购买物品吧！</div>
-            </div>
-            {{else}}
-            <!-- 分类物品列表 -->
-            {{each inventory category}}
-            <div class="category-group">
-                <div class="category-header">
-                    <span class="category-icon">{{if category.categoryKey == 'crops'}}🌾{{else if category.categoryKey == 'seeds'}}🌱{{else if category.categoryKey == 'fertilizer'}}💊{{else if category.categoryKey == 'tools'}}🔧{{else}}📦{{/if}}</span>
-                    <span>{{category.category}}</span>
-                </div>
-                <div class="item-grid">
-                    {{each category.items item}}
-                    <div class="item-card {{if item.locked}}locked{{/if}}">
-                        {{if item.locked}}
-                        <div class="lock-overlay">
-                            <div class="lock-icon">🔒</div>
-                        </div>
-                        {{/if}}
-                        <div class="item-badge">x{{item.quantity}}</div>
-                        <div class="item-icon">{{item.icon}}</div>
-                        <div class="item-name">{{item.name}}</div>
-                        {{if item.price > 0}}
-                        <div class="item-price">💰 {{item.price}}</div>
-                        {{/if}}
-                    </div>
-                    {{/each}}
+            <div class="w-36 h-4 bg-[#3e2515] border-2 border-[#2a1a0a] rounded-sm relative overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5)]">
+                <div class="h-full relative rounded-sm"
+                     :class="capacityClass === 'full' ? 'bg-gradient-to-b from-red-400 to-red-600' :
+                             capacityClass === 'warning' ? 'bg-gradient-to-b from-amber-400 to-amber-600' :
+                             'bg-gradient-to-b from-emerald-400 to-emerald-600'"
+                     :style="{ width: data.usagePercentage + '%' }">
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-white/40 to-transparent"></div>
                 </div>
             </div>
-            {{/each}}
-            {{/if}}
-        </div>
-
-        <!-- 底部提示 -->
-        <div class="footer">
-            <span>💡 提示：</span>
-            <span class="key-tip">#nc出售 [物品名] [数量]</span>
-            <span>换取金币</span>
-            <span class="key-tip">#nc仓库升级</span>
-            <span>升级容量</span>
         </div>
     </div>
-</body>
 
+    <!-- Items Container -->
+    <div class="p-3 min-h-50 bg-[linear-gradient(180deg,#c9956c_0%,#d4a574_50%,#c9956c_100%)]">
+
+        <!-- Empty State -->
+        <div v-if="data.isEmpty" class="flex flex-col items-center justify-center py-10 text-[#6d4c41]">
+            <span class="iconify text-5xl mb-3 opacity-60" data-icon="mdi:package-variant"></span>
+            <div class="text-base font-bold text-[#5d3a1a]">仓库空空如也</div>
+            <div class="text-xs mt-1 text-[#8b7355]">去商店购买种子开始你的农场之旅吧！</div>
+        </div>
+
+        <!-- Category Sections -->
+        <template v-else>
+            <div v-for="cat in data.inventory" :key="cat.categoryKey" class="mb-3 last:mb-0">
+                <!-- Category Header -->
+                <div class="flex items-center gap-2 px-2 py-1 mb-2 bg-[#8b5a2b] rounded-sm border-l-3 border-[#ffd700] shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)]">
+                    <span class="iconify text-sm" :data-icon="getCategoryIcon(cat.categoryKey)"></span>
+                    <span class="text-xs font-bold text-[#fff8dc] text-shadow-[1px_1px_0_#3e2515]">{{ cat.category }}</span>
+                    <span class="text-[10px] text-[#d4c4a8] ml-auto">{{ cat.totalItems }} 种</span>
+                </div>
+
+                <!-- Items Grid -->
+                <div class="grid grid-cols-5 gap-1.5">
+                    <div v-for="item in cat.items" :key="item.id"
+                         class="aspect-square bg-[#a67c52] border-2 border-[#5d3a1a] rounded-sm relative flex flex-col items-center justify-center p-0.5 cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.15),inset_-2px_-2px_0_rgba(0,0,0,0.2)] group"
+                         :class="item.locked ? 'cursor-not-allowed opacity-70' : 'hover:bg-[#b8956e] hover:border-[#8b5a2b]'">
+
+                        <!-- Lock Overlay -->
+                        <div v-if="item.locked" class="absolute inset-0 bg-[#3e2515]/50 z-1 rounded-sm"></div>
+
+                        <!-- Item Icon -->
+                        <div class="text-xl leading-none drop-shadow-sm"
+                             :class="item.locked ? 'opacity-50 grayscale-50' : ''">
+                            {{ item.icon }}
+                        </div>
+
+                        <!-- Item Name -->
+                        <div class="text-[8px] text-[#fff8dc] text-center mt-0.5 max-w-full truncate text-shadow-[1px_1px_0_#3e2515]"
+                             :class="item.locked ? 'opacity-50' : ''">
+                            {{ item.name }}
+                        </div>
+
+                        <!-- Quantity Badge -->
+                        <div class="absolute bottom-0 right-0 bg-[#3e2515]/80 text-[9px] font-bold px-0.5 min-w-3.5 text-center rounded-tl-sm"
+                             :class="item.quantity >= 50 ? 'text-[#ffd700]' : 'text-[#fff8dc]'">
+                            {{ formatNumber(item.quantity) }}
+                        </div>
+
+                        <!-- Lock Icon -->
+                        <span v-if="item.locked"
+                              class="iconify absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base text-[#ffd700] z-2 drop-shadow-[0_0_2px_rgba(0,0,0,0.5)]"
+                              data-icon="mdi:lock"></span>
+
+                        <!-- Tooltip -->
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-[#5d3a1a] border-2 border-[#8b5a2b] rounded px-2 py-1.5 min-w-28 max-w-40 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+                            <div class="text-xs font-bold text-[#ffd700] mb-0.5">{{ item.name }}</div>
+                            <div v-if="item.description" class="text-[10px] text-[#d4c4a8] leading-tight mb-1">{{ item.description }}</div>
+                            <div class="text-[10px] text-[#a89070]">
+                                售价: <span class="text-[#ffd700] font-bold">{{ item.price }}G</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gradient-to-b from-[#6d4c41] to-[#5d3a1a] px-8 py-2 border-t-3 border-[#3e2515] flex justify-between items-center relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
+
+        <div class="flex items-center gap-1.5 text-[10px] text-[#fff8dc] font-medium">
+            <span class="iconify text-sm text-[#ffd700]" data-icon="mdi:information-outline"></span>
+            <span>发送 <span class="text-[#ffd700] font-bold">#nc锁定[物品名]</span> 可锁定物品防止误卖</span>
+        </div>
+
+        <button v-if="data.canUpgrade"
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-[#2e7d32] to-[#1b5e20] border-2 border-[#0d3d12] rounded text-[#a5d6a7] text-xs font-bold cursor-pointer shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.3)]">
+            <span class="iconify text-sm" data-icon="mdi:arrow-up-bold"></span>
+            <span>扩容</span>
+            <span class="flex items-center gap-0.5 text-[#ffd700] text-[10px]">
+                <span class="iconify" data-icon="mdi:currency-usd"></span>
+                {{ data.upgradeCost }}
+            </span>
+        </button>
+
+        <div v-else class="flex items-center gap-1 text-[#8b7355] text-[10px]">
+            <span class="iconify" data-icon="mdi:check-circle"></span>
+            <span>已达最大容量</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const rawData = window.FARM_DATA || {
+                usage: 0,
+                capacity: 30,
+                usagePercentage: 0,
+                isEmpty: true,
+                canUpgrade: false,
+                upgradeCost: 0,
+                inventory: []
+            };
+
+            const data = ref(rawData);
+
+            const capacityClass = computed(() => {
+                const pct = data.value.usagePercentage;
+                if (pct >= 100) return 'full';
+                if (pct >= 80) return 'warning';
+                return '';
+            });
+
+            const categoryIcons = {
+                seeds: 'emojione:seedling',
+                crops: 'emojione:ear-of-corn',
+                fertilizer: 'emojione:droplet',
+                pesticide: 'emojione:skull',
+                defense: 'emojione:shield',
+                tools: 'emojione:hammer-and-wrench',
+                materials: 'emojione:gem-stone',
+                unknown: 'emojione:package'
+            };
+
+            const getCategoryIcon = (key) => categoryIcons[key] || 'emojione:package';
+
+            const formatNumber = (num) => {
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+                return num;
+            };
+
+            onMounted(() => document.body.classList.add('ready'));
+
+            return { data, capacityClass, getCategoryIcon, formatNumber };
+        }
+    }).mount('#app');
+</script>
+
+</body>
 </html>
