@@ -349,8 +349,8 @@ export class ShopCommands extends plugin {
       // 构建渲染数据
       const renderData = this._buildItemDetailRenderData(itemId, itemConfig);
 
-      // 渲染图片
-      const result = await Puppeteer.render('item-detail/index', renderData, { e, scale: 2.0 });
+      // 渲染图片（Vue 客户端渲染）
+      const result = await Puppeteer.renderVue('item-detail/index', renderData, { e, scale: 2.0 });
 
       if (!result) {
         await e.reply('❌ 生成物品详情图片失败，请稍后再试');

@@ -3,97 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{pluResPath}}item-detail/index.css">
-    <title>Item Detail</title>
+    <title>物品详情</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="wood-panel">
-            <div class="screw top-left"></div>
-            <div class="screw top-right"></div>
-            <div class="screw bottom-left"></div>
-            <div class="screw bottom-right"></div>
+<body class="bg-transparent w-100">
 
-            <div class="panel-title-container">
-                <div class="panel-title">物品详情</div>
+<div id="app" v-cloak
+     class="w-100 bg-[#d4a574] border-4 border-[#5d3a1a] relative shadow-[inset_0_0_0_2px_#e7c49a,0_6px_0_#3e2515,0_8px_20px_rgba(0,0,0,0.4)]">
+
+    <!-- Corner Screws -->
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 top-2 left-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 top-2 right-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 bottom-2 left-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+    <div class="absolute w-3 h-3 bg-[#8b7355] rounded-full z-10 bottom-2 right-2 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]"></div>
+
+    <!-- Header -->
+    <div class="bg-gradient-to-b from-[#8b5a2b] to-[#6d4c41] px-5 py-3 border-b-3 border-[#3e2515] flex items-center gap-2.5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)]">
+        <span class="iconify text-2xl text-[#ffd700] drop-shadow-[1px_1px_0_#5d3a1a]" data-icon="mdi:information"></span>
+        <span class="text-lg font-bold text-[#fff8dc] tracking-wider text-shadow-[2px_2px_0_#3e2515]">物品详情</span>
+    </div>
+
+    <!-- Parchment Content -->
+    <div class="m-3 p-3 bg-[#f5e6d3] border-2 border-[#c9a86c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,0.1)] flex flex-col gap-3">
+
+        <!-- Item Header Card -->
+        <div class="flex items-center gap-4 p-3 bg-[#e8d5b7] rounded border border-[#c9a86c]">
+            <div class="w-14 h-14 bg-[#f5e6d3] border-2 border-[#8b5a2b] rounded flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]">
+                <span class="text-2xl">{{ item.icon }}</span>
             </div>
-
-            <div class="parchment-area">
-                <div class="header-section">
-                    <div class="item-icon-frame">
-                        <div class="item-icon">{{item.icon}}</div>
-                    </div>
-                    <div class="item-basic-info">
-                        <div class="category-badge">{{item.categoryName}}</div>
-                        <div class="item-name">{{item.name}}</div>
-                    </div>
-                </div>
-
-                <div class="pixel-divider"></div>
-
-                <div class="description-section">
-                    <p>{{item.description}}</p>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-row">
-                        <span class="stat-label">价格</span>
-                        <span class="stat-value price-buy">{{item.price}} G</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">等级要求</span>
-                        <span class="stat-value">Lv.{{item.requiredLevel}}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">堆叠上限</span>
-                        <span class="stat-value">{{item.maxStack}}</span>
-                    </div>
-                </div>
-
-                {{if item.effects && item.effects.length > 0}}
-                <div class="pixel-divider"></div>
-                <div class="effects-section">
-                    <div class="section-header">特殊效果</div>
-                    <div class="effects-list">
-                        {{each item.effects effect}}
-                        <div class="effect-tag">
-                            <span class="effect-icon">★</span>
-                            <span class="effect-label">{{effect.label}}:</span>
-                            <span class="effect-value">{{effect.value}}</span>
-                        </div>
-                        {{/each}}
-                    </div>
-                </div>
-                {{/if}}
-
-                {{if linkedCrop}}
-                <div class="pixel-divider"></div>
-                <div class="crop-section">
-                    <div class="section-header">种植信息</div>
-                    <div class="crop-preview">
-                        <div class="crop-icon">{{linkedCrop.icon}}</div>
-                        <div class="crop-details">
-                            <div class="crop-name">{{linkedCrop.name}}</div>
-                            <div class="crop-stats">
-                                <div class="crop-stat">
-                                    <span class="stat-emoji">⏳</span> {{linkedCrop.growTime}}
-                                </div>
-                                <div class="crop-stat">
-                                    <span class="stat-emoji">📦</span> {{linkedCrop.baseYield}}
-                                </div>
-                                <div class="crop-stat">
-                                    <span class="stat-emoji">✨</span> {{linkedCrop.experience}} XP
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="crop-desc">{{linkedCrop.description}}</div>
-                </div>
-                {{/if}}
+            <div class="flex flex-col gap-1">
+                <span class="px-2 py-0.5 bg-[#8b5a2b] text-[#fff8dc] text-[10px] font-bold rounded-sm w-fit">{{ item.categoryName }}</span>
+                <span class="text-lg font-bold text-[#3e2515]">{{ item.name }}</span>
             </div>
+        </div>
 
-            <div class="footer-tip">Miao-Yunzai Farm</div>
+        <!-- Description Card -->
+        <div class="p-3 bg-[#e8d5b7] rounded border border-[#c9a86c]">
+            <p class="text-sm text-[#5d3a1a] leading-relaxed">{{ item.description }}</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-3 gap-2">
+            <div class="bg-[#e8d5b7] p-2 rounded border border-[#c9a86c] text-center">
+                <div class="text-[10px] text-[#8b7355] mb-0.5">价格</div>
+                <div class="text-sm font-bold text-[#ffd700] text-shadow-[1px_1px_0_#5d3a1a]">{{ item.price }} G</div>
+            </div>
+            <div class="bg-[#e8d5b7] p-2 rounded border border-[#c9a86c] text-center">
+                <div class="text-[10px] text-[#8b7355] mb-0.5">等级要求</div>
+                <div class="text-sm font-bold text-[#5d3a1a]">Lv.{{ item.requiredLevel }}</div>
+            </div>
+            <div class="bg-[#e8d5b7] p-2 rounded border border-[#c9a86c] text-center">
+                <div class="text-[10px] text-[#8b7355] mb-0.5">堆叠上限</div>
+                <div class="text-sm font-bold text-[#5d3a1a]">{{ item.maxStack }}</div>
+            </div>
+        </div>
+
+        <!-- Effects Card -->
+        <div v-if="item.effects && item.effects.length > 0" class="p-3 bg-[#e8d5b7] rounded border border-[#c9a86c]">
+            <div class="flex items-center gap-1.5 mb-2">
+                <span class="iconify text-sm text-[#ffd700]" data-icon="mdi:star-four-points"></span>
+                <span class="text-xs font-bold text-[#5d3a1a]">特殊效果</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                <div v-for="(effect, idx) in item.effects" :key="idx"
+                     class="flex items-center gap-1 px-2 py-1 bg-[#8b5a2b] rounded text-[11px]">
+                    <span class="iconify text-[#ffd700]" data-icon="mdi:star"></span>
+                    <span class="text-[#d4c4a8]">{{ effect.label }}:</span>
+                    <span class="text-[#fff8dc] font-bold">{{ effect.value }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Linked Crop Card -->
+        <div v-if="linkedCrop" class="p-3 bg-[#e8d5b7] rounded border border-[#c9a86c]">
+            <div class="flex items-center gap-1.5 mb-2">
+                <span class="iconify text-sm text-[#2e7d32]" data-icon="mdi:sprout"></span>
+                <span class="text-xs font-bold text-[#5d3a1a]">种植信息</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 bg-[#f5e6d3] rounded flex items-center justify-center text-2xl border border-[#a89070]">
+                    {{ linkedCrop.icon }}
+                </div>
+                <div class="flex-1">
+                    <div class="font-bold text-[#3e2515] mb-1">{{ linkedCrop.name }}</div>
+                    <div class="flex flex-wrap gap-2 text-[11px]">
+                        <div class="flex items-center gap-0.5 text-[#6d4c41]">
+                            <span class="iconify text-[#8b5a2b]" data-icon="mdi:clock-outline"></span>
+                            {{ linkedCrop.growTime }}
+                        </div>
+                        <div class="flex items-center gap-0.5 text-[#6d4c41]">
+                            <span class="iconify text-[#8b5a2b]" data-icon="mdi:package-variant"></span>
+                            {{ linkedCrop.baseYield }}
+                        </div>
+                        <div class="flex items-center gap-0.5 text-[#6d4c41]">
+                            <span class="iconify text-[#ffd700]" data-icon="mdi:star-circle"></span>
+                            {{ linkedCrop.experience }} XP
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-[#6d4c41] mt-1 leading-tight">{{ linkedCrop.description }}</p>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <div class="bg-gradient-to-b from-[#6d4c41] to-[#5d3a1a] px-4 py-2 border-t-3 border-[#3e2515] text-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
+        <span class="text-[10px] text-[#a89070]">Miao-Yunzai Farm</span>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const rawData = window.FARM_DATA || {
+                item: {
+                    icon: '🌱',
+                    categoryName: '种子',
+                    name: '未知物品',
+                    description: '暂无描述',
+                    price: 0,
+                    requiredLevel: 1,
+                    maxStack: 99,
+                    effects: []
+                },
+                linkedCrop: null
+            };
+
+            const item = ref(rawData.item);
+            const linkedCrop = ref(rawData.linkedCrop);
+
+            onMounted(() => document.body.classList.add('ready'));
+
+            return { item, linkedCrop };
+        }
+    }).mount('#app');
+</script>
+
 </body>
 </html>
