@@ -23,6 +23,12 @@ export class PriceCalculator {
     this.extremeRatioMin = this.pricingConfig.extreme_ratio_min
     this.minBaseSupply = this.pricingConfig.min_base_supply || 1
     this.historyDays = this.pricingConfig.history_days || 7
+
+    // 市场情绪配置
+    const sentimentCfg = this.pricingConfig.market_sentiment || {}
+    this.sentimentEnabled = !!sentimentCfg.enabled
+    this.sentimentVolatility = Number.isFinite(sentimentCfg.volatility) ? sentimentCfg.volatility : 0
+    this.sentimentMaxNoise = Number.isFinite(sentimentCfg.max_noise) ? sentimentCfg.max_noise : 0
   }
 
   /**
@@ -85,7 +91,7 @@ export class PriceCalculator {
   }
 
   /**
-   * 计算供应比率（纯供应驱动）
+   * 计算供应比率（供应驱动 + 市场情绪噪声）
    * @param {number} baseSupply 基准供应量（7日平均）
    * @param {number} actualSupply 昨日实际供应量
    * @returns {number} 供应比率
@@ -95,33 +101,51 @@ export class PriceCalculator {
     const safeBaseSupply = Number.isFinite(baseSupply) && baseSupply > 0 ? baseSupply : 0;
     const safeActualSupply = Number.isFinite(actualSupply) && actualSupply > 0 ? actualSupply : 0;
 
-    // 冷启动 / 无人交易：保持价格稳定
+    // 冷启动 / 无人交易：保持价格稳定（不加噪声）
     if (safeActualSupply <= 0 && safeBaseSupply <= 0) {
-      logger.debug(`[PriceCalculator] 供应冷启动: baseSupply=${safeBaseSupply}, actualSupply=${safeActualSupply}, ratio=1`);
+      logger.debug(`[PriceCalculator] 供应冷启动: ratio=1 (无噪声)`);
       return 1;
     }
 
-    // 有历史基准但昨日无供应：严重短缺 → 高价
+    let rawRatio;
     if (safeActualSupply <= 0 && safeBaseSupply > 0) {
-      logger.debug(`[PriceCalculator] 零供应短缺: baseSupply=${safeBaseSupply}, ratio=${this.extremeRatioMax}`);
-      return this.extremeRatioMax;
+      // 严重短缺
+      rawRatio = this.extremeRatioMax;
+    } else if (safeBaseSupply <= 0 && safeActualSupply > 0) {
+      // 无基准，中性
+      rawRatio = 1;
+    } else {
+      rawRatio = safeBaseSupply / safeActualSupply;
     }
 
-    // 无历史基准但有实际供应：暂时保持中性
-    if (safeBaseSupply <= 0 && safeActualSupply > 0) {
-      logger.debug(`[PriceCalculator] 无基准供应，中性比率: actualSupply=${safeActualSupply}, ratio=1`);
-      return 1;
-    }
+    // 注入市场情绪噪声
+    const noise = this._sampleNoise();
+    const noisyRatio = rawRatio * (1 + noise);
 
-    // 正常情况：baseSupply / actualSupply
-    // 供应多于基准 → ratio < 1 → 价格下跌
-    // 供应少于基准 → ratio > 1 → 价格上涨
-    const ratio = safeBaseSupply / safeActualSupply;
-
-    // 确保 ratio 始终在合理范围内（防止 log 计算异常）
-    const clampedRatio = Math.max(this.extremeRatioMin, Math.min(this.extremeRatioMax, ratio));
-    logger.debug(`[PriceCalculator] 供应驱动: baseSupply=${safeBaseSupply}, actualSupply=${safeActualSupply}, ratio=${ratio.toFixed(4)}, clamped=${clampedRatio.toFixed(4)}`);
+    // 极值钳制
+    const clampedRatio = Math.max(this.extremeRatioMin, Math.min(this.extremeRatioMax, noisyRatio));
+    logger.debug(`[PriceCalculator] 供应比率: raw=${rawRatio.toFixed(4)}, noise=${noise.toFixed(4)}, clamped=${clampedRatio.toFixed(4)}`);
     return clampedRatio;
+  }
+
+  /**
+   * 采样市场情绪噪声（Box-Muller）
+   * @returns {number} 噪声值 ∈ [-max_noise, +max_noise]
+   * @private
+   */
+  _sampleNoise() {
+    if (!this.sentimentEnabled || this.sentimentVolatility <= 0 || this.sentimentMaxNoise <= 0) {
+      return 0;
+    }
+
+    let u1 = 0;
+    do { u1 = Math.random(); } while (u1 === 0); // 避免 log(0)
+    const u2 = Math.random();
+
+    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const noise = z * this.sentimentVolatility;
+
+    return Math.max(-this.sentimentMaxNoise, Math.min(this.sentimentMaxNoise, noise));
   }
 
   /**

@@ -15,6 +15,11 @@ pricing:
   extreme_ratio_min: 0.1 # 极端供需比下限
   min_base_supply: 1 # 基准供应量下限（防止除零）
   history_days: 7 # 供应历史记录天数
+  # 市场情绪扰动配置
+  market_sentiment:
+    enabled: true # 是否启用随机扰动
+    volatility: 0.05 # 波动率σ
+    max_noise: 0.15 # 截断阈值±15%
 
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小

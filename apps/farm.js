@@ -486,6 +486,17 @@ export class farm extends plugin {
           details
         })
       } else if (result.success) {
+        // 无成熟作物可收获
+        if (!result.data) {
+          await this._renderFarmWithResult(e, userId, {
+            type: 'info',
+            icon: 'ℹ️',
+            title: '暂无收获',
+            details: ['当前没有成熟的作物']
+          })
+          return true
+        }
+
         const details = []
         if (harvestedCrops.length > 0) {
           const totalYield = harvestedCrops.reduce((sum, c) => sum + (c.yield || 0), 0)

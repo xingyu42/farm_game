@@ -142,8 +142,8 @@ export class InventoryService {
       // 更新物品元数据
       targetItem.metadata.lastUpdated = Date.now();
 
-      // 保存到Redis
-      await this._saveInventoryToRedis(userId, inventory);
+      // 持久化仓库数据
+      await this._saveInventory(userId, inventory);
 
       const displayInfo = targetItem.getDisplayInfo();
       const newUsage = this._calculateInventoryUsage(inventory.items);
@@ -279,8 +279,8 @@ export class InventoryService {
         }
       }
 
-      // 一次性保存到Redis
-      await this._saveInventoryToRedis(userId, inventory);
+      // 一次性持久化
+      await this._saveInventory(userId, inventory);
 
       const successfulItems = results.filter(r => r.success);
       const totalAdded = successfulItems.reduce((sum, r) => sum + r.quantity, 0);
@@ -354,8 +354,8 @@ export class InventoryService {
         delete inventory.items[itemId];
       }
 
-      // 保存到Redis
-      await this._saveInventoryToRedis(userId, inventory);
+      // 持久化仓库数据
+      await this._saveInventory(userId, inventory);
 
       const economicInfo = targetItem.getEconomicInfo();
 
@@ -586,7 +586,7 @@ export class InventoryService {
    * @returns {Promise<void>}
    * @private
    */
-  async _saveInventoryToRedis(userId, inventory) {
+  async _saveInventory(userId, inventory) {
     if (!this.playerDataService) {
       throw new Error('PlayerDataService not initialized');
     }
@@ -647,8 +647,8 @@ export class InventoryService {
       targetItem.metadata.lockedAt = Date.now();
       targetItem.metadata.lastUpdated = Date.now();
 
-      // 保存到Redis
-      await this._saveInventoryToRedis(userId, inventory);
+      // 持久化仓库数据
+      await this._saveInventory(userId, inventory);
 
 
       const displayInfo = targetItem.getDisplayInfo();
@@ -703,8 +703,8 @@ export class InventoryService {
       delete targetItem.metadata.lockedAt;
       targetItem.metadata.lastUpdated = Date.now();
 
-      // 保存到Redis
-      await this._saveInventoryToRedis(userId, inventory);
+      // 持久化仓库数据
+      await this._saveInventory(userId, inventory);
 
 
       const displayInfo = targetItem.getDisplayInfo();
@@ -801,9 +801,9 @@ export class InventoryService {
         });
       }
 
-      // 如果有变更，一次性保存到Redis
+      // 如果有变更，一次性持久化
       if (hasChanges) {
-        await this._saveInventoryToRedis(userId, inventory);
+        await this._saveInventory(userId, inventory);
       }
 
       const successful = results.filter(r => r.success).length;
@@ -872,9 +872,9 @@ export class InventoryService {
         });
       }
 
-      // 如果有变更，一次性保存到Redis
+      // 如果有变更，一次性持久化
       if (hasChanges) {
-        await this._saveInventoryToRedis(userId, inventory);
+        await this._saveInventory(userId, inventory);
       }
 
       const successful = results.filter(r => r.success).length;
