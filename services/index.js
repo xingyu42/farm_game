@@ -108,11 +108,12 @@ class ServiceContainer {
         this.services.economyService // 注入economyService
       );
 
-      // 实例化LandService (需要依赖PlayerService)
+      // 实例化LandService (需要依赖PlayerService和InventoryService)
       this.services.landService = new LandService(
         redisClient,
         config,
-        this.services.playerService
+        this.services.playerService,
+        this.services.inventoryService
       );
 
       // 实例化PlantingDataService（种植模块的数据访问层）

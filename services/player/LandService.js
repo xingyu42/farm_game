@@ -10,10 +10,11 @@
 import ItemResolver from '../../utils/ItemResolver.js';
 
 class LandService {
-  constructor(redisClient, config, playerService) {
+  constructor(redisClient, config, playerService, inventoryService) {
     this.redis = redisClient;
     this.config = config;
     this.playerService = playerService;
+    this.inventoryService = inventoryService;
     this.itemResolver = new ItemResolver(config);
   }
 
@@ -363,80 +364,108 @@ class LandService {
         };
       }
 
-      // 执行进阶（Redis事务）
-      const playerKey = `farm_game:player:${userId}`;
+      // === 事务块：带回滚的资源消耗 ===
+      let coinsDeducted = false;
+      const materialsRemoved = [];
+      let remainingCoins = null;
 
-      // 获取当前玩家数据进行二次验证
-      const playerData = await this.redis.get(playerKey);
-
-      if (!playerData) {
-        return {
-          success: false,
-          message: '玩家不存在'
-        };
-      }
-
-      // 再次验证条件（防止并发问题）
-      if (playerData.level < upgradeInfo.requirements.level || playerData.coins < upgradeInfo.requirements.gold) {
-        return {
-          success: false,
-          message: '进阶条件已不满足，请重试'
-        };
-      }
-
-      // 验证材料
-      for (const material of upgradeInfo.requirements.materials) {
-        const currentQuantity = playerData.inventory?.[material.item_id]?.quantity || 0;
-        if (currentQuantity < material.quantity) {
-          return {
-            success: false,
-            message: `材料不足：${this._getItemName(material.item_id)}`
-          };
+      try {
+        // Step 1: 扣除金币
+        const coinResult = await this.playerService.deductCoins(
+          userId,
+          upgradeInfo.requirements.gold
+        );
+        coinsDeducted = true;
+        if (coinResult && typeof coinResult.coins === 'number') {
+          remainingCoins = coinResult.coins;
+        } else {
+          remainingCoins = Math.max(
+            0,
+            (upgradeInfo.playerStatus.coins || 0) - upgradeInfo.requirements.gold
+          );
         }
-      }
 
-      // 扣除金币
-      playerData.coins -= upgradeInfo.requirements.gold;
+        // Step 2: 消耗材料（带验证）
+        if (upgradeInfo.requirements.materials?.length > 0) {
+          for (const material of upgradeInfo.requirements.materials) {
+            const removeResult = await this.inventoryService.removeItem(
+              userId,
+              material.item_id,
+              material.quantity
+            );
 
-      // 消耗材料
-      for (const material of upgradeInfo.requirements.materials) {
-        if (playerData.inventory && playerData.inventory[material.item_id]) {
-          playerData.inventory[material.item_id].quantity -= material.quantity;
+            if (!removeResult.success) {
+              throw new Error(`材料移除失败: ${removeResult.message}`);
+            }
 
-          // 如果数量为0，删除物品记录
-          if (playerData.inventory[material.item_id].quantity <= 0) {
-            delete playerData.inventory[material.item_id];
+            materialsRemoved.push({
+              item_id: material.item_id,
+              quantity: material.quantity
+            });
           }
         }
-      }
 
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, using smart land update method for improved code structure; Principle_Applied: CodeStructure-Optimization;}}
-      // 使用智能土地更新方法
-      const updateResult = await this.playerService.updateLand(userId, landId, {
-        quality: upgradeInfo.nextQuality,
-        lastUpgraded: Date.now()
-      });
+        // Step 3: 更新土地品质
+        const updateResult = await this.playerService.updateLand(userId, landId, {
+          quality: upgradeInfo.nextQuality,
+          lastUpgraded: Date.now()
+        });
 
-      if (!updateResult.success) {
+        if (!updateResult.success) {
+          throw new Error(`土地更新失败: ${updateResult.message}`);
+        }
+
+        // === 成功路径 ===
+        let updatedPlayer = null;
+        try {
+          updatedPlayer = await this.playerService.getPlayer(userId);
+        } catch (infoError) {
+          logger.warn(
+            `[LandService] 获取升级后玩家数据失败 [${userId}, ${landId}]: ${infoError.message}`
+          );
+        }
+
+        return {
+          success: true,
+          message: `🎉 土地 ${landId} 成功进阶为${upgradeInfo.nextQualityName}！`,
+          landId,
+          fromQuality: upgradeInfo.currentQuality,
+          toQuality: upgradeInfo.nextQuality,
+          fromQualityName: upgradeInfo.currentQualityName,
+          toQualityName: upgradeInfo.nextQualityName,
+          costGold: upgradeInfo.requirements.gold,
+          materialsCost: upgradeInfo.requirements.materials,
+          remainingCoins: updatedPlayer?.coins ?? remainingCoins ?? 0
+        };
+
+      } catch (txError) {
+        // === 回滚逻辑 ===
+        logger.warn(`[LandService] 土地进阶失败，执行回滚 [${userId}, ${landId}]: ${txError.message}`);
+
+        // 回滚材料（逆序）
+        for (const material of materialsRemoved.reverse()) {
+          try {
+            await this.inventoryService.addItem(userId, material.item_id, material.quantity);
+          } catch (rollbackErr) {
+            logger.error(`[LandService] 回滚材料失败 [${material.item_id}]: ${rollbackErr.message}`);
+          }
+        }
+
+        // 回滚金币
+        if (coinsDeducted) {
+          try {
+            await this.playerService.addCoins(userId, upgradeInfo.requirements.gold);
+          } catch (rollbackErr) {
+            logger.error(`[LandService] 回滚金币失败: ${rollbackErr.message}`);
+          }
+        }
+
         return {
           success: false,
-          message: updateResult.message
+          message: `进阶失败: ${txError.message}`,
+          rolledBack: true
         };
       }
-
-
-      return {
-        success: true,
-        message: `🎉 土地 ${landId} 成功进阶为${upgradeInfo.nextQualityName}！`,
-        landId,
-        fromQuality: upgradeInfo.currentQuality,
-        toQuality: upgradeInfo.nextQuality,
-        fromQualityName: upgradeInfo.currentQualityName,
-        toQualityName: upgradeInfo.nextQualityName,
-        costGold: upgradeInfo.requirements.gold,
-        materialsCost: upgradeInfo.requirements.materials,
-        remainingCoins: playerData.coins
-      };
     } catch (error) {
       logger.error(`[LandService] 土地品质进阶失败 [${userId}, ${landId}]: ${error.message}`);
       throw error;
