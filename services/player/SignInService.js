@@ -187,9 +187,8 @@ class SignInService {
             const accountAge = Math.floor((Date.now() - playerData.createdAt) / (1000 * 60 * 60 * 24)) + 1;
             const signInRate = Math.round((playerData.signIn.totalSignDays / accountAge) * 100);
 
-            // 计算最长连续签到记录（这里简化处理，实际可能需要更复杂的逻辑）
-            const longestStreak = Math.max(playerData.signIn.consecutiveDays,
-                playerData.stats?.longestSignInStreak || 0);
+            // 最长连续签到记录（当前连续天数即为当前记录）
+            const longestStreak = playerData.signIn.consecutiveDays;
 
             return {
                 totalSignDays: playerData.signIn.totalSignDays,

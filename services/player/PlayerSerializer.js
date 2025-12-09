@@ -36,6 +36,11 @@ class PlayerSerializer {
             return null;
         }
 
+        // 清理已废弃的遗留字段（stats已被statistics取代）
+        if (yamlData.stats) {
+            delete yamlData.stats;
+        }
+
         // 使用Player.fromObjectData创建Player实例（适用于YAML数据）
         try {
             const playerInstance = Player.fromObjectData(yamlData, this.config);
@@ -66,13 +71,6 @@ class PlayerSerializer {
                 }));
             case 'inventory':
                 return {};
-            case 'stats':
-                return {
-                    total_signin_days: 0,
-                    total_income: 0,
-                    total_expenses: 0,
-                    consecutive_signin_days: 0
-                };
             case 'signIn':
                 return {
                     lastSignDate: null,

@@ -25,12 +25,19 @@ class Player {
 
     // 仓库系统
     this.inventory = data.inventory;
-    this.inventoryCapacity = data.inventoryCapacity;
-    this.inventory_capacity = data.inventory_capacity; // 新字段名兼容
+    // 统一使用 inventory_capacity，从旧字段名读取以保持向后兼容
+    this.inventory_capacity = data.inventory_capacity
+      || data.inventoryCapacity
+      || config?.items?.inventory?.startingCapacity
+      || 100;
     this.maxInventoryCapacity = data.maxInventoryCapacity;
 
-    // 统计数据
-    this.stats = data.stats;
+    // 向后兼容的仓库容量访问器（只读）
+    Object.defineProperty(this, 'inventoryCapacity', {
+      get() { return this.inventory_capacity; },
+      enumerable: true,
+      configurable: true
+    });
 
     // 签到系统
     this.signIn = data.signIn
@@ -79,7 +86,6 @@ class Player {
       landCount: landConfig.startingLands,
       maxLandCount: landConfig.maxLands,
       inventory: {},
-      inventoryCapacity: inventoryConfig.startingCapacity,
       inventory_capacity: inventoryConfig.startingCapacity,
       maxInventoryCapacity: inventoryConfig.maxCapacity,
       createdAt: now,
@@ -89,7 +95,6 @@ class Player {
 
     // 使用静态方法生成复杂字段的默认值
     playerData.lands = Player._getDefaultComplexField('lands', config);
-    playerData.stats = Player._getDefaultComplexField('stats', config);
     playerData.signIn = Player._getDefaultComplexField('signIn', config);
     playerData.protection = Player._getDefaultComplexField('protection', config);
     playerData.stealing = Player._getDefaultComplexField('stealing', config);
@@ -135,13 +140,6 @@ class Player {
         }));
       case 'inventory':
         return {};
-      case 'stats':
-        return {
-          total_signin_days: 0,
-          total_income: 0,
-          total_expenses: 0,
-          consecutive_signin_days: 0
-        };
       case 'signIn':
         return {
           lastSignDate: null,
@@ -221,23 +219,15 @@ class Player {
       errors.push('仓库必须是对象');
     }
 
-    if (!Number.isInteger(this.inventoryCapacity) || this.inventoryCapacity < 0) {
+    if (!Number.isInteger(this.inventory_capacity) || this.inventory_capacity < 0) {
       errors.push('仓库容量必须是非负整数');
     }
 
-    if (!Number.isInteger(this.inventory_capacity) || this.inventory_capacity < 0) {
-      errors.push('仓库容量(新字段)必须是非负整数');
-    }
-
-    if (this.inventoryCapacity > this.maxInventoryCapacity) {
+    if (this.inventory_capacity > this.maxInventoryCapacity) {
       errors.push('当前仓库容量不能超过最大仓库容量');
     }
 
     // 验证复杂对象结构
-    if (typeof this.stats !== 'object' || this.stats === null) {
-      errors.push('统计数据必须是对象');
-    }
-
     if (typeof this.signIn !== 'object' || this.signIn === null) {
       errors.push('签到数据必须是对象');
     }
@@ -316,7 +306,7 @@ class Player {
    * @returns {boolean} 是否可以扩张
    */
   canExpandInventory() {
-    return this.inventoryCapacity < this.maxInventoryCapacity;
+    return this.inventory_capacity < this.maxInventoryCapacity;
   }
 
   /**
@@ -434,10 +424,9 @@ class Player {
       lands: this.lands,
       maxLandCount: this.maxLandCount,
       inventory: this.inventory,
-      inventoryCapacity: this.inventoryCapacity,
       inventory_capacity: this.inventory_capacity,
+      inventoryCapacity: this.inventory_capacity, // 向后兼容：导出旧字段名
       maxInventoryCapacity: this.maxInventoryCapacity,
-      stats: this.stats,
       signIn: this.signIn,
       protection: this.protection,
       stealing: this.stealing,
@@ -478,7 +467,7 @@ class Player {
       coins: this.coins,
       landCount: this.landCount,
       inventoryUsage: this.getInventoryUsage(),
-      inventoryCapacity: this.inventoryCapacity,
+      inventoryCapacity: this.inventory_capacity, // 使用标准字段，但保持旧字段名用于向后兼容
       isOnline: this.isOnline(),
       lastActiveTime: this.lastActiveTime
     };

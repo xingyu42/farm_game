@@ -30,7 +30,7 @@ class Land {
 
     // 扩展属性
     this.lastUpgradeTime = data.lastUpgradeTime;
-    this.upgradeLevel = data.upgradeLevel;
+    this.upgradeLevel = data.upgradeLevel ?? 0;
   }
 
   /**
@@ -47,7 +47,8 @@ class Land {
       health: 100,
       needsWater: false,
       hasPests: false,
-      stealable: false
+      stealable: false,
+      upgradeLevel: 0
     });
   }
 
@@ -97,6 +98,11 @@ class Land {
 
     if (this.harvestTime && (!Number.isInteger(this.harvestTime) || this.harvestTime < 0)) {
       errors.push('收获时间必须是有效的时间戳');
+    }
+
+    // 验证升级等级
+    if (!Number.isInteger(this.upgradeLevel) || this.upgradeLevel < 0) {
+      errors.push('升级等级必须是非负整数');
     }
 
     return {

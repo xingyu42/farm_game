@@ -54,42 +54,252 @@ requirements:
     description: "丰收之王"
     unlocks: []
 
-  # 高级等级（11-30）
+  11:
+    experience: 3250
+    description: "农业先驱"
+    unlocks: []
+
+  12:
+    experience: 3850
+    description: "田野守护者"
+    unlocks: []
+
+  13:
+    experience: 4500
+    description: "收获使者"
+    unlocks: []
+
+  14:
+    experience: 4750
+    description: "绿洲开拓者"
+    unlocks: []
+
+  # 高级等级（15-30）
   15:
     experience: 5000
     description: "农业导师"
     unlocks: ["mentor_badge"]
+
+  16:
+    experience: 6250
+    description: "播种达人"
+    unlocks: []
+
+  17:
+    experience: 7500
+    description: "沃土行者"
+    unlocks: []
+
+  18:
+    experience: 8750
+    description: "四季农人"
+    unlocks: []
+
+  19:
+    experience: 9500
+    description: "丰饶使者"
+    unlocks: []
 
   20:
     experience: 10000
     description: "土地管理者"
     unlocks: ["land_manager_badge"]
 
+  21:
+    experience: 12000
+    description: "晨曦耕者"
+    unlocks: []
+
+  22:
+    experience: 14000
+    description: "田园诗人"
+    unlocks: []
+
+  23:
+    experience: 16000
+    description: "绿野先锋"
+    unlocks: []
+
+  24:
+    experience: 17500
+    description: "五谷丰登"
+    unlocks: []
+
   25:
     experience: 18000
     description: "农业科学家"
     unlocks: ["scientist_badge"]
 
+  26:
+    experience: 21000
+    description: "麦浪舞者"
+    unlocks: []
+
+  27:
+    experience: 24000
+    description: "金穗守护"
+    unlocks: []
+
+  28:
+    experience: 27000
+    description: "大地之心"
+    unlocks: []
+
+  29:
+    experience: 29000
+    description: "农耕圣手"
+    unlocks: []
+
   30:
     experience: 30000
-    description: "田园诗人"
+    description: "田园领主"
     unlocks: ["poet_badge"]
 
   # 专家等级（31-60）
+  31:
+    experience: 33000
+    description: "季风行者"
+    unlocks: []
+
+  32:
+    experience: 36000
+    description: "雨露恩赐"
+    unlocks: []
+
+  33:
+    experience: 39000
+    description: "青苗守望"
+    unlocks: []
+
+  34:
+    experience: 42000
+    description: "丰年预言"
+    unlocks: []
+
+  35:
+    experience: 45000
+    description: "农庄管家"
+    unlocks: []
+
+  36:
+    experience: 48000
+    description: "沃野千里"
+    unlocks: []
+
+  37:
+    experience: 51000
+    description: "稻香四溢"
+    unlocks: []
+
+  38:
+    experience: 54000
+    description: "桃源主人"
+    unlocks: []
+
+  39:
+    experience: 57000
+    description: "万亩良田"
+    unlocks: []
+
   40:
     experience: 60000
     description: "农业革新者"
     unlocks: ["innovator_badge", "silver_land_unlock"]
+
+  41:
+    experience: 66000
+    description: "春耕使者"
+    unlocks: []
+
+  42:
+    experience: 72000
+    description: "夏长守护"
+    unlocks: []
+
+  43:
+    experience: 78000
+    description: "秋收执事"
+    unlocks: []
+
+  44:
+    experience: 84000
+    description: "冬藏智者"
+    unlocks: []
+
+  45:
+    experience: 90000
+    description: "四时主宰"
+    unlocks: []
+
+  46:
+    experience: 96000
+    description: "风调雨顺"
+    unlocks: []
+
+  47:
+    experience: 102000
+    description: "国泰民安"
+    unlocks: []
+
+  48:
+    experience: 108000
+    description: "五谷神农"
+    unlocks: []
+
+  49:
+    experience: 114000
+    description: "百草先师"
+    unlocks: []
 
   50:
     experience: 120000
     description: "丰收传说"
     unlocks: ["legend_badge"]
 
+  51:
+    experience: 130000
+    description: "天工造化"
+    unlocks: []
+
+  52:
+    experience: 142000
+    description: "地灵人杰"
+    unlocks: []
+
+  53:
+    experience: 154000
+    description: "山河锦绣"
+    unlocks: []
+
+  54:
+    experience: 166000
+    description: "日月精华"
+    unlocks: []
+
+  55:
+    experience: 178000
+    description: "星辰农圣"
+    unlocks: []
+
+  56:
+    experience: 188000
+    description: "乾坤耕者"
+    unlocks: []
+
+  57:
+    experience: 195000
+    description: "天地同辉"
+    unlocks: []
+
   58:
     experience: 200000
     description: "黄金农夫"
     unlocks: ["gold_land_unlock"]
+
+  59:
+    experience: 225000
+    description: "紫气东来"
+    unlocks: []
 
   60:
     experience: 250000
@@ -97,20 +307,200 @@ requirements:
     unlocks: ["emperor_badge"]
 
   # 传奇等级（61-100）
+  61:
+    experience: 265000
+    description: "混沌初开"
+    unlocks: []
+
+  62:
+    experience: 280000
+    description: "鸿蒙始祖"
+    unlocks: []
+
+  63:
+    experience: 295000
+    description: "开天辟地"
+    unlocks: []
+
+  64:
+    experience: 310000
+    description: "女娲造人"
+    unlocks: []
+
+  65:
+    experience: 325000
+    description: "神农尝百草"
+    unlocks: []
+
+  66:
+    experience: 345000
+    description: "后稷播百谷"
+    unlocks: []
+
+  67:
+    experience: 365000
+    description: "仓颉造字"
+    unlocks: []
+
+  68:
+    experience: 380000
+    description: "伏羲画卦"
+    unlocks: []
+
+  69:
+    experience: 392000
+    description: "黄帝垂衣"
+    unlocks: []
+
   70:
     experience: 400000
     description: "大地之神"
     unlocks: ["god_badge"]
+
+  71:
+    experience: 420000
+    description: "青帝司春"
+    unlocks: []
+
+  72:
+    experience: 445000
+    description: "赤帝司夏"
+    unlocks: []
+
+  73:
+    experience: 470000
+    description: "白帝司秋"
+    unlocks: []
+
+  74:
+    experience: 495000
+    description: "黑帝司冬"
+    unlocks: []
+
+  75:
+    experience: 520000
+    description: "中央黄帝"
+    unlocks: []
+
+  76:
+    experience: 545000
+    description: "五方神君"
+    unlocks: []
+
+  77:
+    experience: 565000
+    description: "六合归一"
+    unlocks: []
+
+  78:
+    experience: 580000
+    description: "七星照命"
+    unlocks: []
+
+  79:
+    experience: 592000
+    description: "八荒独尊"
+    unlocks: []
 
   80:
     experience: 600000
     description: "永恒收割者"
     unlocks: ["eternal_badge"]
 
+  81:
+    experience: 630000
+    description: "九天揽月"
+    unlocks: []
+
+  82:
+    experience: 665000
+    description: "十方无敌"
+    unlocks: []
+
+  83:
+    experience: 700000
+    description: "百川归海"
+    unlocks: []
+
+  84:
+    experience: 735000
+    description: "千秋万代"
+    unlocks: []
+
+  85:
+    experience: 770000
+    description: "万古长青"
+    unlocks: []
+
+  86:
+    experience: 805000
+    description: "亿载流芳"
+    unlocks: []
+
+  87:
+    experience: 840000
+    description: "兆年不朽"
+    unlocks: []
+
+  88:
+    experience: 865000
+    description: "京华绝代"
+    unlocks: []
+
+  89:
+    experience: 885000
+    description: "垓世无双"
+    unlocks: []
+
   90:
     experience: 900000
     description: "宇宙农夫"
     unlocks: ["cosmic_badge"]
+
+  91:
+    experience: 960000
+    description: "穰穰满仓"
+    unlocks: []
+
+  92:
+    experience: 1020000
+    description: "沟壑纵横"
+    unlocks: []
+
+  93:
+    experience: 1080000
+    description: "涧流不息"
+    unlocks: []
+
+  94:
+    experience: 1140000
+    description: "正大光明"
+    unlocks: []
+
+  95:
+    experience: 1200000
+    description: "载德万邦"
+    unlocks: []
+
+  96:
+    experience: 1260000
+    description: "极乐净土"
+    unlocks: []
+
+  97:
+    experience: 1320000
+    description: "恒沙世界"
+    unlocks: []
+
+  98:
+    experience: 1380000
+    description: "阿僧祇劫"
+    unlocks: []
+
+  99:
+    experience: 1440000
+    description: "那由他境"
+    unlocks: []
 
   100:
     experience: 1500000
