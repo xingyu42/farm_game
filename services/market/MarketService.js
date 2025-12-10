@@ -32,7 +32,7 @@ export class MarketService {
 
   /**
    * 初始化市场数据 - 委托给MarketDataManager
-   * 为所有浮动价格物品创建初始的Redis数据结构
+   * 为所有浮动价格物品创建初始的市场数据结构
    */
   async initializeMarketData() {
     try {
@@ -93,6 +93,20 @@ export class MarketService {
   }
 
   /**
+   * 获取市场统计数据 - 委托给MarketDataManager
+   * @param {string|Array<string>} itemIds 物品ID或ID数组
+   * @returns {Promise<Object|Array>} 统计数据
+   */
+  async getMarketStats(itemIds) {
+    try {
+      return await this.dataManager.getMarketStats(itemIds);
+    } catch (error) {
+      logger.error(`[MarketService] 获取市场统计失败: ${error.message}`);
+      return Array.isArray(itemIds) ? [] : null;
+    }
+  }
+
+  /**
    * 获取市场显示数据 - 委托给MarketDataManager
    * @returns {Promise<Array>} 市场价格显示数据
    */
@@ -140,7 +154,7 @@ export class MarketService {
 
   /**
    * 每日价格更新任务入口（纯供应驱动模式）
-   * 执行流程：1.归档昨日供应 → 2.计算新价格 → 3.更新Redis
+   * 执行流程：1.归档昨日供应 → 2.计算新价格 → 3.持久化到JSON
    * @returns {Promise<Object>} 更新结果
    */
   async executeDailyPriceUpdate() {
@@ -275,8 +289,7 @@ export class MarketService {
             );
 
             priceUpdates.push({
-              type: 'hset',
-              key: `farm_game:market:stats:${itemId}`,
+              itemId,
               data: {
                 current_price: priceResult.price.toString(),
                 price_trend: trend,
@@ -305,13 +318,13 @@ export class MarketService {
         }
       }
 
-      // 批量更新 Redis
+      // 批量更新到内存并持久化到 JSON
       if (priceUpdates.length > 0) {
-        const transactionResult = await this.transactionManager.executeBatchUpdate(priceUpdates);
-        updatedCount = transactionResult.successCount;
+        const updateResult = await this.dataManager.batchUpdateMarketData(priceUpdates);
+        updatedCount = updateResult.updatedCount;
 
-        if (transactionResult.errors && transactionResult.errors.length > 0) {
-          errors.push(...transactionResult.errors);
+        if (updateResult.errors && updateResult.errors.length > 0) {
+          errors.push(...updateResult.errors);
         }
       }
 

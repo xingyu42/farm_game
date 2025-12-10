@@ -3,7 +3,7 @@
   interval: 3600000 # 1小时 = 60 * 60 * 1000 毫秒
 
   # 保留备份文件数量
-  maxBackups: 24 # 保留最近24份备份（24小时）
+  maxBackups: 3 # 保留最近24份备份（24小时）
 
   # 备份文件名前缀
   filePrefix: "player_data_backup"

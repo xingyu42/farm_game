@@ -280,6 +280,16 @@ class ServiceContainer {
    * 关闭所有服务
    */
   async shutdown() {
+    // 持久化市场数据到 JSON 文件
+    if (this.services.marketDataManager) {
+      try {
+        await this.services.marketDataManager.persistToFile();
+        logger.info('市场数据已持久化');
+      } catch (error) {
+        logger.error('市场数据持久化失败', { error: error.message });
+      }
+    }
+
     // 停止备份服务
     if (this.services.dataBackupService) {
       await this.services.dataBackupService.stop();
@@ -298,4 +308,58 @@ class ServiceContainer {
 
 // 导出单例实例
 const serviceContainer = new ServiceContainer();
+
+// ================== Docker友好的优雅关闭信号处理 ==================
+
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;  // 优雅关闭最大等待时间（10秒）
+let shuttingDown = false;
+
+/**
+ * 处理进程退出信号（SIGINT / SIGTERM）
+ *
+ * Docker容器停止时会发送SIGTERM，本地Ctrl+C发送SIGINT。
+ * 给予10秒时间完成数据持久化，超时则强制退出。
+ *
+ * @param {string} signal 信号名称
+ */
+async function handleSignal(signal) {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+
+  logger.info(`[ServiceContainer] 收到退出信号: ${signal}，开始优雅关闭...`);
+
+  // 设置超时保护：10秒后强制退出
+  const timeout = setTimeout(() => {
+    logger.warn(`[ServiceContainer] 优雅关闭超时（${GRACEFUL_SHUTDOWN_TIMEOUT_MS}ms），强制退出`);
+    process.exit(1);
+  }, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
+
+  // unref() 允许进程在定时器未触发时退出
+  if (typeof timeout.unref === 'function') {
+    timeout.unref();
+  }
+
+  try {
+    await serviceContainer.shutdown();
+    clearTimeout(timeout);
+    logger.info('[ServiceContainer] 优雅关闭完成，安全退出');
+    process.exit(0);
+  } catch (error) {
+    clearTimeout(timeout);
+    logger.error(`[ServiceContainer] 优雅关闭失败: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+// 注册信号监听器
+if (typeof process !== 'undefined' && process.on) {
+  ['SIGINT', 'SIGTERM'].forEach(signal => {
+    process.on(signal, () => {
+      handleSignal(signal);
+    });
+  });
+}
+
 export default serviceContainer;

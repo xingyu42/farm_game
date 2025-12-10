@@ -1,18 +1,36 @@
 /**
  * MarketDataManager - 市场数据管理服务
- * 
+ *
  * 专门负责市场数据的存储、检索、验证和格式化。
  * 从原有MarketService中提取的数据管理核心逻辑。
- * 
- * @version 1.0.0
+ *
+ * @version 3.0.0 - 全JSON架构：内存运行时 + 防抖自动持久化
+ *
+ * 存储架构：
+ * - 运行时：内存缓存 (this._marketData)
+ * - 持久化：JSON文件 (data/market/market.json)
+ * - 写入策略：修改后5秒自动保存，关键操作立即持久化
  */
 import ItemResolver from '../../utils/ItemResolver.js';
+import { FileStorage } from '../../utils/fileStorage.js';
+
+const SCHEMA_VERSION = 1
+const MARKET_FILENAME = 'market.json'
+const AUTO_SAVE_DELAY_MS = 5000  // 自动保存防抖延迟（毫秒）
 
 export class MarketDataManager {
   constructor(redisClient, config) {
     this.redis = redisClient;
     this.config = config;
     this.itemResolver = new ItemResolver(config);
+
+    this.storage = new FileStorage('data/market');
+    this._marketData = null;
+
+    // 自动持久化控制
+    this._dirty = false;           // 脏标记：数据是否已修改
+    this._saveTimer = null;        // 防抖定时器
+    this._persistPromise = null;   // 并发写入控制：确保同时只有一个持久化任务
 
     // 获取市场配置
     this.marketConfig = this.config.market
@@ -21,13 +39,152 @@ export class MarketDataManager {
     this.minBaseSupply = this.marketConfig.pricing?.min_base_supply || 1
   }
 
+  _getDefaultData() {
+    return {
+      version: SCHEMA_VERSION,
+      lastPersistedAt: 0,
+      items: {},
+      globalStats: {
+        totalItems: 0,
+        lastUpdate: 0,
+        updateCount: 0,
+        avgUpdateTime: 0,
+        errorCount: 0,
+        lastReset: 0,
+        lastResetCount: 0
+      }
+    }
+  }
+
+  /**
+   * 从 JSON 文件加载市场数据到内存
+   */
+  async loadFromFile() {
+    try {
+      await this.storage.init();
+      const data = await this.storage.readJSON(MARKET_FILENAME, null);
+
+      if (!data || typeof data !== 'object') {
+        this._marketData = this._getDefaultData();
+        return;
+      }
+
+      const defaults = this._getDefaultData();
+      this._marketData = {
+        version: data.version ?? SCHEMA_VERSION,
+        lastPersistedAt: data.lastPersistedAt ?? 0,
+        items: data.items && typeof data.items === 'object' ? data.items : {},
+        globalStats: { ...defaults.globalStats, ...(data.globalStats || {}) }
+      };
+    } catch (error) {
+      logger.error('[MarketDataManager] 加载市场数据失败:', error);
+      this._marketData = this._getDefaultData();
+    }
+  }
+
+  /**
+   * 确保内存中的市场数据已加载
+   * @private
+   */
+  async _ensureMarketDataLoaded() {
+    if (!this._marketData) {
+      await this.loadFromFile();
+    }
+  }
+
+  /**
+   * 标记数据已变脏并启动防抖持久化
+   *
+   * 采用防抖策略：5秒内如果有新的修改，则重置定时器，避免频繁写文件。
+   * timer.unref() 防止定时器阻止Node.js进程退出。
+   *
+   * @private
+   */
+  _markDirty() {
+    if (!this._marketData) {
+      return;
+    }
+
+    this._dirty = true;
+
+    // 清除旧定时器
+    if (this._saveTimer) {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = null;
+    }
+
+    // 启动新的防抖定时器
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      this._flushIfDirty().catch(error => {
+        logger.error(`[MarketDataManager] 自动持久化失败: ${error.message}`);
+      });
+    }, AUTO_SAVE_DELAY_MS);
+
+    // 允许进程在定时器期间退出（不阻塞进程关闭）
+    if (typeof this._saveTimer?.unref === 'function') {
+      this._saveTimer.unref();
+    }
+  }
+
+  /**
+   * 如果数据已标记为脏，则执行持久化
+   * @private
+   */
+  async _flushIfDirty() {
+    if (!this._dirty) {
+      return;
+    }
+
+    this._dirty = false;
+    await this.persistToFile();
+  }
+
+  /**
+   * 将内存中的市场数据持久化到 JSON 文件（原子写入）
+   *
+   * 通过 _persistPromise 确保并发安全：同时只有一个持久化任务在执行。
+   * 使用临时文件+原子rename避免写入过程中崩溃导致数据损坏。
+   */
+  async persistToFile() {
+    // 并发控制：如果已有持久化任务在执行，直接返回同一个Promise
+    if (this._persistPromise) {
+      return this._persistPromise;
+    }
+
+    this._persistPromise = (async () => {
+      if (!this._marketData) {
+        await this.loadFromFile();
+      }
+
+      this._marketData.lastPersistedAt = Date.now();
+      const tempFile = `${MARKET_FILENAME}.tmp.${Date.now()}`;
+
+      try {
+        await this.storage.init();
+        await this.storage.writeJSON(tempFile, this._marketData);
+        await this.storage.rename(tempFile, MARKET_FILENAME);
+        logger.info(`[MarketDataManager] 市场数据已持久化，物品数: ${Object.keys(this._marketData.items).length}`);
+      } catch (error) {
+        try { await this.storage.deleteFile(tempFile); } catch { /* ignore */ }
+        throw new Error(`持久化市场数据失败: ${error.message}`, { cause: error });
+      } finally {
+        this._persistPromise = null;
+      }
+    })();
+
+    return this._persistPromise;
+  }
+
   /**
    * 初始化市场数据
-   * 为所有浮动价格物品创建初始的Redis数据结构
+   * 为所有浮动价格物品创建初始的市场数据结构（基于 JSON 存储）
    * @returns {Promise<Object>} 初始化结果
    */
   async initializeMarketData() {
     try {
+      await this._ensureMarketDataLoaded();
+
       const floatingItems = this._getFloatingPriceItems();
       logger.info(`[MarketDataManager] 开始初始化 ${floatingItems.length} 个浮动价格物品的市场数据`);
 
@@ -36,26 +193,32 @@ export class MarketDataManager {
 
       for (const itemId of floatingItems) {
         try {
-          const statsKey = `farm_game:market:stats:${itemId}`;
-          const exists = await this.redis.exists(statsKey);
+          const existing = this._marketData.items[itemId];
 
-          if (!exists) {
+          if (!existing || !existing.stats) {
             const itemInfo = this.itemResolver.getItemInfo(itemId);
             if (itemInfo) {
               const basePrice = itemInfo.price;
 
               // 验证价格数据完整性
               if (this._validatePriceData(basePrice, itemId)) {
-                // 初始化市场统计数据
-                await this.redis.hSet(statsKey, {
-                  base_price: basePrice.toString(),
-                  current_price: basePrice.toString(),
-                  demand_24h: '0',
-                  supply_24h: '0',
-                  last_updated: Date.now().toString(),
-                  price_trend: 'stable',
-                  price_history: JSON.stringify([basePrice])
-                });
+                const now = Date.now();
+
+                this._marketData.items[itemId] = {
+                  stats: {
+                    basePrice,
+                    currentPrice: basePrice,
+                    demand24h: 0,
+                    supply24h: 0,
+                    lastUpdated: now,
+                    priceTrend: 'stable',
+                    priceHistory: [basePrice],
+                    lastTransaction: 0,
+                    lastReset: now,
+                    lastArchive: 0
+                  },
+                  supplyHistory: Array.isArray(existing?.supplyHistory) ? existing.supplyHistory : []
+                };
 
                 successCount++;
               }
@@ -71,6 +234,7 @@ export class MarketDataManager {
 
       // 初始化全局市场统计
       await this._initializeGlobalStats(floatingItems.length);
+      await this.persistToFile();
 
       logger.info(`[MarketDataManager] 市场数据初始化完成，数量: ${floatingItems.length}`);
 
@@ -87,7 +251,7 @@ export class MarketDataManager {
   }
 
   /**
-   * 记录交易统计数据
+   * 记录交易统计数据（内存写入 + 防抖持久化）
    * @param {string} itemId 物品ID
    * @param {number} quantity 交易数量
    * @param {string} transactionType 交易类型: 'buy' | 'sell'
@@ -95,21 +259,35 @@ export class MarketDataManager {
    */
   async recordTransaction(itemId, quantity, transactionType) {
     try {
-      // 检查是否为浮动价格物品
       const isFloating = await this._isFloatingPriceItem(itemId);
       if (!isFloating) {
-        return false; // 固定价格物品不记录统计
+        return false;
       }
 
-      const statsKey = `farm_game:market:stats:${itemId}`;
-      const field = transactionType === 'buy' ? 'demand_24h' : 'supply_24h';
+      await this._ensureMarketDataLoaded();
 
-      // 使用Redis事务确保原子性
-      const multi = this.redis.pipeline();
-      multi.hIncrBy(statsKey, field, quantity);
-      multi.hSet(statsKey, 'last_transaction', Date.now().toString());
+      const itemData = this._marketData.items[itemId];
+      if (!itemData || !itemData.stats) {
+        logger.warn(`[MarketDataManager] 记录交易统计时发现物品数据不存在: ${itemId}`);
+        return false;
+      }
 
-      await multi.exec();
+      const stats = itemData.stats;
+      const field = transactionType === 'buy' ? 'demand24h' : 'supply24h';
+      const delta = Number(quantity);
+
+      // 验证数量有效性
+      if (!Number.isFinite(delta) || delta <= 0) {
+        logger.warn(`[MarketDataManager] 无效的交易数量: itemId=${itemId}, quantity=${quantity}, type=${transactionType}`);
+        return false;
+      }
+
+      const current = Number.isFinite(stats[field]) ? stats[field] : 0;
+
+      stats[field] = current + delta;
+      stats.lastTransaction = Date.now();
+
+      this._markDirty();
 
       return true;
     } catch (error) {
@@ -125,26 +303,34 @@ export class MarketDataManager {
    */
   async archiveDailySupply(itemId) {
     try {
-      const statsKey = `farm_game:market:stats:${itemId}`;
-      const historyKey = `farm_game:market:supply:history:${itemId}`;
+      await this._ensureMarketDataLoaded();
 
-      // 获取昨日供应量
-      const dailySupply = parseInt(await this.redis.hGet(statsKey, 'supply_24h')) || 0;
+      const itemData = this._marketData.items[itemId];
 
-      // 写入历史列表（LPUSH 确保最新的在前面）
-      await this.redis.lPush(historyKey, dailySupply.toString());
+      if (!itemData || !itemData.stats) {
+        logger.warn(`[MarketDataManager] 归档供应量时发现物品数据不存在: ${itemId}`);
+        return { success: false, dailySupply: 0, historyLength: 0 };
+      }
 
-      // 只保留最近 N 天的数据
-      await this.redis.lTrim(historyKey, 0, this.historyDays - 1);
+      const dailySupply = Number.isFinite(itemData.stats.supply24h)
+        ? itemData.stats.supply24h
+        : 0;
 
-      // 重置当日供应计数器
-      await this.redis.hSet(statsKey, {
-        supply_24h: '0',
-        last_archive: Date.now().toString()
-      });
+      if (!Array.isArray(itemData.supplyHistory)) {
+        itemData.supplyHistory = [];
+      }
 
-      // 获取当前历史长度
-      const historyLength = await this.redis.lLen(historyKey);
+      itemData.supplyHistory.unshift(dailySupply);
+      if (itemData.supplyHistory.length > this.historyDays) {
+        itemData.supplyHistory.length = this.historyDays;
+      }
+
+      itemData.stats.supply24h = 0;
+      itemData.stats.lastArchive = Date.now();
+
+      const historyLength = itemData.supplyHistory.length;
+
+      this._markDirty();
 
       logger.debug(`[MarketDataManager] 归档供应量: ${itemId}, dailySupply=${dailySupply}, historyLength=${historyLength}`);
 
@@ -162,8 +348,10 @@ export class MarketDataManager {
    */
   async getSupplyHistory(itemId) {
     try {
-      const historyKey = `farm_game:market:supply:history:${itemId}`;
-      const history = await this.redis.lRange(historyKey, 0, -1);
+      await this._ensureMarketDataLoaded();
+
+      const itemData = this._marketData.items[itemId];
+      const history = Array.isArray(itemData?.supplyHistory) ? itemData.supplyHistory : [];
 
       // 转换为数字数组并过滤无效值
       return history
@@ -207,7 +395,8 @@ export class MarketDataManager {
   }
 
   /**
-   * 批量归档所有浮动价格物品的供应量（使用 pipeline 优化）
+   * 批量归档所有浮动价格物品的供应量
+   * 从内存 stats.supply24h 归档到 supplyHistory，然后重置为0
    * @returns {Promise<Object>} 归档结果统计
    */
   async archiveAllDailySupply() {
@@ -215,39 +404,61 @@ export class MarketDataManager {
     const errors = [];
 
     try {
+      await this._ensureMarketDataLoaded();
+
       const floatingItems = this._getFloatingPriceItems();
       logger.info(`[MarketDataManager] 开始归档 ${floatingItems.length} 个物品的每日供应量`);
 
-      // Step 1: 批量获取所有物品的 supply_24h
-      const readPipeline = this.redis.pipeline();
+      const archiveTime = Date.now();
+
       for (const itemId of floatingItems) {
-        readPipeline.hGet(`farm_game:market:stats:${itemId}`, 'supply_24h');
+        const itemIdStr = itemId;
+
+        // 从内存中读取 supply24h
+        const dailySupply = (() => {
+          try {
+            const itemData = this._marketData.items[itemIdStr];
+            if (!itemData || !itemData.stats) {
+              return 0;
+            }
+            return Number.isFinite(itemData.stats.supply24h)
+              ? itemData.stats.supply24h
+              : 0;
+          } catch {
+            return 0;
+          }
+        })();
+
+        try {
+          let itemData = this._marketData.items[itemIdStr];
+          if (!itemData) {
+            itemData = this._marketData.items[itemIdStr] = { stats: {}, supplyHistory: [] };
+          }
+          if (!itemData.stats) {
+            itemData.stats = {};
+          }
+          if (!Array.isArray(itemData.supplyHistory)) {
+            itemData.supplyHistory = [];
+          }
+
+          // 归档到历史列表
+          itemData.supplyHistory.unshift(dailySupply);
+          if (itemData.supplyHistory.length > this.historyDays) {
+            itemData.supplyHistory.length = this.historyDays;
+          }
+
+          // 重置供应量并更新归档时间
+          if (itemData.stats) {
+            itemData.stats.lastArchive = archiveTime;
+            itemData.stats.supply24h = 0;
+          }
+        } catch (error) {
+          errors.push(`物品 ${itemIdStr} 归档失败: ${error.message}`);
+        }
       }
-      const supplyValues = await readPipeline.exec();
 
-      // Step 2: 构造批量写入命令
-      const writePipeline = this.redis.pipeline();
-      const archiveTime = Date.now().toString();
-
-      for (let i = 0; i < floatingItems.length; i++) {
-        const itemId = floatingItems[i];
-        const dailySupply = parseInt(supplyValues[i]) || 0;
-        const statsKey = `farm_game:market:stats:${itemId}`;
-        const historyKey = `farm_game:market:supply:history:${itemId}`;
-
-        // 写入历史列表
-        writePipeline.lPush(historyKey, dailySupply.toString());
-        // 只保留最近 N 天
-        writePipeline.lTrim(historyKey, 0, this.historyDays - 1);
-        // 重置当日供应计数器
-        writePipeline.hSet(statsKey, {
-          supply_24h: '0',
-          last_archive: archiveTime
-        });
-      }
-
-      // Step 3: 执行批量写入
-      await writePipeline.exec();
+      // 持久化到 JSON
+      await this.persistToFile();
 
       const duration = Date.now() - startTime;
       logger.info(`[MarketDataManager] 归档完成: ${floatingItems.length} 个物品, 耗时: ${duration}ms`);
@@ -285,25 +496,22 @@ export class MarketDataManager {
         return isArray ? [] : null;
       }
 
-      // 批量获取统计数据
-      const pipeline = this.redis.pipeline();
-      for (const itemId of ids) {
-        pipeline.hGetAll(`farm_game:market:stats:${itemId}`);
-      }
+      await this._ensureMarketDataLoaded();
 
-      const results = await pipeline.exec();
       const stats = [];
 
-      for (let i = 0; i < ids.length; i++) {
-        const data = results[i];
-        if (data && Object.keys(data).length > 0) {
+      for (const itemId of ids) {
+        const itemData = this._marketData.items[itemId];
+        const rawStats = itemData && itemData.stats;
+
+        if (rawStats && Object.keys(rawStats).length > 0) {
           stats.push({
-            itemId: ids[i],
-            ...this._parseStatsData(data)
+            itemId,
+            ...this._parseStatsData(rawStats)
           });
         } else {
           stats.push({
-            itemId: ids[i],
+            itemId,
             error: '数据不存在'
           });
         }
@@ -505,7 +713,7 @@ export class MarketDataManager {
   }
 
   /**
-   * 重置每日统计数据
+   * 重置每日统计数据（重置内存中的 demand24h/supply24h）
    * @returns {Promise<Object>} 重置结果统计
    */
   async resetDailyStats() {
@@ -526,34 +734,41 @@ export class MarketDataManager {
         };
       }
 
+      await this._ensureMarketDataLoaded();
+
       const floatingItems = this._getFloatingPriceItems();
       logger.info(`[MarketDataManager] 开始重置 ${floatingItems.length} 个物品的日统计数据`);
 
-      // 使用Redis Pipeline进行批量重置
-      const pipeline = this.redis.pipeline();
-      const resetTime = Date.now().toString();
+      const resetTime = Date.now();
 
+      // 遍历所有浮动价格物品，重置内存中的统计数据
       for (const itemId of floatingItems) {
         try {
-          pipeline.hSet(`farm_game:market:stats:${itemId}`, {
-            demand_24h: '0',
-            supply_24h: '0',
-            last_reset: resetTime
-          });
+          const itemData = this._marketData.items[itemId];
+          if (!itemData || !itemData.stats) {
+            continue;
+          }
+
+          itemData.stats.demand24h = 0;
+          itemData.stats.supply24h = 0;
+          itemData.stats.lastReset = resetTime;
+
           resetCount++;
         } catch (error) {
-          errors.push(`物品 ${itemId} 重置失败: ${error.message}`);
+          errors.push(`重置物品 ${itemId} 日统计失败: ${error.message}`);
         }
       }
 
-      // 执行批量操作
-      await pipeline.exec();
+      // 更新全局统计（保存在 JSON 中）
+      const globalStats = this._marketData.globalStats || {};
+      globalStats.lastReset = resetTime;
+      globalStats.lastResetCount = (Number(globalStats.lastResetCount) || 0) + resetCount;
+      this._marketData.globalStats = globalStats;
 
-      // 更新全局统计
-      await this.redis.hSet(`farm_game:market:global:stats`, {
-        last_reset: resetTime,
-        last_reset_count: resetCount.toString()
-      });
+      // 触发防抖持久化
+      if (resetCount > 0) {
+        this._markDirty();
+      }
 
       const duration = Date.now() - startTime;
       logger.info(`[MarketDataManager] 日统计数据重置完成，成功: ${resetCount}/${floatingItems.length}, 耗时: ${duration}ms`);
@@ -592,14 +807,77 @@ export class MarketDataManager {
         return { success: true, updatedCount: 0, errors: [] };
       }
 
-      const pipeline = this.redis.pipeline();
+      await this._ensureMarketDataLoaded();
+
       let validUpdates = 0;
       const errors = [];
 
       for (const update of updates) {
         try {
           if (this._validateUpdateData(update)) {
-            pipeline.hSet(`farm_game:market:stats:${update.itemId}`, update.data);
+            const itemId = update.itemId;
+            let itemData = this._marketData.items[itemId];
+
+            if (!itemData || !itemData.stats) {
+              const itemInfo = this.itemResolver.getItemInfo(itemId);
+              const basePrice = itemInfo?.price;
+              if (!this._validatePriceData(basePrice, itemId)) {
+                errors.push(`无效的基础数据: ${itemId}`);
+                continue;
+              }
+
+              const now = Date.now();
+              itemData = this._marketData.items[itemId] = {
+                stats: {
+                  basePrice,
+                  currentPrice: basePrice,
+                  demand24h: 0,
+                  supply24h: 0,
+                  lastUpdated: now,
+                  priceTrend: 'stable',
+                  priceHistory: [basePrice],
+                  lastTransaction: 0,
+                  lastReset: now,
+                  lastArchive: 0
+                },
+                supplyHistory: []
+              };
+            }
+
+            const stats = itemData.stats;
+            const data = update.data || {};
+
+            if (data.base_price !== undefined) {
+              stats.basePrice = parseFloat(data.base_price) || stats.basePrice;
+            }
+            if (data.current_price !== undefined) {
+              stats.currentPrice = parseFloat(data.current_price) || stats.currentPrice;
+            }
+            if (data.demand_24h !== undefined) {
+              stats.demand24h = parseInt(data.demand_24h) || 0;
+            }
+            if (data.supply_24h !== undefined) {
+              stats.supply24h = parseInt(data.supply_24h) || 0;
+            }
+            if (data.last_updated !== undefined) {
+              stats.lastUpdated = parseInt(data.last_updated) || stats.lastUpdated || Date.now();
+            }
+            if (data.price_trend !== undefined) {
+              stats.priceTrend = data.price_trend || stats.priceTrend;
+            }
+            if (data.price_history !== undefined) {
+              stats.priceHistory = this._parsePriceHistory(data.price_history);
+            }
+            if (data.last_transaction !== undefined) {
+              stats.lastTransaction = parseInt(data.last_transaction) || stats.lastTransaction || 0;
+            }
+            if (data.last_reset !== undefined) {
+              stats.lastReset = parseInt(data.last_reset) || stats.lastReset || 0;
+            }
+            if (data.last_archive !== undefined) {
+              stats.lastArchive = parseInt(data.last_archive) || stats.lastArchive || 0;
+            }
+
             validUpdates++;
           } else {
             errors.push(`无效的更新数据: ${update.itemId}`);
@@ -609,8 +887,7 @@ export class MarketDataManager {
         }
       }
 
-      // 执行批量更新
-      await pipeline.exec();
+      await this.persistToFile();
 
       logger.info(`[MarketDataManager] 批量更新完成，成功: ${validUpdates}/${updates.length}`);
 
@@ -734,13 +1011,62 @@ export class MarketDataManager {
 
   /**
    * 解析统计数据
-   * @param {Object} data Redis返回的数据
+   * @param {Object} data 统计数据（Redis哈希或JSON stats对象）
    * @returns {Object} 解析后的数据
    * @private
    */
   _parseStatsData(data) {
-    let basePrice = parseFloat(data.base_price) || 0;
-    let currentPrice = parseFloat(data.current_price) || 0;
+    if (!data || typeof data !== 'object') {
+      return {
+        basePrice: 0,
+        currentPrice: 0,
+        demand24h: 0,
+        supply24h: 0,
+        lastUpdated: 0,
+        priceTrend: 'stable',
+        priceHistory: [],
+        lastTransaction: 0,
+        lastReset: 0,
+        lastArchive: 0
+      };
+    }
+
+    let basePrice;
+    let currentPrice;
+    let demand24h;
+    let supply24h;
+    let lastUpdated;
+    let priceTrend;
+    let priceHistory;
+    let lastTransaction;
+    let lastReset;
+    let lastArchive;
+
+    // 兼容 Redis 哈希结构（下划线命名）
+    if (data.base_price !== undefined || data.current_price !== undefined) {
+      basePrice = parseFloat(data.base_price) || 0;
+      currentPrice = parseFloat(data.current_price) || 0;
+      demand24h = parseInt(data.demand_24h) || 0;
+      supply24h = parseInt(data.supply_24h) || 0;
+      lastUpdated = parseInt(data.last_updated) || 0;
+      priceTrend = data.price_trend || 'stable';
+      priceHistory = this._parsePriceHistory(data.price_history);
+      lastTransaction = parseInt(data.last_transaction) || 0;
+      lastReset = parseInt(data.last_reset) || 0;
+      lastArchive = parseInt(data.last_archive) || 0;
+    } else {
+      // JSON 文件中的 stats 结构（驼峰命名）
+      basePrice = typeof data.basePrice === 'number' ? data.basePrice : 0;
+      currentPrice = typeof data.currentPrice === 'number' ? data.currentPrice : 0;
+      demand24h = typeof data.demand24h === 'number' ? data.demand24h : 0;
+      supply24h = typeof data.supply24h === 'number' ? data.supply24h : 0;
+      lastUpdated = typeof data.lastUpdated === 'number' ? data.lastUpdated : 0;
+      priceTrend = data.priceTrend || 'stable';
+      priceHistory = Array.isArray(data.priceHistory) ? data.priceHistory : [];
+      lastTransaction = typeof data.lastTransaction === 'number' ? data.lastTransaction : 0;
+      lastReset = typeof data.lastReset === 'number' ? data.lastReset : 0;
+      lastArchive = typeof data.lastArchive === 'number' ? data.lastArchive : 0;
+    }
 
     // 如果只有一个价格字段可用，则将其作为两个价格的共同基准
     if (basePrice <= 0 && currentPrice > 0) {
@@ -752,13 +1078,14 @@ export class MarketDataManager {
     return {
       basePrice,
       currentPrice,
-      demand24h: parseInt(data.demand_24h) || 0,
-      supply24h: parseInt(data.supply_24h) || 0,
-      lastUpdated: parseInt(data.last_updated) || 0,
-      priceTrend: data.price_trend || 'stable',
-      priceHistory: this._parsePriceHistory(data.price_history),
-      lastTransaction: parseInt(data.last_transaction) || 0,
-      lastReset: parseInt(data.last_reset) || 0
+      demand24h,
+      supply24h,
+      lastUpdated,
+      priceTrend,
+      priceHistory,
+      lastTransaction,
+      lastReset,
+      lastArchive
     };
   }
 
@@ -801,16 +1128,20 @@ export class MarketDataManager {
    */
   async _initializeGlobalStats(totalItems) {
     try {
-      const globalStats = {
-        total_items: totalItems.toString(),
-        last_update: Date.now().toString(),
-        update_count: '0',
-        avg_update_time: '0',
-        error_count: '0',
-        last_reset: Date.now().toString(),
-      };
+      await this._ensureMarketDataLoaded();
 
-      await this.redis.hSet(`farm_game:market:global:stats`, globalStats);
+      const now = Date.now();
+      const existing = this._marketData.globalStats || {};
+
+      this._marketData.globalStats = {
+        totalItems: typeof totalItems === 'number' ? totalItems : Number(existing.totalItems) || 0,
+        lastUpdate: existing.lastUpdate || now,
+        updateCount: Number(existing.updateCount) || 0,
+        avgUpdateTime: Number(existing.avgUpdateTime) || 0,
+        errorCount: Number(existing.errorCount) || 0,
+        lastReset: existing.lastReset || now,
+        lastResetCount: Number(existing.lastResetCount) || 0
+      };
     } catch (error) {
       logger.error(`[MarketDataManager] 初始化全局统计失败: ${error.message}`);
     }
