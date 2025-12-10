@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer'
 import path from 'path'
 import fs from 'fs'
+import { pathToFileURL } from 'url'
 import _ from 'lodash'
 import Renderer from '../../../lib/renderer/loader.js'
 import { _path, PLUGIN_NAME } from '../models/constants.js'
@@ -236,7 +237,8 @@ class Puppeteer {
       // 在页面脚本执行前注入数据
       await page.evaluateOnNewDocument((d) => { window.FARM_DATA = d }, data)
       await page.setViewport({ width: 800, height: 600, deviceScaleFactor: scale })
-      await page.goto(tplFile, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      const tplUrl = pathToFileURL(tplFile).href
+      await page.goto(tplUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
       // 等待 Vue 渲染完成
       await page.waitForSelector('body.ready', { timeout: 10000 }).catch(() => {
