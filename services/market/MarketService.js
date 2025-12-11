@@ -273,12 +273,13 @@ export class MarketService {
           const supplyHistory = await this.dataManager.getSupplyHistory(itemId);
           const yesterdaySupply = supplyHistory.length > 0 ? supplyHistory[0] : 0;
 
-          // 计算新价格
+          // 计算新价格（传入当前价格用于惯性计算）
           const priceResult = await this.priceCalculator.calculatePrice(
             itemId,
             stats.basePrice,
             baseSupply,
-            yesterdaySupply
+            yesterdaySupply,
+            stats.currentPrice
           );
 
           if (!priceResult.degraded) {
@@ -308,7 +309,9 @@ export class MarketService {
                 changePercent: ((priceResult.price - stats.currentPrice) / stats.currentPrice * 100).toFixed(2),
                 baseSupply,
                 yesterdaySupply,
-                ratio: priceResult.ratio,
+                activity: priceResult.activity,
+                momentum: priceResult.momentum,
+                volatility: priceResult.volatility,
                 timestamp: Date.now()
               });
             }
@@ -345,174 +348,6 @@ export class MarketService {
     } catch (error) {
       logger.error(`[MarketService] 重置每日统计失败: ${error.message}`);
       throw error;
-    }
-  }
-
-  /**
-   * 市场监控和告警 - 使用集成的监控逻辑
-   */
-  async monitorMarket() {
-    const startTime = Date.now();
-
-    try {
-      if (!this._isDynamicPricingEnabled()) {
-        return {
-          timestamp: Date.now(),
-          status: 'disabled',
-          summary: {
-            totalItems: 0,
-            healthyItems: 0,
-            warningItems: 0,
-            errorItems: 0
-          },
-          alerts: [],
-          performance: {
-            avgUpdateTime: 0,
-            errorRate: 0,
-            lastUpdate: 0
-          }
-        };
-      }
-
-      const floatingItems = this._getFloatingPriceItems();
-      const alerts = [];
-      const summary = {
-        totalItems: floatingItems.length,
-        healthyItems: 0,
-        warningItems: 0,
-        errorItems: 0
-      };
-
-      // 批量获取所有物品的统计数据
-      const allStats = await this.dataManager.getMarketStats(floatingItems);
-
-      // 分析每个物品的状态
-      for (const stats of allStats) {
-        if (stats.error) {
-          summary.errorItems++;
-          alerts.push({
-            level: 'ERROR',
-            itemId: stats.itemId,
-            message: '缺少统计数据',
-            value: 0,
-            threshold: 0
-          });
-          continue;
-        }
-
-        try {
-          let itemStatus = 'healthy';
-
-          // 检查价格异常波动（超过30%）
-          if (stats.basePrice > 0) {
-            const priceChangePercent = Math.abs((stats.currentPrice - stats.basePrice) / stats.basePrice * 100);
-            const priceThreshold = this.config.market.monitoring.price_change_threshold * 100; // 30%
-
-            if (priceChangePercent > priceThreshold) {
-              itemStatus = 'warning';
-              alerts.push({
-                level: 'WARN',
-                itemId: stats.itemId,
-                message: `价格波动异常: ${priceChangePercent.toFixed(1)}%`,
-                value: priceChangePercent,
-                threshold: priceThreshold
-              });
-            }
-          }
-
-          // 检查供需比例极端情况
-          if (stats.supply24h > 0) {
-            const ratio = stats.demand24h / stats.supply24h;
-            const extremeThreshold = this.config.market.monitoring.extreme_ratio_threshold; // 2.0
-
-            if (ratio > extremeThreshold * 5 || ratio < 1 / (extremeThreshold * 5)) {
-              itemStatus = 'warning';
-              alerts.push({
-                level: 'WARN',
-                itemId: stats.itemId,
-                message: `供需比例极端: ${ratio.toFixed(2)}`,
-                value: ratio,
-                threshold: extremeThreshold
-              });
-            }
-          }
-
-          // 更新统计
-          if (itemStatus === 'healthy') {
-            summary.healthyItems++;
-          } else if (itemStatus === 'warning') {
-            summary.warningItems++;
-          } else {
-            summary.errorItems++;
-          }
-
-        } catch (error) {
-          summary.errorItems++;
-          alerts.push({
-            level: 'ERROR',
-            itemId: stats.itemId,
-            message: `分析失败: ${error.message}`,
-            value: 0,
-            threshold: 0
-          });
-        }
-      }
-
-      // 获取性能指标
-      const performance = {
-        avgUpdateTime: this.stats.averageUpdateTime,
-        errorRate: summary.totalItems > 0 ? (summary.errorItems / summary.totalItems * 100) : 0,
-        lastUpdate: this.stats.lastUpdateTime
-      };
-
-      // 确定整体状态
-      let overallStatus = 'healthy';
-      if (summary.errorItems > 0) {
-        overallStatus = 'error';
-      } else if (summary.warningItems > 0) {
-        overallStatus = 'warning';
-      }
-
-      const duration = Date.now() - startTime;
-      logger.info(`[MarketService] 市场监控完成，耗时: ${duration}ms, 状态: ${overallStatus}`);
-
-      return {
-        timestamp: Date.now(),
-        status: overallStatus,
-        summary,
-        alerts,
-        performance
-      };
-
-    } catch (error) {
-      logger.error('市场监控失败', {
-        error: error.message,
-        stack: error.stack,
-        duration: `${Date.now() - startTime}ms`
-      });
-
-      return {
-        timestamp: Date.now(),
-        status: 'critical',
-        summary: {
-          totalItems: 0,
-          healthyItems: 0,
-          warningItems: 0,
-          errorItems: 0
-        },
-        alerts: [{
-          level: 'CRITICAL',
-          itemId: 'system',
-          message: `监控系统故障: ${error.message}`,
-          value: 0,
-          threshold: 0
-        }],
-        performance: {
-          avgUpdateTime: 0,
-          errorRate: 100,
-          lastUpdate: 0
-        }
-      };
     }
   }
 

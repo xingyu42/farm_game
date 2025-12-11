@@ -44,5 +44,3 @@
   # 分布式锁配置
   locks:
     timeout: 10000 # 锁超时时间（毫秒）
-    retryDelay: 100 # 重试延迟（毫秒）
-    maxRetries: 50 # 最大重试次数

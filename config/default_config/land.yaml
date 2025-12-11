@@ -69,14 +69,14 @@ quality:
     name: "普通土地"
     productionBonus: 0      # 增产百分比
     timeReduction: 0        # 时间减少百分比
-    expBonus: 0             # 经验加成百分比
+    experienceBonus: 0      # 经验加成百分比
     color: "#8B4513"        # 棕色
     
   copper:
     name: "铜质土地"
     productionBonus: 10     # +10%产量
     timeReduction: 10       # -10%时间
-    expBonus: 0             # 无经验加成
+    experienceBonus: 0      # 无经验加成
     color: "#CD7F32"        # 铜色
     levelRequired: 28
     goldCost: 50000
@@ -88,7 +88,7 @@ quality:
     name: "银质土地"
     productionBonus: 20     # +20%产量
     timeReduction: 20       # -20%时间
-    expBonus: 0             # 无经验加成
+    experienceBonus: 0      # 无经验加成
     color: "#C0C0C0"        # 银色
     levelRequired: 40
     goldCost: 200000
@@ -100,7 +100,7 @@ quality:
     name: "金质土地"
     productionBonus: 28     # +28%产量
     timeReduction: 20       # -20%时间
-    expBonus: 28            # +28%经验
+    experienceBonus: 28     # +28%经验
     color: "#FFD700"        # 金色
     levelRequired: 58
     goldCost: 800000

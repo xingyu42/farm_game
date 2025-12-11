@@ -4,22 +4,29 @@
 # 全局开关
 enabled: true
 
-# 价格调整参数（纯供应驱动模式）
+# 价格调整参数（活跃度驱动模式 v3.0）
 pricing:
-  sensitivity: 0.1 # 价格敏感度系数K
   min_ratio: 0.5 # 最小价格比率（基准价的50%）
   max_ratio: 1.5 # 最大价格比率（基准价的150%）
-  sell_price_ratio: 0.5 # 售价比例（相对于买价）
   stability_threshold: 2 # 价格稳定性判断阈值（百分比）
   extreme_ratio_max: 10 # 极端供需比上限
   extreme_ratio_min: 0.1 # 极端供需比下限
   min_base_supply: 1 # 基准供应量下限（防止除零）
   history_days: 7 # 供应历史记录天数
-  # 市场情绪扰动配置
-  market_sentiment:
-    enabled: true # 是否启用随机扰动
-    volatility: 0.05 # 波动率σ
-    max_noise: 0.15 # 截断阈值±15%
+
+  # 动态惯性配置（活跃度驱动）
+  momentum:
+    min: 0.3 # 活跃时惯性（30%延续昨价，响应快）
+    max: 0.85 # 冷清时惯性（85%延续昨价，变化慢）
+
+  # 动态波动配置（正态分布 N(0, σ)）
+  volatility:
+    min: 0.02 # 冷清时波动率σ（±2%微扰）
+    max: 0.12 # 活跃时波动率σ（±12%剧烈）
+    truncate: 3 # 截断倍数（±3σ）
+
+  # 活跃度判定
+  activity_threshold: 2 # actualSupply/baseSupply 达到此值视为完全活跃
 
 # 批量处理配置（新增）
 batch_size: 100 # 默认批次大小
@@ -36,19 +43,11 @@ floating_items:
     - tomato # 西红柿
     - wheat # 小麦
 
-# 监控和告警（增强版本）
-monitoring:
-  enabled: true # 是否启用监控
-  price_change_threshold: 0.3 # 价格变化超过30%时告警
-  extreme_ratio_threshold: 2.0 # 供需比极端值告警阈值
-
 # 任务调度器配置（增强版）
 scheduler:
-  enabled: true # 是否启用任务调度器
   max_concurrent_tasks: 3 # 最大并发任务数
   task_timeout: 300 # 任务超时时间（秒）
   retry_attempts: 2 # 任务重试次数
-  lock_ttl: 600 # 分布式锁TTL（秒）
   # 任务定义配置 - 支持配置驱动的任务管理
   tasks:
     - name: dailyPriceUpdate
@@ -59,14 +58,6 @@ scheduler:
       retry_attempts: 2 # 重试2次
       enabled: true # 启用任务
       description: "每日价格更新任务（归档供应历史+计算新价格+重置计数器）"
-
-    - name: monitoring
-      type: interval # 间隔执行任务
-      interval: 1800 # 30分钟（秒）
-      timeout: 120 # 2分钟超时（秒）
-      retry_attempts: 1 # 重试1次
-      enabled: true # 启用任务
-      description: "市场监控任务"
 
 # 事务配置
 transaction:

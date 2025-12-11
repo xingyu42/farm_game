@@ -23,8 +23,7 @@ export class TaskScheduler {
 
         // 任务映射表
         this.taskMapping = {
-            dailyPriceUpdate: () => this.marketService.executeDailyPriceUpdate(),
-            monitoring: () => this.marketService.monitorMarket()
+            dailyPriceUpdate: () => this.marketService.executeDailyPriceUpdate()
         };
     }
 

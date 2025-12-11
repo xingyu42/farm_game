@@ -208,7 +208,6 @@ export class MarketDataManager {
                   stats: {
                     basePrice,
                     currentPrice: basePrice,
-                    demand24h: 0,
                     supply24h: 0,
                     lastUpdated: now,
                     priceTrend: 'stable',
@@ -252,6 +251,7 @@ export class MarketDataManager {
 
   /**
    * 记录交易统计数据（内存写入 + 防抖持久化）
+   * 仅记录卖出（supply）统计，买入（buy）交易静默忽略
    * @param {string} itemId 物品ID
    * @param {number} quantity 交易数量
    * @param {string} transactionType 交易类型: 'buy' | 'sell'
@@ -259,6 +259,11 @@ export class MarketDataManager {
    */
   async recordTransaction(itemId, quantity, transactionType) {
     try {
+      // 只记录 sell（供应统计），buy 交易不记录
+      if (transactionType === 'buy') {
+        return true;
+      }
+
       const isFloating = await this._isFloatingPriceItem(itemId);
       if (!isFloating) {
         return false;
@@ -273,7 +278,6 @@ export class MarketDataManager {
       }
 
       const stats = itemData.stats;
-      const field = transactionType === 'buy' ? 'demand24h' : 'supply24h';
       const delta = Number(quantity);
 
       // 验证数量有效性
@@ -282,9 +286,9 @@ export class MarketDataManager {
         return false;
       }
 
-      const current = Number.isFinite(stats[field]) ? stats[field] : 0;
+      const current = Number.isFinite(stats.supply24h) ? stats.supply24h : 0;
 
-      stats[field] = current + delta;
+      stats.supply24h = current + delta;
       stats.lastTransaction = Date.now();
 
       this._markDirty();
@@ -713,7 +717,7 @@ export class MarketDataManager {
   }
 
   /**
-   * 重置每日统计数据（重置内存中的 demand24h/supply24h）
+   * 重置每日统计数据（重置内存中的 supply24h）
    * @returns {Promise<Object>} 重置结果统计
    */
   async resetDailyStats() {
@@ -749,7 +753,6 @@ export class MarketDataManager {
             continue;
           }
 
-          itemData.stats.demand24h = 0;
           itemData.stats.supply24h = 0;
           itemData.stats.lastReset = resetTime;
 
@@ -831,7 +834,6 @@ export class MarketDataManager {
                 stats: {
                   basePrice,
                   currentPrice: basePrice,
-                  demand24h: 0,
                   supply24h: 0,
                   lastUpdated: now,
                   priceTrend: 'stable',
@@ -852,9 +854,6 @@ export class MarketDataManager {
             }
             if (data.current_price !== undefined) {
               stats.currentPrice = parseFloat(data.current_price) || stats.currentPrice;
-            }
-            if (data.demand_24h !== undefined) {
-              stats.demand24h = parseInt(data.demand_24h) || 0;
             }
             if (data.supply_24h !== undefined) {
               stats.supply24h = parseInt(data.supply_24h) || 0;
@@ -1020,7 +1019,6 @@ export class MarketDataManager {
       return {
         basePrice: 0,
         currentPrice: 0,
-        demand24h: 0,
         supply24h: 0,
         lastUpdated: 0,
         priceTrend: 'stable',
@@ -1033,7 +1031,6 @@ export class MarketDataManager {
 
     let basePrice;
     let currentPrice;
-    let demand24h;
     let supply24h;
     let lastUpdated;
     let priceTrend;
@@ -1046,7 +1043,6 @@ export class MarketDataManager {
     if (data.base_price !== undefined || data.current_price !== undefined) {
       basePrice = parseFloat(data.base_price) || 0;
       currentPrice = parseFloat(data.current_price) || 0;
-      demand24h = parseInt(data.demand_24h) || 0;
       supply24h = parseInt(data.supply_24h) || 0;
       lastUpdated = parseInt(data.last_updated) || 0;
       priceTrend = data.price_trend || 'stable';
@@ -1058,7 +1054,6 @@ export class MarketDataManager {
       // JSON 文件中的 stats 结构（驼峰命名）
       basePrice = typeof data.basePrice === 'number' ? data.basePrice : 0;
       currentPrice = typeof data.currentPrice === 'number' ? data.currentPrice : 0;
-      demand24h = typeof data.demand24h === 'number' ? data.demand24h : 0;
       supply24h = typeof data.supply24h === 'number' ? data.supply24h : 0;
       lastUpdated = typeof data.lastUpdated === 'number' ? data.lastUpdated : 0;
       priceTrend = data.priceTrend || 'stable';
@@ -1078,7 +1073,6 @@ export class MarketDataManager {
     return {
       basePrice,
       currentPrice,
-      demand24h,
       supply24h,
       lastUpdated,
       priceTrend,
