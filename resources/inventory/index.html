@@ -39,11 +39,8 @@
             </div>
             <div class="w-36 h-4 bg-[#3e2515] border-2 border-[#2a1a0a] rounded-sm relative overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5)]">
                 <div class="h-full relative rounded-sm"
-                     :class="capacityClass === 'full' ? 'bg-gradient-to-b from-red-400 to-red-600' :
-                             capacityClass === 'warning' ? 'bg-gradient-to-b from-amber-400 to-amber-600' :
-                             'bg-gradient-to-b from-emerald-400 to-emerald-600'"
-                     :style="{ width: data.usagePercentage + '%' }">
-                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-b from-white/40 to-transparent"></div>
+                     :style="{ width: data.usagePercentage + '%', background: capacityClass === 'full' ? 'linear-gradient(to bottom, #f87171, #dc2626)' : capacityClass === 'warning' ? 'linear-gradient(to bottom, #fbbf24, #d97706)' : 'linear-gradient(to bottom, #34d399, #059669)' }">
+                    <div class="absolute inset-0 h-1 bg-gradient-to-b from-white/40 to-transparent"></div>
                 </div>
             </div>
         </div>

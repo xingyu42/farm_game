@@ -248,12 +248,11 @@ class Puppeteer {
           content: `
             @font-face {
               font-family: 'Noto Color Emoji';
-              src: url('${fontUrl}') format('truetype');
-              font-display: swap;
-              unicode-range: U+1F300-1F9FF, U+2600-26FF, U+2700-27BF, U+FE00-FE0F, U+1F1E0-1F1FF;
+              src: url('${fontUrl}');
+              unicode-range: U+200D, U+2600-26FF, U+2700-27BF, U+FE00-FE0F, U+1F000-1FFFF;
             }
-            body {
-              font-family: 'Noto Color Emoji', system-ui, sans-serif !important;
+            body, * {
+              font-family: system-ui, sans-serif, 'Noto Color Emoji';
             }
           `
         })

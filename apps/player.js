@@ -64,8 +64,8 @@ export class player extends plugin {
       const currentBonus = await this.protectionService.getProtectionBonus(userId);
       const stealStats = await this.stealService.getStealStatistics(userId);
 
-      const renderData = this._buildPlayerRenderData(playerData, userName, levelInfo, currentBonus, stealStats);
-      await Puppeteer.render('player/index', renderData, { e, scale: 2.0 });
+      const renderData = this._buildPlayerRenderData(userId, playerData, userName, levelInfo, currentBonus, stealStats);
+      await Puppeteer.renderVue('player/index', renderData, { e, scale: 2.0 });
       return true;
     } catch (error) {
       logger.error('[农场游戏] 显示玩家信息失败:', error);
@@ -77,7 +77,7 @@ export class player extends plugin {
   /**
    * 构建玩家信息渲染数据
    */
-  _buildPlayerRenderData(playerData, userName, levelInfo, currentBonus, stealStats) {
+  _buildPlayerRenderData(userId, playerData, userName, levelInfo, currentBonus, stealStats) {
     const now = Date.now();
     const experienceToNext = levelInfo ? levelInfo.experienceRequired : playerData.experience;
     const expPercentage = levelInfo ? Math.min((playerData.experience / experienceToNext) * 100, 100) : 100;
@@ -110,7 +110,8 @@ export class player extends plugin {
     const stealCooldown = canSteal ? 0 : Math.ceil(stealStats.cooldownStatus.remainingTime / 60000);
 
     return {
-      saveId: `player_${playerData.userId}`,
+      saveId: `player_${userId}`,
+      avatarUrl: `https://q.qlogo.cn/headimg_dl?dst_uin=${userId}&spec=640`,
       playerName: playerData.name || userName,
       oderId: playerData.oderId || playerData.oderId,
       level: playerData.level,
@@ -192,7 +193,7 @@ export class player extends plugin {
       }
 
       const renderData = this._buildSignInRenderData(signInResult, userName);
-      await Puppeteer.render('signin/index', renderData, { e, scale: 2.0 });
+      await Puppeteer.renderVue('signin/index', renderData, { e, scale: 2.0 });
       return true;
 
     } catch (error) {

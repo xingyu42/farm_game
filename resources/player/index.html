@@ -1,163 +1,205 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-
+<html lang="zh-CN" data-theme="garden">
 <head>
-    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{pluResPath}}player/index.css" />
-    <link rel="shortcut icon" href="#" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玩家信息</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
     <style>
-        @font-face {
-            font-family: 'Noto Color Emoji';
-            src: url('{{pluResPath}}common/fonts/NotoColorEmoji.ttf') format('truetype');
-            font-display: swap;
-            unicode-range: U+1F300-1F9FF, U+2600-26FF, U+2700-27BF, U+FE00-FE0F, U+1F1E0-1F1FF;
-        }
-        body {
-            font-family: 'Noto Color Emoji', system-ui, sans-serif;
-        }
-        #container {
-            background: url("{{pluResPath}}help/bg.jpg") center !important;
-            background-size: cover !important;
-        }
+        [v-cloak] { display: none; }
+        .bg-farm { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+        .glass { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); }
     </style>
 </head>
+<body class="bg-farm min-h-screen p-6 font-sans">
 
-<body>
-    <div class="container" id="container">
+<div id="app" v-cloak class="bg-farm w-[520px] p-5 flex flex-col gap-4">
 
-        <!-- Header -->
-        <div class="glass-panel header">
-            <div class="avatar-box">🌾</div>
-            <div class="header-info">
-                <div class="player-name">{{playerName}} 的农场</div>
-                <div class="player-uid">ID: {{oderId}}</div>
+    <!-- Header -->
+    <div class="glass rounded-2xl p-4 shadow-md flex items-center gap-3">
+        <div class="w-16 h-16 rounded-full overflow-hidden shadow-lg ring-2 ring-green-400 ring-offset-2">
+            <img :src="avatarUrl" class="w-full h-full object-cover" />
+        </div>
+        <div class="flex-1">
+            <div class="text-xl font-extrabold text-green-700">{{ playerName }} 的农场</div>
+            <div class="badge badge-ghost text-xs mt-1">ID: {{ oderId }}</div>
+        </div>
+        <div class="badge badge-warning badge-lg font-bold text-lg px-4 py-3 shadow">Lv.{{ level }}</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="glass rounded-2xl p-4 shadow-md flex flex-col gap-3">
+        <!-- EXP Bar -->
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-green-700 w-8">EXP</span>
+            <div class="flex-1 h-5 bg-black/10 rounded-full relative overflow-hidden shadow-inner">
+                <div class="h-full bg-[linear-gradient(to_right,#4ade80,#16a34a)] rounded-full transition-all duration-500"
+                     :style="{ width: expPercentage + '%' }"></div>
+                <span class="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white drop-shadow">
+                    {{ experience }} / {{ experienceToNext }}
+                </span>
             </div>
-            <div class="level-badge">Lv.{{level}}</div>
+        </div>
+
+        <!-- Unlock Preview -->
+        <div v-if="nextUnlocksText" class="flex items-center gap-3 bg-green-50/60 p-2 rounded-xl border border-dashed border-green-300">
+            <span class="text-xs font-bold text-green-700 w-8">解锁</span>
+            <span class="text-[11px] text-green-700 font-semibold">Lv.{{ nextLevel }}：{{ nextUnlocksText }}</span>
         </div>
 
         <!-- Core Stats -->
-        <div class="glass-panel level-section">
-            <div class="level-row">
-                <span class="exp-label">EXP</span>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: {{expPercentage}}%;"></div>
-                    <div class="progress-text">{{experience}} / {{experienceToNext}}</div>
-                </div>
+        <div class="grid grid-cols-3 gap-3">
+            <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
+                <span class="text-2xl block">💰</span>
+                <span class="text-sm font-bold text-stone-800 block">{{ coins }}</span>
+                <span class="text-[10px] text-stone-500">金币</span>
             </div>
-
-            {{if nextUnlocksText}}
-            <div class="unlock-row">
-                <span class="exp-label">解锁</span>
-                <div class="unlock-text">Lv.{{nextLevel}}：{{nextUnlocksText}}</div>
+            <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
+                <span class="text-2xl block">🏞️</span>
+                <span class="text-sm font-bold text-stone-800 block">{{ landCount }} / {{ maxLandCount }}</span>
+                <span class="text-[10px] text-stone-500">土地</span>
             </div>
-            {{/if}}
-
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="stat-icon">💰</span>
-                    <span class="stat-value">{{coins}}</span>
-                    <span class="stat-label">金币</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-icon">🏞️</span>
-                    <span class="stat-value">{{landCount}} / {{maxLandCount}}</span>
-                    <span class="stat-label">土地</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-icon">📦</span>
-                    <span class="stat-value">{{inventoryUsage}} / {{inventoryCapacity}}</span>
-                    <span class="stat-label">仓库</span>
-                </div>
+            <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
+                <span class="text-2xl block">📦</span>
+                <span class="text-sm font-bold text-stone-800 block">{{ inventoryUsage }} / {{ inventoryCapacity }}</span>
+                <span class="text-[10px] text-stone-500">仓库</span>
             </div>
         </div>
-
-        <!-- Protection -->
-        <div class="glass-panel info-section">
-            <div class="section-header">
-                <span>🛡️ 农场防护</span>
-            </div>
-            <div class="protection-grid">
-                <div class="protection-card">
-                    <div class="detail-icon">🏰</div>
-                    <div class="detail-content">
-                        <span class="detail-title">基础防御</span>
-                        <span class="detail-value">+{{defenseBonus}}%</span>
-                    </div>
-                </div>
-                <div class="protection-card dog-card">
-                    <div class="detail-icon">🐕</div>
-                    <div class="detail-content">
-                        <span class="detail-title dog-title">看家萌宠</span>
-                        {{if dogFoodActive}}
-                        <span class="detail-value dog-value">{{dogFoodName}}</span>
-                        <span class="detail-sub">+{{dogFoodBonus}}% | 剩余 {{dogFoodRemaining}}分钟</span>
-                        {{else}}
-                        <span class="detail-value dog-value">未激活</span>
-                        <span class="detail-sub">使用狗粮激活防护</span>
-                        {{/if}}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Steal Status -->
-        <div class="glass-panel info-section">
-            <div class="section-header">
-                <span>🥷 偷菜情报</span>
-                {{if canSteal}}
-                <span class="status-tag ready">准备就绪</span>
-                {{else}}
-                <span class="status-tag cooldown">冷却中 {{stealCooldown}}分钟</span>
-                {{/if}}
-            </div>
-            <div class="steal-status">
-                <div class="steal-item">
-                    <span>📅 今日次数</span>
-                    <span class="steal-value">{{todayStealCount}}</span>
-                </div>
-                <div class="steal-item">
-                    <span>🎯 成功率</span>
-                    <span class="steal-value">{{stealRate}}%</span>
-                </div>
-                <div class="steal-item">
-                    <span>🌾 最多偷取</span>
-                    <span class="steal-value">{{maxStealPerAttempt}}块</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sign In -->
-        <div class="glass-panel info-section">
-            <div class="signin-row">
-                <div class="signin-item">
-                    <span class="signin-label">📅 总签到</span>
-                    <span class="signin-value total">{{totalSignDays}} 天</span>
-                </div>
-                <div class="signin-item">
-                    <span class="signin-label">📈 连续签到</span>
-                    <span class="signin-value consecutive">{{consecutiveDays}} 天</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tips -->
-        {{if isNewPlayer}}
-        <div class="glass-panel tips-section">
-            <div class="tips-title">🎉 欢迎来到农场世界！</div>
-            <div class="tips-content">💡 输入 #nc帮助 查看游戏指令</div>
-        </div>
-        {{else}}
-        <div class="glass-panel tips-section">
-            <div class="tips-content">💡 使用 #使用狗粮 激活防护</div>
-        </div>
-        {{/if}}
-
-        <div class="footer">
-            Generated by Miao-Yunzai Farm Plugin
-        </div>
-
     </div>
-</body>
 
+    <!-- Protection -->
+    <div class="glass rounded-2xl p-4 shadow-md">
+        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200">🛡️ 农场防护</div>
+        <div class="flex gap-3">
+            <div class="flex-1 bg-[linear-gradient(135deg,#eff6ff,#dbeafe)] rounded-xl p-3 flex items-center gap-3 border border-blue-200">
+                <span class="text-2xl">🏰</span>
+                <div class="flex flex-col">
+                    <span class="text-[11px] text-slate-500 font-bold">基础防御</span>
+                    <span class="text-sm font-bold text-slate-800">+{{ defenseBonus }}%</span>
+                </div>
+            </div>
+            <div class="flex-1 bg-[linear-gradient(135deg,#fff7ed,#ffedd5)] rounded-xl p-3 flex items-center gap-3 border border-orange-200">
+                <span class="text-2xl">🐕</span>
+                <div class="flex flex-col">
+                    <span class="text-[11px] text-orange-700 font-bold">看家萌宠</span>
+                    <template v-if="dogFoodActive">
+                        <span class="text-sm font-bold text-orange-800">{{ dogFoodName }}</span>
+                        <span class="text-[10px] text-stone-500">+{{ dogFoodBonus }}% | 剩余 {{ dogFoodRemaining }}分钟</span>
+                    </template>
+                    <template v-else>
+                        <span class="text-sm font-bold text-orange-800">未激活</span>
+                        <span class="text-[10px] text-stone-500">使用狗粮激活防护</span>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Steal Status -->
+    <div class="glass rounded-2xl p-4 shadow-md">
+        <div class="flex items-center pb-2 mb-3 border-b-2 border-dashed border-stone-200">
+            <span class="text-sm font-bold text-stone-700">🥷 偷菜情报</span>
+            <span v-if="canSteal" class="ml-auto badge badge-success badge-sm text-white">准备就绪</span>
+            <span v-else class="ml-auto badge badge-error badge-sm text-white">冷却中 {{ stealCooldown }}分钟</span>
+        </div>
+        <div class="bg-stone-100/50 rounded-xl p-3 flex justify-between">
+            <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
+                <span>📅 今日次数</span>
+                <span class="text-sm font-bold text-stone-800">{{ todayStealCount }}</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
+                <span>🎯 成功率</span>
+                <span class="text-sm font-bold text-stone-800">{{ stealRate }}%</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
+                <span>🌾 最多偷取</span>
+                <span class="text-sm font-bold text-stone-800">{{ maxStealPerAttempt }}块</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign In Stats -->
+    <div class="glass rounded-2xl p-4 shadow-md">
+        <div class="flex justify-around bg-white/60 rounded-xl p-3">
+            <div class="flex flex-col items-center gap-1">
+                <span class="text-xs text-slate-500">📅 总签到</span>
+                <span class="text-lg font-bold text-blue-600">{{ totalSignDays }} 天</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+                <span class="text-xs text-slate-500">📈 连续签到</span>
+                <span class="text-lg font-bold text-orange-500">{{ consecutiveDays }} 天</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tips -->
+    <div v-if="isNewPlayer" class="glass rounded-2xl p-4 shadow-md text-center">
+        <div class="text-sm font-bold text-green-700 mb-1">🎉 欢迎来到农场世界！</div>
+        <div class="text-xs text-stone-600">💡 输入 #nc帮助 查看游戏指令</div>
+    </div>
+    <div v-else class="glass rounded-2xl p-4 shadow-md text-center">
+        <div class="text-xs text-stone-600">💡 使用 #使用狗粮 激活防护</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center text-[10px] text-stone-500/70 py-1">
+        Generated by Miao-Yunzai Farm Plugin
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const s = window.FARM_DATA || {};
+
+            const playerName = ref(s.playerName || '未知');
+            const avatarUrl = ref(s.avatarUrl || '');
+            const oderId = ref(s.oderId || '');
+            const level = ref(s.level || 1);
+            const expPercentage = ref(s.expPercentage || 0);
+            const experience = ref(s.experience || 0);
+            const experienceToNext = ref(s.experienceToNext || 0);
+            const nextLevel = ref(s.nextLevel || 2);
+            const nextUnlocksText = ref(s.nextUnlocksText || '');
+            const coins = ref(s.coins || 0);
+            const landCount = ref(s.landCount || 0);
+            const maxLandCount = ref(s.maxLandCount || 0);
+            const inventoryUsage = ref(s.inventoryUsage || 0);
+            const inventoryCapacity = ref(s.inventoryCapacity || 0);
+            const defenseBonus = ref(s.defenseBonus || 0);
+            const dogFoodActive = ref(s.dogFoodActive || false);
+            const dogFoodName = ref(s.dogFoodName || '');
+            const dogFoodBonus = ref(s.dogFoodBonus || 0);
+            const dogFoodRemaining = ref(s.dogFoodRemaining || 0);
+            const canSteal = ref(s.canSteal || false);
+            const stealCooldown = ref(s.stealCooldown || 0);
+            const todayStealCount = ref(s.todayStealCount || 0);
+            const stealRate = ref(s.stealRate || 0);
+            const maxStealPerAttempt = ref(s.maxStealPerAttempt || 0);
+            const totalSignDays = ref(s.totalSignDays || 0);
+            const consecutiveDays = ref(s.consecutiveDays || 0);
+            const isNewPlayer = ref(s.isNewPlayer || false);
+
+            onMounted(() => {
+                document.body.classList.add('ready');
+            });
+
+            return {
+                playerName, avatarUrl, oderId, level, expPercentage, experience, experienceToNext,
+                nextLevel, nextUnlocksText, coins, landCount, maxLandCount,
+                inventoryUsage, inventoryCapacity, defenseBonus,
+                dogFoodActive, dogFoodName, dogFoodBonus, dogFoodRemaining,
+                canSteal, stealCooldown, todayStealCount, stealRate, maxStealPerAttempt,
+                totalSignDays, consecutiveDays, isNewPlayer
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
 </html>
