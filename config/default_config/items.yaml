@@ -66,6 +66,15 @@ seeds:
     maxStack: 99
     icon: 🌱
 
+  blueberry_seed:
+    name: "蓝莓种子"
+    price: 22
+    category: "seeds"
+    description: "适合中后期种植的水果种子"
+    requiredLevel: 10
+    maxStack: 99
+    icon: 🌱
+
   grape_seed:
     name: "葡萄种子"
     price: 28
@@ -81,6 +90,186 @@ seeds:
     category: "seeds"
     description: "南瓜的播种用种子"
     requiredLevel: 14
+    maxStack: 99
+    icon: 🌱
+
+  onion_seed:
+    name: "洋葱种子"
+    price: 12
+    category: "seeds"
+    description: "洋葱的播种用种子"
+    requiredLevel: 5
+    maxStack: 99
+    icon: 🌱
+
+  cucumber_seed:
+    name: "黄瓜种子"
+    price: 16
+    category: "seeds"
+    description: "黄瓜的播种用种子"
+    requiredLevel: 7
+    maxStack: 99
+    icon: 🌱
+
+  pepper_seed:
+    name: "辣椒种子"
+    price: 20
+    category: "seeds"
+    description: "辣椒的播种用种子"
+    requiredLevel: 9
+    maxStack: 99
+    icon: 🌱
+
+  eggplant_seed:
+    name: "茄子种子"
+    price: 26
+    category: "seeds"
+    description: "茄子的播种用种子"
+    requiredLevel: 11
+    maxStack: 99
+    icon: 🌱
+
+  melon_seed:
+    name: "甜瓜种子"
+    price: 30
+    category: "seeds"
+    description: "甜瓜的播种用种子"
+    requiredLevel: 13
+    maxStack: 99
+    icon: 🌱
+
+  sunflower_seed:
+    name: "向日葵种子"
+    price: 32
+    category: "seeds"
+    description: "向日葵的播种用种子"
+    requiredLevel: 15
+    maxStack: 99
+    icon: 🌱
+
+  beet_seed:
+    name: "甜菜种子"
+    price: 36
+    category: "seeds"
+    description: "甜菜的播种用种子"
+    requiredLevel: 18
+    maxStack: 99
+    icon: 🌱
+
+  cauliflower_seed:
+    name: "花椰菜种子"
+    price: 40
+    category: "seeds"
+    description: "花椰菜的播种用种子"
+    requiredLevel: 21
+    maxStack: 99
+    icon: 🌱
+
+  garlic_seed:
+    name: "大蒜种子"
+    price: 38
+    category: "seeds"
+    description: "大蒜的播种用种子"
+    requiredLevel: 24
+    maxStack: 99
+    icon: 🌱
+
+  cranberry_seed:
+    name: "蔓越莓种子"
+    price: 45
+    category: "seeds"
+    description: "蔓越莓的播种用种子"
+    requiredLevel: 27
+    maxStack: 99
+    icon: 🌱
+
+  pineapple_seed:
+    name: "菠萝种子"
+    price: 55
+    category: "seeds"
+    description: "菠萝的播种用种子"
+    requiredLevel: 30
+    maxStack: 99
+    icon: 🌱
+
+  tea_leaf_seed:
+    name: "茶叶种子"
+    price: 65
+    category: "seeds"
+    description: "茶叶的播种用种子"
+    requiredLevel: 35
+    maxStack: 99
+    icon: 🌱
+
+  lotus_root_seed:
+    name: "莲藕种子"
+    price: 80
+    category: "seeds"
+    description: "莲藕的播种用种子"
+    requiredLevel: 40
+    maxStack: 99
+    icon: 🌱
+
+  cactus_fruit_seed:
+    name: "仙人掌果种子"
+    price: 95
+    category: "seeds"
+    description: "仙人掌果的播种用种子"
+    requiredLevel: 45
+    maxStack: 99
+    icon: 🌱
+
+  starfruit_seed:
+    name: "杨桃种子"
+    price: 120
+    category: "seeds"
+    description: "杨桃的播种用种子"
+    requiredLevel: 50
+    maxStack: 99
+    icon: 🌱
+
+  ancient_fruit_seed:
+    name: "远古果实种子"
+    price: 170
+    category: "seeds"
+    description: "远古果实的播种用种子"
+    requiredLevel: 60
+    maxStack: 99
+    icon: 🌱
+
+  dragonfruit_seed:
+    name: "火龙果种子"
+    price: 230
+    category: "seeds"
+    description: "火龙果的播种用种子"
+    requiredLevel: 70
+    maxStack: 99
+    icon: 🌱
+
+  ginseng_seed:
+    name: "人参种子"
+    price: 300
+    category: "seeds"
+    description: "人参的播种用种子"
+    requiredLevel: 80
+    maxStack: 99
+    icon: 🌱
+
+  saffron_seed:
+    name: "藏红花种子"
+    price: 400
+    category: "seeds"
+    description: "藏红花的播种用种子"
+    requiredLevel: 90
+    maxStack: 99
+    icon: 🌱
+
+  eternal_fruit_seed:
+    name: "永恒之果种子"
+    price: 500
+    category: "seeds"
+    description: "永恒之果的播种用种子"
+    requiredLevel: 100
     maxStack: 99
     icon: 🌱
 

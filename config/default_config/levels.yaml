@@ -7,78 +7,78 @@ requirements:
   1:
     experience: 0 # 1级起始经验
     description: "新手农夫"
-    unlocks: ["carrot"] # 解锁作物
+    unlocks: ["胡萝卜"] # 解锁作物
 
   2:
     experience: 100 # 升到2级需要的总经验
     description: "见习农夫"
-    unlocks: ["wheat"]
+    unlocks: ["小麦", "生菜"]
 
   3:
     experience: 250 # 升到3级需要的总经验
     description: "熟练农夫"
-    unlocks: ["tomato", "watering_can"]
+    unlocks: ["番茄", "浇水壶"]
 
   4:
     experience: 450 # 升到4级需要的总经验
     description: "专业农夫"
-    unlocks: []
+    unlocks: ["土豆"]
 
   5:
     experience: 700 # 升到5级需要的总经验
     description: "农场主"
-    unlocks: ["premium_fertilizer"]
+    unlocks: ["高级肥料", "洋葱"]
 
   6:
     experience: 1000
     description: "高级农夫"
-    unlocks: ["advanced_seeds"]
+    unlocks: ["高级种子", "玉米"]
 
   7:
     experience: 1350
     description: "农业专家"
-    unlocks: []
+    unlocks: ["黄瓜"]
 
   8:
     experience: 1750
     description: "大地园丁"
-    unlocks: ["rare_fertilizer"]
+    unlocks: ["稀有肥料", "草莓"]
 
   9:
     experience: 2200
     description: "作物大师"
-    unlocks: []
+    unlocks: ["辣椒"]
 
   10:
     experience: 2700
     description: "丰收之王"
-    unlocks: []
+    unlocks: ["蓝莓"]
 
   11:
     experience: 3250
     description: "农业先驱"
-    unlocks: []
+    unlocks: ["茄子"]
 
   12:
     experience: 3850
     description: "田野守护者"
-    unlocks: []
+    unlocks: ["葡萄"]
 
   13:
     experience: 4500
     description: "收获使者"
-    unlocks: []
+    unlocks: ["甜瓜"]
 
   14:
     experience: 4750
     description: "绿洲开拓者"
-    unlocks: []
+    unlocks: ["南瓜"]
 
   # 高级等级（15-30）
   15:
     experience: 5000
     description: "农业导师"
-    unlocks: ["mentor_badge"]
+    unlocks: ["导师徽章", "向日葵"]
 
   16:
     experience: 6250
@@ -93,7 +93,7 @@ requirements:
   18:
     experience: 8750
     description: "四季农人"
-    unlocks: []
+    unlocks: ["甜菜"]
 
   19:
     experience: 9500
@@ -103,12 +103,12 @@ requirements:
   20:
     experience: 10000
     description: "土地管理者"
-    unlocks: ["land_manager_badge"]
+    unlocks: ["土地管理者徽章"]
 
   21:
     experience: 12000
     description: "晨曦耕者"
-    unlocks: []
+    unlocks: ["花椰菜"]
 
   22:
     experience: 14000
@@ -123,12 +123,12 @@ requirements:
   24:
     experience: 17500
     description: "五谷丰登"
-    unlocks: []
+    unlocks: ["大蒜"]
 
   25:
     experience: 18000
     description: "农业科学家"
-    unlocks: ["scientist_badge"]
+    unlocks: ["科学家徽章"]
 
   26:
     experience: 21000
@@ -138,7 +138,7 @@ requirements:
   27:
     experience: 24000
     description: "金穗守护"
-    unlocks: []
+    unlocks: ["蔓越莓"]
 
   28:
     experience: 27000
@@ -153,7 +153,7 @@ requirements:
   30:
     experience: 30000
     description: "田园领主"
-    unlocks: ["poet_badge"]
+    unlocks: ["诗人徽章", "菠萝"]
 
   # 专家等级（31-60）
   31:
@@ -179,7 +179,7 @@ requirements:
   35:
     experience: 45000
     description: "农庄管家"
-    unlocks: []
+    unlocks: ["茶叶"]
 
   36:
     experience: 48000
@@ -204,7 +204,7 @@ requirements:
   40:
     experience: 60000
     description: "农业革新者"
-    unlocks: ["innovator_badge", "silver_land_unlock"]
+    unlocks: ["创新者徽章", "银色土地解锁", "莲藕"]
 
   41:
     experience: 66000
@@ -229,7 +229,7 @@ requirements:
   45:
     experience: 90000
     description: "四时主宰"
-    unlocks: []
+    unlocks: ["仙人掌果"]
 
   46:
     experience: 96000
@@ -254,7 +254,7 @@ requirements:
   50:
     experience: 120000
     description: "丰收传说"
-    unlocks: ["legend_badge"]
+    unlocks: ["传奇徽章", "杨桃"]
 
   51:
     experience: 130000
@@ -294,7 +294,7 @@ requirements:
   58:
     experience: 200000
     description: "黄金农夫"
-    unlocks: ["gold_land_unlock"]
+    unlocks: ["金色土地解锁"]
 
   59:
     experience: 225000
@@ -304,7 +304,7 @@ requirements:
   60:
     experience: 250000
     description: "农业帝王"
-    unlocks: ["emperor_badge"]
+    unlocks: ["帝王徽章", "远古水果"]
 
   # 传奇等级（61-100）
   61:
@@ -355,7 +355,7 @@ requirements:
   70:
     experience: 400000
     description: "大地之神"
-    unlocks: ["god_badge"]
+    unlocks: ["神之徽章", "火龙果"]
 
   71:
     experience: 420000
@@ -405,7 +405,7 @@ requirements:
   80:
     experience: 600000
     description: "永恒收割者"
-    unlocks: ["eternal_badge"]
+    unlocks: ["永恒徽章", "人参"]
 
   81:
     experience: 630000
@@ -455,7 +455,7 @@ requirements:
   90:
     experience: 900000
     description: "宇宙农夫"
-    unlocks: ["cosmic_badge"]
+    unlocks: ["宇宙徽章", "藏红花"]
 
   91:
     experience: 960000
@@ -505,7 +505,7 @@ requirements:
   100:
     experience: 1500000
     description: "无上农神"
-    unlocks: ["supreme_badge"]
+    unlocks: ["至尊徽章", "永恒之果"]
 
 # 等级奖励配置
 rewards:

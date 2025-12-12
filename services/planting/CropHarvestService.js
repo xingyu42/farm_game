@@ -7,6 +7,7 @@ import Calculator from '../../utils/calculator.js';
 import { PlantingUtils } from './PlantingUtils.js';
 import PlantingMessageBuilder from './PlantingMessageBuilder.js';
 import LevelCalculator from '../player/LevelCalculator.js';
+import ItemResolver from '../../utils/ItemResolver.js';
 
 class CropHarvestService {
   constructor(plantingDataService, inventoryService, landService, playerService, cropMonitorService, config) {
@@ -23,6 +24,7 @@ class CropHarvestService {
     this.validator = new PlantingUtils(config, logger);
     this.messageBuilder = new PlantingMessageBuilder();
     this.levelCalculator = new LevelCalculator(config);
+    this.itemResolver = new ItemResolver(config);
   }
 
   /**
@@ -137,6 +139,8 @@ class CropHarvestService {
         }
 
         // 4. 执行收获操作
+        let levelUpInfo = null;
+        let unlockedItemNames = [];
         if (harvestedCrops.length > 0) {
           for (const [itemId, amount] of Object.entries(inventoryAdditions)) {
             const addResult = await this.inventoryService.addItem(userId, itemId, amount);
@@ -149,7 +153,14 @@ class CropHarvestService {
           await this.plantingDataService.updateMultipleLands(userId, landUpdates);
 
           if (totalExp > 0) {
-            await this.playerService.addExp(userId, totalExp);
+            const expResult = await this.playerService.addExp(userId, totalExp);
+            levelUpInfo = expResult?.levelUp || null;
+            if (levelUpInfo?.unlockedItems?.length) {
+              unlockedItemNames = levelUpInfo.unlockedItems.map(itemId => {
+                const cfg = this.itemResolver.findItemById(itemId);
+                return cfg?.name ?? itemId;
+              });
+            }
           }
 
           const harvestedLandIds = harvestedCrops.map(crop => crop.landId);
@@ -163,11 +174,12 @@ class CropHarvestService {
             harvestedCrops,
             skippedCrops,
             totalExp,
-            { currentUsage: inventory.capacity - remainingSpace, capacity: inventory.capacity }
+            { currentUsage: inventory.capacity - remainingSpace, capacity: inventory.capacity },
+            { levelUp: levelUpInfo, unlockedItemNames }
           );
         }
 
-        return this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp);
+        return this.messageBuilder.buildHarvestMessage(harvestedCrops, totalExp, { levelUp: levelUpInfo, unlockedItemNames });
       });
 
     } catch (error) {

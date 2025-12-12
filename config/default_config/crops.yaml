@@ -62,6 +62,18 @@ potato:
   requiredLevel: 4
   description: "淀粉丰富的块茎作物，稳健收益"
 
+# 洋葱 - 中期过渡（Lv5）
+onion:
+  name: "洋葱"
+  icon: "🧅"
+  price: 26
+  is_dynamic_price: true
+  growTime: 840
+  baseYield: 5
+  experience: 14
+  requiredLevel: 5
+  description: "辛香浓郁的洋葱，稳健的过渡作物"
+
 # 玉米 - 中期主粮（Lv6）
 corn:
   name: "玉米"
@@ -74,6 +86,18 @@ corn:
   requiredLevel: 6
   description: "高产谷物，广泛用途"
 
+# 黄瓜 - 中后期前置（Lv7）
+cucumber:
+  name: "黄瓜"
+  icon: "🥒"
+  price: 42
+  is_dynamic_price: true
+  growTime: 1500
+  baseYield: 7
+  experience: 25
+  requiredLevel: 7
+  description: "清脆爽口的黄瓜，适合中期稳定收益"
+
 # 草莓 - 中后期高价值（Lv8）
 strawberry:
   name: "草莓"
@@ -85,6 +109,42 @@ strawberry:
   experience: 33
   requiredLevel: 8
   description: "香甜多汁的人气水果"
+
+# 辣椒 - 中后期活跃作物（Lv9）
+pepper:
+  name: "辣椒"
+  icon: "🌶️"
+  price: 60
+  is_dynamic_price: true
+  growTime: 1600
+  baseYield: 6
+  experience: 32
+  requiredLevel: 9
+  description: "辛辣爽口的辣椒，短周期高单价"
+
+# 蓝莓 - 中后期稳定高收益（Lv10）
+blueberry:
+  name: "蓝莓"
+  icon: "🫐"
+  price: 78
+  is_dynamic_price: true
+  growTime: 2400
+  baseYield: 9
+  experience: 40
+  requiredLevel: 10
+  description: "酸甜清香的蓝莓，中后期稳定高收益"
+
+# 茄子 - 后期前置（Lv11）
+eggplant:
+  name: "茄子"
+  icon: "🍆"
+  price: 120
+  is_dynamic_price: true
+  growTime: 3600
+  baseYield: 8
+  experience: 60
+  requiredLevel: 11
+  description: "口感绵软的茄子，中长周期高收益"
 
 # 葡萄 - 后期精品（Lv12）
 # 调整：略削弱产量，避免在 basePrice×1.5 时远超其它作物太多
@@ -99,6 +159,18 @@ grape:
   requiredLevel: 12
   description: "可酿造的优质水果，长周期高收益"
 
+# 甜瓜 - 后期高价值（Lv13）
+melon:
+  name: "甜瓜"
+  icon: "🍈"
+  price: 160
+  is_dynamic_price: true
+  growTime: 4200
+  baseYield: 9
+  experience: 80
+  requiredLevel: 13
+  description: "清甜多汁的甜瓜，中长周期可观回报"
+
 # 南瓜 - 后期高回报（Lv14）
 # 调整：大幅提升产量，让极长周期在任何价格段都对得起占格时间
 pumpkin:
@@ -111,3 +183,183 @@ pumpkin:
   experience: 150 # 原130，强化“后期挂机大额结算”的体验
   requiredLevel: 14
   description: "体积硕大，价值不俗的长周期作物"
+
+# 向日葵 - 活跃型高单价（Lv15）
+sunflower:
+  name: "向日葵"
+  icon: "🌻"
+  price: 190
+  is_dynamic_price: true
+  growTime: 3000
+  baseYield: 6
+  experience: 70
+  requiredLevel: 15
+  description: "阳光灿烂的向日葵，短中周期高单价"
+
+# 甜菜 - 稳定高产（Lv18）
+beet:
+  name: "甜菜"
+  icon: "🫜"
+  price: 220
+  is_dynamic_price: true
+  growTime: 4800
+  baseYield: 10
+  experience: 105
+  requiredLevel: 18
+  description: "耐储存的甜菜，高产稳健"
+
+# 花椰菜 - 中后期耐久作物（Lv21）
+cauliflower:
+  name: "花椰菜"
+  icon: "🥦"
+  price: 260
+  is_dynamic_price: true
+  growTime: 5400
+  baseYield: 9
+  experience: 120
+  requiredLevel: 21
+  description: "口感细腻的花椰菜，长周期高回报"
+
+# 大蒜 - 料理香料作物（Lv24）
+garlic:
+  name: "大蒜"
+  icon: "🧄"
+  price: 240
+  is_dynamic_price: true
+  growTime: 3600
+  baseYield: 7
+  experience: 95
+  requiredLevel: 24
+  description: "辛香的大蒜，适合中期稳定收益"
+
+# 蔓越莓 - 长周期高产（Lv27）
+cranberry:
+  name: "蔓越莓"
+  icon: "🍒"
+  price: 320
+  is_dynamic_price: true
+  growTime: 7200
+  baseYield: 12
+  experience: 160
+  requiredLevel: 27
+  description: "酸甜的蔓越莓，长周期高产"
+
+# 菠萝 - 中后期精品（Lv30）
+pineapple:
+  name: "菠萝"
+  icon: "🍍"
+  price: 420
+  is_dynamic_price: true
+  growTime: 10800
+  baseYield: 10
+  experience: 210
+  requiredLevel: 30
+  description: "香气浓郁的菠萝，长周期精品收益"
+
+# 茶叶 - 传奇作物前置（Lv35）
+tea_leaf:
+  name: "茶叶"
+  icon: "🍃"
+  price: 520
+  is_dynamic_price: true
+  growTime: 14400
+  baseYield: 9
+  experience: 260
+  requiredLevel: 35
+  description: "清香的茶叶，长周期高单价"
+
+# 莲藕 - 后期高产（Lv40）
+lotus_root:
+  name: "莲藕"
+  icon: "🪷"
+  price: 680
+  is_dynamic_price: true
+  growTime: 18000
+  baseYield: 12
+  experience: 340
+  requiredLevel: 40
+  description: "清脆的莲藕，超长周期高产回报"
+
+# 仙人掌果 - 极端环境作物（Lv45）
+cactus_fruit:
+  name: "仙人掌果"
+  icon: "🌵"
+  price: 820
+  is_dynamic_price: true
+  growTime: 21600
+  baseYield: 11
+  experience: 410
+  requiredLevel: 45
+  description: "顽强的仙人掌果，耐久长周期收益"
+
+# 杨桃 - 传奇作物（Lv50）
+starfruit:
+  name: "杨桃"
+  icon: "⭐"
+  price: 1100
+  is_dynamic_price: true
+  growTime: 28800
+  baseYield: 13
+  experience: 550
+  requiredLevel: 50
+  description: "稀有的杨桃，传奇级回报"
+
+# 远古果实 - 史诗作物（Lv60）
+ancient_fruit:
+  name: "远古果实"
+  icon: "🍏"
+  price: 1600
+  is_dynamic_price: true
+  growTime: 43200
+  baseYield: 14
+  experience: 800
+  requiredLevel: 60
+  description: "传说中的远古果实，超长周期史诗收益"
+
+# 火龙果 - 神话作物（Lv70）
+dragonfruit:
+  name: "火龙果"
+  icon: "🐲"
+  price: 2300
+  is_dynamic_price: true
+  growTime: 64800
+  baseYield: 15
+  experience: 1150
+  requiredLevel: 70
+  description: "烈焰般的火龙果，神话级超长周期收益"
+
+# 人参 - 终局稀有药材（Lv80）
+ginseng:
+  name: "人参"
+  icon: "🌿"
+  price: 3200
+  is_dynamic_price: true
+  growTime: 86400
+  baseYield: 12
+  experience: 1500
+  requiredLevel: 80
+  description: "珍贵的人参，终局级稀有回报"
+
+# 藏红花 - 宇宙级珍稀花卉（Lv90）
+saffron:
+  name: "藏红花"
+  icon: "🌺"
+  price: 4800
+  is_dynamic_price: true
+  growTime: 129600
+  baseYield: 10
+  experience: 2200
+  requiredLevel: 90
+  description: "极其珍稀的藏红花，超长周期顶级回报"
+
+# 永恒之果 - 终极作物（Lv100）
+eternal_fruit:
+  name: "永恒之果"
+  icon: "✨"
+  price: 7200
+  is_dynamic_price: true
+  growTime: 172800
+  baseYield: 12
+  experience: 3400
+  requiredLevel: 100
+  description: "传说中的永恒之果，终极长周期大奖励"

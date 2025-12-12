@@ -46,6 +46,13 @@
                 </div>
             </div>
 
+            {{if nextUnlocksText}}
+            <div class="unlock-row">
+                <span class="exp-label">解锁</span>
+                <div class="unlock-text">Lv.{{nextLevel}}：{{nextUnlocksText}}</div>
+            </div>
+            {{/if}}
+
             <div class="stats-grid">
                 <div class="stat-item">
                     <span class="stat-icon">💰</span>

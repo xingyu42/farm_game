@@ -83,6 +83,15 @@ export class player extends plugin {
     const expPercentage = levelInfo ? Math.min((playerData.experience / experienceToNext) * 100, 100) : 100;
     const inventoryInfo = playerData.getInventoryInfo();
 
+    // 下一等级解锁展示（兼容未知ID）
+    const nextLevel = levelInfo?.level ?? null;
+    const nextUnlockIds = Array.isArray(levelInfo?.unlocks) ? levelInfo.unlocks : [];
+    const nextUnlockNames = nextUnlockIds.map(id => {
+      const cfg = this.itemResolver?.findItemById(id);
+      return cfg?.name ?? id;
+    });
+    const nextUnlocksText = nextUnlockNames.join('、');
+
     // 狗粮防护状态
     const dogFood = playerData.protection?.dogFood;
     const dogFoodActive = dogFood?.effectEndTime > now;
@@ -125,7 +134,9 @@ export class player extends plugin {
       maxStealPerAttempt: stealStats.config.maxStealPerAttempt,
       totalSignDays: playerData.signIn.totalSignDays || 0,
       consecutiveDays: playerData.signIn.consecutiveDays || 0,
-      isNewPlayer: playerData.isNewPlayer()
+      isNewPlayer: playerData.isNewPlayer(),
+      nextLevel,
+      nextUnlocksText
     };
   }
 

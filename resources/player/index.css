@@ -92,6 +92,24 @@ body {
     gap: 10px;
 }
 
+.unlock-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(232, 245, 233, 0.6);
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px dashed rgba(102, 187, 106, 0.5);
+}
+
+.unlock-text {
+    flex: 1;
+    font-size: 11px;
+    color: #2e7d32;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
 .exp-label {
     font-size: 12px;
     font-weight: bold;

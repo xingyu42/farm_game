@@ -465,6 +465,8 @@ export class farm extends plugin {
       const harvestedCrops = result.data?.harvestedCrops || []
       const skippedCrops = result.data?.skippedCrops || []
       const isPartialHarvest = result.data?.isPartialHarvest
+      const levelUp = result.data?.levelUp
+      const unlockedItemNames = result.data?.unlockedItemNames || []
 
       // 优先处理部分收获（包括全部跳过的情况）
       if (isPartialHarvest && skippedCrops.length > 0) {
@@ -478,6 +480,14 @@ export class farm extends plugin {
 
         details.push(`⚠️ 仓库已满 (${inventoryInfo.currentUsage}/${inventoryInfo.capacity})`)
         details.push(`请清理或升级仓库后再收获`)
+
+        if (levelUp?.newLevel) {
+          details.push('')
+          details.push(`升级: Lv.${levelUp.oldLevel} → Lv.${levelUp.newLevel}`)
+          if (unlockedItemNames.length > 0) {
+            details.push(`解锁: ${unlockedItemNames.join('、')}`)
+          }
+        }
 
         await this._renderFarmWithResult(e, userId, {
           type: 'warning',
@@ -502,6 +512,13 @@ export class farm extends plugin {
           const totalYield = harvestedCrops.reduce((sum, c) => sum + (c.yield || 0), 0)
           details.push(`土地: ${harvestedCrops.length}块`)
           details.push(`数量: ${totalYield}`)
+        }
+
+        if (levelUp?.newLevel) {
+          details.push(`升级: Lv.${levelUp.oldLevel} → Lv.${levelUp.newLevel}`)
+          if (unlockedItemNames.length > 0) {
+            details.push(`解锁: ${unlockedItemNames.join('、')}`)
+          }
         }
 
         await this._renderFarmWithResult(e, userId, {

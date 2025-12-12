@@ -113,6 +113,16 @@ class PlantingMessageBuilder {
       messages.push(`${this.icons.experience} 获得经验: ${totalExp}`);
     }
 
+    // 升级与解锁提示（不参与数值逻辑，仅展示）
+    const levelUp = options.levelUp;
+    const unlockedItemNames = Array.isArray(options.unlockedItemNames) ? options.unlockedItemNames : [];
+    if (levelUp && levelUp.newLevel) {
+      messages.push(`${this.icons.success} 等级提升: Lv.${levelUp.oldLevel} → Lv.${levelUp.newLevel}`);
+      if (unlockedItemNames.length > 0) {
+        messages.push(`🔓 解锁: ${unlockedItemNames.join('、')}`);
+      }
+    }
+
     return {
       success: true,
       message: messages.join('\n'),
@@ -132,7 +142,7 @@ class PlantingMessageBuilder {
    * @param {Object} inventoryInfo 仓库信息 {currentUsage, capacity}
    * @returns {Object} 部分收获响应
    */
-  buildPartialHarvestMessage(harvestedCrops, skippedCrops, totalExp = 0, inventoryInfo = {}) {
+  buildPartialHarvestMessage(harvestedCrops, skippedCrops, totalExp = 0, inventoryInfo = {}, options = {}) {
     return {
       success: harvestedCrops.length > 0,
       data: {
@@ -140,7 +150,8 @@ class PlantingMessageBuilder {
         skippedCrops,
         totalExperience: totalExp,
         inventoryInfo,
-        isPartialHarvest: true
+        isPartialHarvest: true,
+        ...options
       }
     };
   }
