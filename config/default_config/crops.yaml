@@ -5,48 +5,49 @@
 carrot:
   name: "胡萝卜"
   icon: "🥕"
-  price: 8 # 作物购买价格（商店/市场基准价）
-  is_dynamic_price: true # 启用动态定价
+  price: 8 # basePrice：动态定价基准
+  is_dynamic_price: true
   growTime: 600 # 生长时间（秒）
   baseYield: 3 # 基础产量
-  experience: 5 # 获得经验
-  requiredLevel: 1 # 种植等级要求
+  experience: 5
+  requiredLevel: 1
   description: "营养丰富的胡萝卜，生长速度快"
 
 # 西红柿 - 中等作物
 tomato:
   name: "西红柿"
   icon: "🍅"
-  price: 22 # 作物购买价格（商店/市场基准价）
-  is_dynamic_price: true # 启用动态定价
-  growTime: 900 # 生长时间（秒）
-  baseYield: 5 # 基础产量
-  experience: 15 # 获得经验
-  requiredLevel: 3 # 种植等级要求
+  price: 22
+  is_dynamic_price: true
+  growTime: 900
+  baseYield: 5
+  experience: 15
+  requiredLevel: 3
   description: "酸甜可口的西红柿，深受喜爱"
 
 # 小麦 - 粮食作物
 wheat:
   name: "小麦"
   icon: "🌾"
-  price: 10 # 作物购买价格（商店/市场基准价）
-  is_dynamic_price: true # 启用动态定价
-  growTime: 800 # 生长时间（秒）
-  baseYield: 6 # 基础产量（谷物高产）
-  experience: 10 # 获得经验
-  requiredLevel: 2 # 种植等级要求
+  price: 10
+  is_dynamic_price: true
+  growTime: 800
+  baseYield: 6 # 谷物高产
+  experience: 10
+  requiredLevel: 2
   description: "基础粮食作物，用途广泛"
 
 # 生菜 - 快速作物（Lv2）
+# 调整：提高产量，让极短周期在动态价下不会显得太亏
 lettuce:
   name: "生菜"
   icon: "🥬"
   price: 10
   is_dynamic_price: true
   growTime: 360
-  baseYield: 2 # 基础产量（快速但产量低）
+  baseYield: 3  # 原为2 → 3，提升单位时间收益和操作回报感
   experience: 6
-  requiredLevel: 2 # 种植等级要求
+  requiredLevel: 2
   description: "爽脆可口的生菜，极短生长期"
 
 # 土豆 - 中期入门（Lv4）
@@ -56,9 +57,9 @@ potato:
   price: 21
   is_dynamic_price: true
   growTime: 720
-  baseYield: 4 # 基础产量
+  baseYield: 4
   experience: 12
-  requiredLevel: 4 # 种植等级要求
+  requiredLevel: 4
   description: "淀粉丰富的块茎作物，稳健收益"
 
 # 玉米 - 中期主粮（Lv6）
@@ -68,9 +69,9 @@ corn:
   price: 34
   is_dynamic_price: true
   growTime: 1200
-  baseYield: 6 # 基础产量（高产谷物）
+  baseYield: 6
   experience: 20
-  requiredLevel: 6 # 种植等级要求
+  requiredLevel: 6
   description: "高产谷物，广泛用途"
 
 # 草莓 - 中后期高价值（Lv8）
@@ -80,31 +81,33 @@ strawberry:
   price: 52
   is_dynamic_price: true
   growTime: 1800
-  baseYield: 8 # 基础产量（一株多果）
+  baseYield: 8
   experience: 33
-  requiredLevel: 8 # 种植等级要求
+  requiredLevel: 8
   description: "香甜多汁的人气水果"
 
 # 葡萄 - 后期精品（Lv12）
+# 调整：略削弱产量，避免在 basePrice×1.5 时远超其它作物太多
 grape:
   name: "葡萄"
   icon: "🍇"
   price: 172
   is_dynamic_price: true
   growTime: 5400
-  baseYield: 12 # 基础产量（葡萄串产量高）
-  experience: 100
-  requiredLevel: 12 # 种植等级要求
+  baseYield: 10  # 原为12 → 10，单位时间收益仍显著高于草莓
+  experience: 95  # 原100，微降以匹配收益削弱
+  requiredLevel: 12
   description: "可酿造的优质水果，长周期高收益"
 
 # 南瓜 - 后期高回报（Lv14）
+# 调整：大幅提升产量，让极长周期在任何价格段都对得起占格时间
 pumpkin:
   name: "南瓜"
   icon: "🎃"
   price: 251
   is_dynamic_price: true
   growTime: 7200
-  baseYield: 3 # 基础产量（单个大但数量少）
-  experience: 130
-  requiredLevel: 14 # 种植等级要求
+  baseYield: 8  # 原为3 → 8，单位时间收益 ~ 草莓的1.2倍、略低于葡萄
+  experience: 150 # 原130，强化“后期挂机大额结算”的体验
+  requiredLevel: 14
   description: "体积硕大，价值不俗的长周期作物"
