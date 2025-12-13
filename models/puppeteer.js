@@ -247,12 +247,12 @@ class Puppeteer {
         await page.addStyleTag({
           content: `
             @font-face {
-              font-family: 'Noto Color Emoji';
+              font-family: 'Emoji';
               src: url('${fontUrl}');
-              unicode-range: U+200D, U+2600-26FF, U+2700-27BF, U+FE00-FE0F, U+1F000-1FFFF;
+              unicode-range: U+10000-10FFFF;
             }
             body, * {
-              font-family: system-ui, sans-serif, 'Noto Color Emoji';
+              font-family: 'Emoji', system-ui, -apple-system, sans-serif;
             }
           `
         })
