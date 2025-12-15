@@ -171,7 +171,7 @@ export class farm extends plugin {
       if (!isEmpty) {
         const cropConfig = cropsConfig[land.crop]
         landData.cropName = cropConfig?.name || land.crop
-        landData.cropIcon = this.config.getItemIcon(land.crop)
+        landData.cropIcon = cropConfig?.icon || 'twemoji:seedling'
 
         // 计算健康度并分级
         const rawHealth = land.health != null ? Number(land.health) : 100

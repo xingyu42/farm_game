@@ -117,7 +117,6 @@ export class ShopCommands extends plugin {
       const items = cat.items.map(item => {
         return {
           ...item,
-          icon: this.shopService.config.getItemIcon(item.id),
           isLocked: playerData.level < (item.requiredLevel || 1)
         };
       });
@@ -380,7 +379,7 @@ export class ShopCommands extends plugin {
 
     // 基础物品数据
     const item = {
-      icon: this.shopService.config.getItemIcon(itemId),
+      icon: itemConfig.icon,
       name: itemConfig.name,
       category: itemConfig.category,
       categoryName: categoryNameMap[itemConfig.category] || itemConfig.category,

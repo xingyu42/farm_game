@@ -616,7 +616,7 @@ export class MarketDataManager {
             allItems.push({
               id: itemId,
               name: itemInfo.name,
-              icon: this.config.getItemIcon(itemId),
+              icon: itemInfo.icon,
               currentPrice: Math.round(stats.currentPrice),
               basePrice: stats.basePrice,
               priceChange: parseFloat(priceChange.toFixed(1)),

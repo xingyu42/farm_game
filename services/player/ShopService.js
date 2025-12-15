@@ -184,6 +184,7 @@ export class ShopService {
             categoryItems.push({
               id: itemId,
               name: item.name,
+              icon: item.icon,
               price: currentPrice,
               basePrice: item.price,
               isDynamic,
