@@ -523,7 +523,6 @@ export class InventoryService {
 
           category: displayInfo.category,
           price: economicInfo.price,
-          totalValue: economicInfo.totalValue,
           canSell: economicInfo.canSell,
           isExpired: displayInfo.isExpired,
           locked: Boolean(item.metadata.locked),
@@ -546,8 +545,7 @@ export class InventoryService {
             category: categoryName,
             categoryKey: categoryKey,
             items: sortedItems,
-            totalItems: sortedItems.length,
-            totalValue: sortedItems.reduce((sum, item) => sum + (item.totalValue || 0), 0)
+            totalItems: sortedItems.length
           });
         }
       }
@@ -559,8 +557,7 @@ export class InventoryService {
           category: categories.unknown,
           categoryKey: 'unknown',
           items: sortedItems,
-          totalItems: sortedItems.length,
-          totalValue: sortedItems.reduce((sum, item) => sum + item.totalSellValue, 0)
+          totalItems: sortedItems.length
         });
       }
 
@@ -570,8 +567,7 @@ export class InventoryService {
         capacity: inventory.capacity,
         isEmpty: Object.keys(inventory.items).length === 0,
         totalCategories: items.length,
-        totalItems: items.reduce((sum, cat) => sum + cat.totalItems, 0),
-        totalValue: items.reduce((sum, cat) => sum + cat.totalValue, 0)
+        totalItems: items.reduce((sum, cat) => sum + cat.totalItems, 0)
       };
     } catch (error) {
       logger.error(`获取格式化仓库失败 [${userId}]: ${error.message}`);

@@ -555,8 +555,11 @@ export class ShopService {
         };
       }
 
-      // 计算总价值
-      const totalValue = cropItems.reduce((sum, crop) => sum + CommonUtils.calcCoins(crop.unitPrice, crop.quantity), 0);
+      // 计算总价值（对累加结果再次处理，消除浮点精度漂移）
+      const totalValue = CommonUtils.calcCoins(
+        cropItems.reduce((sum, crop) => sum + CommonUtils.calcCoins(crop.unitPrice, crop.quantity), 0),
+        1
+      );
 
       // 执行批量出售事务：移除所有作物 + 增加金币
       return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {

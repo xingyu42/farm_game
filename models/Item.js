@@ -94,24 +94,6 @@ class Item {
   }
 
   /**
-   * 创建物品堆叠
-   * @param {string} itemId 物品ID
-   * @param {number} quantity 数量
-   * @param {Object} config 配置对象
-   * @returns {Item} 物品实例
-   */
-  static createStack(itemId, quantity, config) {
-    const item = Item.fromConfig(itemId, quantity, config);
-
-    // 所有物品都支持堆叠，只需检查最大堆叠数量
-    if (quantity > item.maxStack) {
-      throw new Error(`物品 ${itemId} 超过最大堆叠数量 ${item.maxStack}`);
-    }
-
-    return item;
-  }
-
-  /**
    * 验证物品数据
    * @returns {Object} 验证结果
    */
@@ -208,88 +190,6 @@ class Item {
     this.quantity -= amount;
     return this;
   }
-
-  /**
-   * 设置数量
-   * @param {number} quantity 新数量
-   * @returns {Item} 返回自身以支持链式调用
-   */
-  setQuantity(quantity) {
-    if (!Number.isInteger(quantity) || quantity < 0) {
-      throw new Error('数量必须是非负整数');
-    }
-
-    if (quantity > this.maxStack) {
-      throw new Error(`超过最大堆叠数量 ${this.maxStack}`);
-    }
-
-    this.quantity = quantity;
-    return this;
-  }
-
-  /**
-   * 分割物品堆叠
-   * @param {number} splitQuantity 分割数量
-   * @returns {Item} 新的物品实例
-   */
-  split(splitQuantity) {
-    if (!Number.isInteger(splitQuantity) || splitQuantity <= 0) {
-      throw new Error('分割数量必须是正整数');
-    }
-
-    if (splitQuantity >= this.quantity) {
-      throw new Error('分割数量不能大于等于当前数量');
-    }
-
-    // 创建新的物品实例
-    const newItem = this.clone();
-    newItem.setQuantity(splitQuantity);
-
-    // 减少当前物品数量
-    this.removeQuantity(splitQuantity);
-
-    return newItem;
-  }
-
-  /**
-   * 合并物品堆叠
-   * @param {Item} otherItem 要合并的物品
-   * @returns {number} 剩余无法合并的数量
-   */
-  merge(otherItem) {
-    if (!this.canMergeWith(otherItem)) {
-      throw new Error('无法合并不同类型的物品');
-    }
-
-    const totalQuantity = this.quantity + otherItem.quantity;
-
-    if (totalQuantity <= this.maxStack) {
-      // 可以完全合并
-      this.quantity = totalQuantity;
-      otherItem.quantity = 0;
-      return 0;
-    } else {
-      // 部分合并
-      const overflow = totalQuantity - this.maxStack;
-      this.quantity = this.maxStack;
-      otherItem.quantity = overflow;
-      return overflow;
-    }
-  }
-
-  /**
-   * 检查是否可以与另一个物品合并
-   * @param {Item} otherItem 另一个物品
-   * @returns {boolean}
-   */
-  canMergeWith(otherItem) {
-    return this.id === otherItem.id &&
-      this.category === otherItem.category &&
-      !this.isExpired() &&
-      !otherItem.isExpired();
-  }
-
-
 
   /**
    * 获取显示信息

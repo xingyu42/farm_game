@@ -142,117 +142,6 @@ class Calculator {
   }
 
   /**
-   * 计算土地扩张成本
-   * @param {number} currentLandCount 当前土地数量
-   * @param {number} targetLandCount 目标土地数量
-   * @returns {Object} 扩张成本信息
-   */
-  calculateLandExpansionCost(currentLandCount, targetLandCount) {
-    if (!this.config.land.expansion) {
-      // 默认扩张成本计算
-      const baseCost = 1000;
-      const costMultiplier = 1.5;
-      let totalCost = 0;
-
-      for (let i = currentLandCount + 1; i <= targetLandCount; i++) {
-        totalCost += Math.floor(baseCost * Math.pow(costMultiplier, i - 7));
-      }
-
-      return {
-        totalCost,
-        canAfford: false,
-        expansionSteps: []
-      };
-    }
-
-    const expansionConfig = this.config.land.expansion;
-    let totalGoldCost = 0;
-    let maxLevelRequired = 1;
-    const expansionSteps = [];
-
-    for (let landNum = currentLandCount + 1; landNum <= targetLandCount; landNum++) {
-      const landConfig = expansionConfig[landNum];
-
-      if (landConfig) {
-        totalGoldCost += landConfig.goldCost;
-        maxLevelRequired = Math.max(maxLevelRequired, landConfig.levelRequired);
-
-        expansionSteps.push({
-          landNumber: landNum,
-          goldCost: landConfig.goldCost,
-          levelRequired: landConfig.levelRequired
-        });
-      }
-    }
-
-    return {
-      totalGoldCost,
-      maxLevelRequired,
-      expansionSteps,
-      stepCount: expansionSteps.length
-    };
-  }
-
-  /**
-   * 计算土地品质升级成本
-   * @param {string} currentQuality 当前品质
-   * @param {string} targetQuality 目标品质
-   * @returns {Object} 升级成本信息
-   */
-  calculateQualityUpgradeCost(currentQuality, targetQuality) {
-    const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
-    const currentIndex = qualityOrder.indexOf(currentQuality);
-    const targetIndex = qualityOrder.indexOf(targetQuality);
-
-    if (currentIndex === -1 || targetIndex === -1 || targetIndex <= currentIndex) {
-      return {
-        canUpgrade: false,
-        error: '无效的品质升级路径'
-      };
-    }
-
-    let totalGoldCost = 0;
-    let maxLevelRequired = 1;
-    const materialCosts = {};
-    const upgradeSteps = [];
-
-    for (let i = currentIndex + 1; i <= targetIndex; i++) {
-      const quality = qualityOrder[i];
-      const qualityConfig = this._getLandQualityConfig(quality);
-      const upgradeConfig = qualityConfig.upgrade;
-
-      if (upgradeConfig) {
-        totalGoldCost += upgradeConfig.goldCost;
-        maxLevelRequired = Math.max(maxLevelRequired, upgradeConfig.levelRequired);
-
-        // 累计材料需求
-        if (upgradeConfig.materials) {
-          for (const [materialId, quantity] of Object.entries(upgradeConfig.materials)) {
-            materialCosts[materialId] = (materialCosts[materialId] || 0) + quantity;
-          }
-        }
-
-        upgradeSteps.push({
-          fromQuality: qualityOrder[i - 1],
-          toQuality: quality,
-          goldCost: upgradeConfig.goldCost,
-          levelRequired: upgradeConfig.levelRequired,
-          materials: upgradeConfig.materials
-        });
-      }
-    }
-
-    return {
-      canUpgrade: true,
-      totalGoldCost,
-      maxLevelRequired,
-      materialCosts,
-      upgradeSteps,
-      stepCount: upgradeSteps.length
-    };
-  }
-
-  /**
    * 计算商店购买/出售价格
    * @param {string} itemId 物品ID
    * @param {number} quantity 数量
@@ -381,43 +270,6 @@ class Calculator {
   }
 
   /**
-   * 计算偷菜收益
-   * @param {string} cropType 作物类型
-   * @param {number} baseYield 基础产量
-   * @param {string} landQuality 土地品质
-   * @param {number} stealerLevel 偷菜者等级
-   * @param {number} ownerLevel 土地主人等级
-   * @returns {Object} 偷菜收益
-   */
-  calculateStealYield(cropType, baseYield, landQuality = 'normal', stealerLevel = 1, ownerLevel = 1) {
-    // 基础偷菜比例（10-30%）
-    const baseStealRatio = 0.2;
-
-    // 等级差异影响（偷菜者等级高时收益增加）
-    const levelDiff = stealerLevel - ownerLevel;
-    const levelBonus = Math.max(-0.1, Math.min(0.1, levelDiff * 0.01));
-
-    // 土地品质影响（高品质土地偷菜收益更高）
-    const qualityConfig = this._getLandQualityConfig(landQuality);
-    const qualityBonus = qualityConfig.productionBonus / 200; // 品质加成的一半
-
-    const finalStealRatio = baseStealRatio + levelBonus + qualityBonus;
-    const stealYield = Math.floor(baseYield * finalStealRatio);
-
-    // 主人损失（通常是偷菜者收益的1.5倍）
-    const ownerLoss = Math.floor(stealYield * 1.5);
-
-    return {
-      stealerGain: Math.max(stealYield, 1),
-      ownerLoss: Math.max(ownerLoss, 1),
-      stealRatio: finalStealRatio * 100,
-      baseRatio: baseStealRatio * 100,
-      levelBonus: levelBonus * 100,
-      qualityBonus: qualityBonus * 100
-    };
-  }
-
-  /**
    * 私有方法：获取土地品质配置
    * @param {string} quality 品质类型
    * @returns {Object} 品质配置
@@ -489,32 +341,6 @@ class Calculator {
     } else {
       return 1 - actualDiscount * 0.5; // 出售时折扣减半
     }
-  }
-
-  /**
-   * 获取计算器统计信息
-   * @returns {Object} 统计信息
-   */
-  getStats() {
-    return {
-      hasConfig: !!this.config,
-      supportedCalculations: [
-        'growTime',
-        'yield',
-        'experience',
-        'level',
-        'landExpansion',
-        'qualityUpgrade',
-        'shopPrice',
-        'inventorySpace',
-        'inventoryUsage',
-        'stealYield'
-      ],
-      staticMethods: [
-        'calculateInventoryUsage'
-      ],
-      configModules: this.config ? Object.keys(this.config) : []
-    };
   }
 }
 

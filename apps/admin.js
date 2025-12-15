@@ -94,7 +94,7 @@ export class adminApp extends plugin {
 
   async setLandQuality(e, args) {
     const targetId = e.at;
-    const [landIdStr, quality] = args;
+    const [landIdStr, quality] = (args[0] || '').split(/\s+/);
     const landId = parseInt(landIdStr, 10);
 
     if (!targetId || isNaN(landId) || !quality) {

@@ -166,42 +166,6 @@ class LevelCalculator {
         };
     }
 
-    /**
-     * 计算从当前经验值到目标等级需要的经验值
-     * @param {number} currentExp 当前经验值
-     * @param {number} targetLevel 目标等级
-     * @returns {Object} 计算结果
-     */
-    getExpToLevel(currentExp, targetLevel) {
-        const levels = this.config.levels.requirements;
-
-        if (!levels[targetLevel]) {
-            return {
-                valid: false,
-                message: '目标等级不存在'
-            };
-        }
-
-        const targetLevelConfig = levels[targetLevel];
-        const expNeeded = Math.max(0, targetLevelConfig.experience - currentExp);
-
-        return {
-            valid: true,
-            currentExp,
-            targetLevel,
-            targetExp: targetLevelConfig.experience,
-            expNeeded,
-            canReach: expNeeded === 0
-        };
-    }
-
-    /**
-     * 获取经验值来源配置
-     * @returns {Object} 经验值来源配置
-     */
-    getExperienceSources() {
-        return this.config.levels.experienceSources;
-    }
 }
 
 export default LevelCalculator; 

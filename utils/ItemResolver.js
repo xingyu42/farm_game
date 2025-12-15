@@ -94,7 +94,7 @@ class ItemResolver {
    */
   getItemName(itemId) {
     const itemConfig = this.findItemById(itemId);
-    return itemConfig.name;
+    return itemConfig?.name || itemId;
   }
 
   /**
@@ -172,66 +172,6 @@ class ItemResolver {
     }));
   }
 
-  /**
-   * 获取所有可用的类别
-   * @returns {Array} 类别列表
-   */
-  getAvailableCategories() {
-    return this.categories.slice();
-  }
-
-  /**
-   * 批量获取物品信息
-   * @param {Array<string>} itemIds 物品ID数组
-   * @returns {Array<Object>} 物品信息数组
-   */
-  getItemsInfo(itemIds) {
-    return itemIds.map(itemId => {
-      const itemConfig = this.findItemById(itemId);
-      return itemConfig ? { id: itemId, ...itemConfig } : null;
-    }).filter(item => item !== null);
-  }
-
-  /**
-   * 搜索物品（支持模糊匹配）
-   * @param {string} searchTerm 搜索词
-   * @param {string} category 限定类别（可选）
-   * @returns {Array} 匹配的物品列表
-   */
-  searchItems(searchTerm, category = null) {
-    const itemsConfig = this.config.items
-    const searchCategories = category ? [category] : this.categories;
-    const results = [];
-
-    for (const cat of searchCategories) {
-      if (cat === 'crops') {
-        const cropsConfig = this.config.crops
-        for (const [itemId, itemInfo] of Object.entries(cropsConfig)) {
-          if (itemInfo?.name?.includes(searchTerm) || itemId.includes(searchTerm)) {
-            results.push({
-              id: itemId,
-              ...itemInfo,
-              category: 'crops',
-              originalCategory: 'crops'
-            });
-          }
-        }
-      } else if (itemsConfig[cat]) {
-        for (const [itemId, itemInfo] of Object.entries(itemsConfig[cat])) {
-          if (itemInfo?.name?.includes(searchTerm) || itemId.includes(searchTerm)) {
-            results.push({
-              id: itemId,
-              ...itemInfo,
-              category: cat,
-              originalCategory: cat
-            });
-          }
-        }
-      }
-    }
-
-    return results;
-  }
 }
 
 export default ItemResolver;

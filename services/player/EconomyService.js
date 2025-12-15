@@ -201,62 +201,6 @@ class EconomyService {
         }
     }
 
-    /**
-     * 获取经验值来源配置
-     * @returns {Object} 经验值来源配置
-     */
-    getExperienceSources() {
-        return this.levelCalculator.getExperienceSources();
-    }
-
-    /**
-     * 计算到达目标等级需要的经验值
-     * @param {string} userId 用户ID
-     * @param {number} targetLevel 目标等级
-     * @returns {Object} 计算结果
-     */
-    async getExpToLevel(userId, targetLevel) {
-        try {
-            const playerData = await this.dataService.getPlayer(userId);
-
-            if (!playerData) {
-                throw new Error('玩家不存在');
-            }
-
-            return this.levelCalculator.getExpToLevel(playerData.experience, targetLevel);
-        } catch (error) {
-            logger.error(`[EconomyService] 计算升级经验失败 [${userId}]: ${error.message}`);
-            throw error;
-        }
-    }
-
-    /**
-     * 获取玩家财务统计
-     * @param {string} userId 用户ID
-     * @returns {Object} 财务统计
-     */
-    async getFinancialStats(userId) {
-        try {
-            const playerData = await this.dataService.getPlayer(userId);
-
-            if (!playerData) {
-                throw new Error('玩家不存在');
-            }
-
-            return {
-                currentCoins: playerData.coins,
-                totalEarned: playerData.statistics.totalMoneyEarned,
-                totalSpent: playerData.statistics.totalMoneySpent,
-                netWorth: playerData.statistics.totalMoneyEarned - playerData.statistics.totalMoneySpent,
-                currentLevel: playerData.level,
-                currentExp: playerData.experience
-            };
-        } catch (error) {
-            logger.error(`[EconomyService] 获取财务统计失败 [${userId}]: ${error.message}`);
-            throw error;
-        }
-    }
-
     /** @private */
     _updateCoinsInTransaction(playerData, amount) {
         return EconomyService.updateCoinsInTransaction(playerData, amount);

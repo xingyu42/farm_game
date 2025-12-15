@@ -113,7 +113,7 @@ export class player extends plugin {
       saveId: `player_${userId}`,
       avatarUrl: `https://q.qlogo.cn/headimg_dl?dst_uin=${userId}&spec=640`,
       playerName: playerData.name || userName,
-      oderId: playerData.oderId || playerData.oderId,
+      oderId: userId,
       level: playerData.level,
       experience: playerData.experience,
       experienceToNext: levelInfo ? experienceToNext : 'Max',

@@ -121,22 +121,6 @@ export class PlayerYamlStorage {
         }
     }
 
-    /**
-     * 备份玩家 YAML 文件
-     * @param {string} userId 用户ID
-     * @param {string} backupSuffix 备份后缀，默认为当前时间戳
-     * @returns {Promise<boolean>} 备份是否成功
-     */
-    async backupPlayer(userId, backupSuffix = null) {
-        try {
-            const filename = `${userId}.yaml`
-            const suffix = backupSuffix || `.${Date.now()}.bak`
-            return await this.fileStorage.backup(filename, suffix)
-        } catch (error) {
-            logger.error(`[PlayerYamlStorage] 备份玩家文件失败 [${userId}]:`, error)
-            return false
-        }
-    }
 }
 
 // 创建默认实例

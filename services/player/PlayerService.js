@@ -161,44 +161,6 @@ class PlayerService {
         return await this.economyService.deductCoins(userId, amount);
     }
 
-    /**
-     * 获取经验值来源配置
-     * @returns {Object} 经验值来源配置
-     */
-    getExperienceSources() {
-        return this.economyService.getExperienceSources();
-    }
-
-    /**
-     * 计算到达目标等级需要的经验值
-     * @param {string} userId 用户ID
-     * @param {number} targetLevel 目标等级
-     * @returns {Object} 计算结果
-     */
-    async getExpToLevel(userId, targetLevel) {
-        return await this.economyService.getExpToLevel(userId, targetLevel);
-    }
-
-    /**
-     * 获取玩家财务统计
-     * @param {string} userId 用户ID
-     * @returns {Object} 财务统计
-     */
-    async getFinancialStats(userId) {
-        return await this.economyService.getFinancialStats(userId);
-    }
-
-    /**
-     * 在事务上下文中更新金币和统计数据（内部方法）
-     * @param {Object} playerData 玩家数据对象
-     * @param {number} amount 金币变化量（可为负数）
-     * @returns {number} 实际变化量
-     * @private
-     */
-    _updateCoinsInTransaction(playerData, amount) {
-        return this.economyService._updateCoinsInTransaction(playerData, amount);
-    }
-
     // ==================== 签到系统方法（委托） ====================
 
     /**
@@ -415,15 +377,6 @@ class PlayerService {
      */
     async getRankingData(userId) {
         return await this.statisticsService.getRankingData(userId);
-    }
-
-    /**
-     * 获取详细统计报告
-     * @param {string} userId 用户ID
-     * @returns {Object} 详细统计报告
-     */
-    async getDetailedReport(userId) {
-        return await this.statisticsService.getDetailedReport(userId);
     }
 
     /**
