@@ -284,7 +284,6 @@ class Land {
       targetQuality: nextQuality,
       levelRequired: qualityConfig.levelRequired,
       goldCost: qualityConfig.goldCost,
-      materials: qualityConfig.materials,
       canUpgrade: true
     };
   }

@@ -110,7 +110,7 @@ export class ShopCommands extends plugin {
     const categories = shopItems.map(cat => {
       const categoryKeyMap = {
         '种子': 'seeds', '肥料': 'fertilizer', '杀虫剂': 'pesticide',
-        '防御': 'defense', '工具': 'tools', '材料': 'materials', '作物': 'crops'
+        '防御': 'defense', '工具': 'tools', '作物': 'crops'
       };
       const key = categoryKeyMap[cat.category] || 'unknown';
 
@@ -375,7 +375,7 @@ export class ShopCommands extends plugin {
   _buildItemDetailRenderData(itemId, itemConfig) {
     const categoryNameMap = {
       seeds: '种子', fertilizer: '肥料', pesticide: '杀虫剂',
-      defense: '防御', tools: '工具', materials: '材料', crops: '作物'
+      defense: '防御', tools: '工具', crops: '作物'
     };
 
     // 基础物品数据

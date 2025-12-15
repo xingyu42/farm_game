@@ -9,101 +9,91 @@ default:
 # 土地扩张配置（PRD要求）
 expansion:
   7:
-    levelRequired: 5 
-    goldCost: 1000
+    levelRequired: 5
+    goldCost: 10000
   8:
     levelRequired: 7
-    goldCost: 2000
+    goldCost: 20000
   9:
     levelRequired: 9
-    goldCost: 3000
+    goldCost: 30000
   10:
     levelRequired: 11
-    goldCost: 4000
+    goldCost: 50000
   11:
     levelRequired: 13
-    goldCost: 5000
+    goldCost: 70000
   12:
     levelRequired: 15
-    goldCost: 6000
+    goldCost: 90000
   13:
     levelRequired: 17
-    goldCost: 7000
+    goldCost: 120000
   14:
     levelRequired: 19
-    goldCost: 8000
+    goldCost: 150000
   15:
     levelRequired: 21
-    goldCost: 9000
+    goldCost: 180000
   16:
     levelRequired: 23
-    goldCost: 10000
+    goldCost: 230000
   17:
     levelRequired: 25
-    goldCost: 11000
+    goldCost: 300000
   18:
     levelRequired: 27
-    goldCost: 12000
+    goldCost: 500000
   19:
     levelRequired: 29
-    goldCost: 13000
+    goldCost: 850000
   20:
     levelRequired: 31
-    goldCost: 14000
+    goldCost: 1100000
   21:
     levelRequired: 33
-    goldCost: 15000
+    goldCost: 1300000
   22:
     levelRequired: 35
-    goldCost: 16000
+    goldCost: 1500000
   23:
     levelRequired: 37
-    goldCost: 17000
+    goldCost: 1700000
   24:
     levelRequired: 39
-    goldCost: 20000
+    goldCost: 2000000
 
-# 土地品质系统
+# 土地升级系统
 quality:
   normal:
     name: "普通土地"
     productionBonus: 0      # 增产百分比
     timeReduction: 0        # 时间减少百分比
     experienceBonus: 0      # 经验加成百分比
-    color: "#8B4513"        # 棕色
-    
+
   copper:
-    name: "铜质土地"
+    name: "红土地"
+    starColor: "#C75B39"    # 星星颜色（红色）
     productionBonus: 10     # +10%产量
     timeReduction: 10       # -10%时间
     experienceBonus: 0      # 无经验加成
-    color: "#CD7F32"        # 铜色
-    levelRequired: 28
-    goldCost: 50000
-    materials:
-      - item_id: 'copper_essence'
-        quantity: 1
-        
+    levelRequired: 40
+    goldCost: 500000        # 50万
+
   silver:
-    name: "银质土地"
+    name: "黑土地"
+    starColor: "#2D2D2D"    # 星星颜色（黑色）
     productionBonus: 20     # +20%产量
     timeReduction: 20       # -20%时间
     experienceBonus: 0      # 无经验加成
-    color: "#C0C0C0"        # 银色
     levelRequired: 40
-    goldCost: 200000
-    materials:
-      - item_id: 'silver_essence'
-        quantity: 1
-        
+    goldCost: 1000000       # 100万
+
   gold:
-    name: "金质土地"
+    name: "金土地"
+    starColor: "#FFB300"    # 星星颜色（金色）
     productionBonus: 28     # +28%产量
     timeReduction: 20       # -20%时间
     experienceBonus: 28     # +28%经验
-    color: "#FFD700"        # 金色
-    levelRequired: 58
-    goldCost: 800000
-    materials:
-      - item_id: 'gold_essence'
-        quantity: 1
+    levelRequired: 40
+    goldCost: 2000000       # 200万

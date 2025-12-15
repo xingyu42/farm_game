@@ -198,6 +198,11 @@
 
             const lands = Array.isArray(s.lands) ? s.lands : [];
             const maxSlots = s.maxLandCount || 24;
+            const qualityColors = s.qualityColors || {
+                copper: '#C75B39',
+                silver: '#2D2D2D',
+                gold: '#FFB300'
+            };
             const initialPlots = [];
 
             for (let i = 1; i <= maxSlots; i++) {
@@ -246,8 +251,7 @@
             };
 
             const getQualityStarColor = (quality) => {
-                const map = { red: '#C75B39', black: '#2D2D2D', gold: '#FFB300' };
-                return map[quality] || '#888';
+                return qualityColors[quality] || '#888';
             };
 
             onMounted(() => {

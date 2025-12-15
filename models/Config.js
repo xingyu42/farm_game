@@ -115,7 +115,7 @@ class Config {
 
     // 2. 物品配置（按类别扫描）
     const itemsRoot = this.items || {};
-    const categoryKeys = ['seeds', 'fertilizer', 'pesticide', 'defense', 'tools', 'materials'];
+    const categoryKeys = ['seeds', 'fertilizer', 'pesticide', 'defense', 'tools'];
 
     for (const categoryKey of categoryKeys) {
       const group = itemsRoot[categoryKey];
@@ -132,8 +132,7 @@ class Config {
         fertilizer: '💊',
         pesticide: '🐛',
         defense: '🦴',
-        tools: '🔧',
-        materials: '✨'
+        tools: '🔧'
       };
       return fallbacks[categoryKey] || '📦';
     }

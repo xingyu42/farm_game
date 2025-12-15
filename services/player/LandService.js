@@ -278,23 +278,7 @@ class LandService {
       const meetsLevelRequirement = playerData.level >= nextConfig.levelRequired;
       const meetsGoldRequirement = playerData.coins >= nextConfig.goldCost;
 
-      // 检查材料需求
-      let meetsMaterialRequirement = true;
-      const materialIssues = [];
-
-      if (nextConfig.materials && nextConfig.materials.length > 0) {
-        for (const material of nextConfig.materials) {
-          const inventory = playerData.inventory || {};
-          const currentQuantity = inventory[material.item_id]?.quantity || 0;
-
-          if (currentQuantity < material.quantity) {
-            meetsMaterialRequirement = false;
-            materialIssues.push(`缺少 ${this._getItemName(material.item_id)} ${material.quantity - currentQuantity} 个`);
-          }
-        }
-      }
-
-      const meetsAllRequirements = meetsLevelRequirement && meetsGoldRequirement && meetsMaterialRequirement;
+      const meetsAllRequirements = meetsLevelRequirement && meetsGoldRequirement;
 
       return {
         canUpgrade: true,
@@ -305,18 +289,14 @@ class LandService {
         nextQualityName: nextConfig.name,
         requirements: {
           level: nextConfig.levelRequired,
-          gold: nextConfig.goldCost,
-          materials: nextConfig.materials
+          gold: nextConfig.goldCost
         },
         meetsAllRequirements,
         meetsLevelRequirement,
         meetsGoldRequirement,
-        meetsMaterialRequirement,
-        materialIssues,
         playerStatus: {
           level: playerData.level,
-          coins: playerData.coins,
-          inventory: playerData.inventory || {}
+          coins: playerData.coins
         }
       };
     } catch (error) {
@@ -366,7 +346,6 @@ class LandService {
 
       // === 事务块：带回滚的资源消耗 ===
       let coinsDeducted = false;
-      const materialsRemoved = [];
       let remainingCoins = null;
 
       try {
@@ -385,27 +364,7 @@ class LandService {
           );
         }
 
-        // Step 2: 消耗材料（带验证）
-        if (upgradeInfo.requirements.materials?.length > 0) {
-          for (const material of upgradeInfo.requirements.materials) {
-            const removeResult = await this.inventoryService.removeItem(
-              userId,
-              material.item_id,
-              material.quantity
-            );
-
-            if (!removeResult.success) {
-              throw new Error(`材料移除失败: ${removeResult.message}`);
-            }
-
-            materialsRemoved.push({
-              item_id: material.item_id,
-              quantity: material.quantity
-            });
-          }
-        }
-
-        // Step 3: 更新土地品质
+        // Step 2: 更新土地品质
         const updateResult = await this.playerService.updateLand(userId, landId, {
           quality: upgradeInfo.nextQuality,
           lastUpgraded: Date.now()
@@ -434,22 +393,12 @@ class LandService {
           fromQualityName: upgradeInfo.currentQualityName,
           toQualityName: upgradeInfo.nextQualityName,
           costGold: upgradeInfo.requirements.gold,
-          materialsCost: upgradeInfo.requirements.materials,
           remainingCoins: updatedPlayer?.coins ?? remainingCoins ?? 0
         };
 
       } catch (txError) {
         // === 回滚逻辑 ===
         logger.warn(`[LandService] 土地进阶失败，执行回滚 [${userId}, ${landId}]: ${txError.message}`);
-
-        // 回滚材料（逆序）
-        for (const material of materialsRemoved.reverse()) {
-          try {
-            await this.inventoryService.addItem(userId, material.item_id, material.quantity);
-          } catch (rollbackErr) {
-            logger.error(`[LandService] 回滚材料失败 [${material.item_id}]: ${rollbackErr.message}`);
-          }
-        }
 
         // 回滚金币
         if (coinsDeducted) {

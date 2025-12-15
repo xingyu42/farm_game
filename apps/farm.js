@@ -214,6 +214,14 @@ export class farm extends plugin {
       ? Math.round(Math.min((playerData.experience - currentLevelExp) / (nextLevelExp - currentLevelExp) * 100, 100))
       : 100
 
+    // 提取品质配置的星星颜色（普通土地不显示星星，跳过）
+    const qualityColors = {}
+    for (const [qualityKey, qualityConfig] of Object.entries(this.config.land.quality)) {
+      if (qualityKey !== 'normal' && qualityConfig.starColor) {
+        qualityColors[qualityKey] = qualityConfig.starColor
+      }
+    }
+
     const renderData = {
       isOwner,
       playerName: playerData.name,
@@ -223,7 +231,8 @@ export class farm extends plugin {
       expPercent,
       landCount: playerData.lands.length,
       maxLandCount: playerData.maxLandCount || 24,
-      lands
+      lands,
+      qualityColors
     }
 
     if (operationResult) {

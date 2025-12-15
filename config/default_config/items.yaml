@@ -394,32 +394,7 @@ tools:
       cooldownReduction: 20 # -20%冷却时间
       duration: 120 # 持续120分钟
     icon: "twemoji:wrench"
-# 土地进阶材料
-materials:
-  copper_essence:
-    name: "铜质精华"
-    price: 10000 # 商店价格（稀有）
-    category: "materials"
-    description: "用于土地品质进阶的珍贵材料"
-    requiredLevel: 10
-    maxStack: 10
-    icon: "twemoji:brown-circle"
-  silver_essence:
-    name: "银质精华"
-    price: 50000 # 商店价格（超稀有）
-    category: "materials"
-    description: "用于土地品质进阶的传奇材料"
-    requiredLevel: 15
-    maxStack: 5
-    icon: "twemoji:white-circle"
-  gold_essence:
-    name: "金质精华"
-    price: 200000 # 商店价格（传说）
-    category: "materials"
-    description: "用于土地品质进阶的神话材料"
-    requiredLevel: 20
-    maxStack: 3
-    icon: "twemoji:yellow-circle"
+
 # 分类定义
 categories:
   - key: "seeds"
@@ -432,8 +407,6 @@ categories:
     name: "防御"
   - key: "tools"
     name: "工具"
-  - key: "materials"
-    name: "材料"
   - key: "crops"
     name: "作物"
 # 初始礼包配置

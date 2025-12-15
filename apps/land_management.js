@@ -22,7 +22,7 @@ export class LandManagementCommands extends plugin {
           fnc: 'viewLandInfo'
         },
         {
-          reg: '^#(nc)?土地进阶(\\d+)?$',
+          reg: '^#(nc)?土地升级(\\d+)?$',
           fnc: 'upgradeLandQuality'
         },
         {
@@ -145,15 +145,6 @@ export class LandManagementCommands extends plugin {
         message += `📍 土地编号: ${result.landId}\n`;
         message += `⬆️ 品质变化: ${result.fromQualityName} → ${result.toQualityName}\n`;
         message += `💰 花费金币: ${result.costGold}\n`;
-
-        if (result.materialsCost && result.materialsCost.length > 0) {
-          message += `🔧 消耗材料:\n`;
-          for (const material of result.materialsCost) {
-            const materialName = this._getItemName(material.item_id);
-            message += `   • ${materialName} x${material.quantity}\n`;
-          }
-        }
-
         message += `💰 剩余金币: ${result.remainingCoins}`;
         await e.reply(message);
       } else {
@@ -207,30 +198,16 @@ export class LandManagementCommands extends plugin {
         message += `💰 金币需求: ${upgradeInfo.requirements.gold}\n`;
         message += `⭐ 等级需求: ${upgradeInfo.requirements.level}\n`;
 
-        if (upgradeInfo.requirements.materials && upgradeInfo.requirements.materials.length > 0) {
-          message += `🔧 材料需求:\n`;
-          for (const material of upgradeInfo.requirements.materials) {
-            const materialName = this._getItemName(material.item_id);
-            const currentQuantity = upgradeInfo.playerStatus.inventory[material.item_id]?.quantity || 0;
-            const hasEnough = currentQuantity >= material.quantity;
-            const status = hasEnough ? '✅' : '❌';
-            message += `   ${status} ${materialName}: ${currentQuantity}/${material.quantity}\n`;
-          }
-        }
 
         message += '\n📊 当前状态:\n';
         message += `   💰 金币: ${upgradeInfo.playerStatus.coins}/${upgradeInfo.requirements.gold} ${upgradeInfo.meetsGoldRequirement ? '✅' : '❌'}\n`;
         message += `   ⭐ 等级: ${upgradeInfo.playerStatus.level}/${upgradeInfo.requirements.level} ${upgradeInfo.meetsLevelRequirement ? '✅' : '❌'}\n`;
-        message += `   🔧 材料: ${upgradeInfo.meetsMaterialRequirement ? '✅' : '❌'}\n`;
 
         if (upgradeInfo.meetsAllRequirements) {
           message += '\n🎉 满足所有进阶条件！';
           message += `\n💡 使用 #nc土地进阶 ${landId} 进行品质进阶`;
         } else {
           message += '\n⚠️ 进阶条件未满足';
-          if (upgradeInfo.materialIssues.length > 0) {
-            message += `\n❌ ${upgradeInfo.materialIssues.join('；')}`;
-          }
         }
       } else if (upgradeInfo.reason) {
         message += `🎯 ${upgradeInfo.reason}`;
