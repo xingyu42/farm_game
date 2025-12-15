@@ -47,7 +47,7 @@
         <!-- 金币槽 -->
         <div class="flex items-center gap-2 bg-[#2a1a10] px-4 py-1.5 rounded-sm border-2 border-[#1a0a04]
             shadow-[inset_2px_2px_0_rgba(0,0,0,0.6),inset_-1px_-1px_0_rgba(255,255,255,0.1)]">
-            <span class="text-6 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">💰</span>
+            <span class="iconify text-6 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]" data-icon="twemoji:money-bag"></span>
             <span class="text-6 font-black text-[#ffd700] tracking-wide drop-shadow-[2px_2px_0_#000]">{{ playerCoins }}</span>
         </div>
 
@@ -57,7 +57,7 @@
         <!-- 等级徽章 -->
         <div class="relative flex items-center gap-1 bg-gradient-to-b from-[#d94844] to-[#a03030] px-4 py-1.5 rounded-sm border-2 border-[#8b0000]
             shadow-[inset_0_2px_0_rgba(255,255,255,0.3),0_3px_0_#5a0000]">
-            <span class="text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">⭐</span>
+            <span class="iconify text-5 drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]" data-icon="twemoji:star"></span>
             <span class="text-5 font-black text-white drop-shadow-[2px_2px_0_#4a0000]">Lv.{{ playerLevel }}</span>
             <!-- 高光效果 -->
             <div class="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/20 to-transparent rounded-r-sm"></div>
@@ -103,7 +103,7 @@
                     <div v-if="item.isLocked" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-15
                         w-11 h-11 rounded-full bg-gradient-to-br from-[#555] to-[#222] border-3 border-[#111]
                         flex items-center justify-center text-5.5
-                        shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_4px_0_#000]">🔒</div>
+                        shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_4px_0_#000]"><span class="iconify" data-icon="twemoji:locked"></span></div>
 
                     <!-- 等级要求徽章 -->
                     <div v-if="item.requiredLevel > 1" class="absolute top-1 left-1 z-20
@@ -124,7 +124,7 @@
                     <div class="mt-2 bg-[#ffcd9c] px-3 py-1 rounded-full border-2 border-[#8b4513] font-black text-3
                         shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_2px_0_#5a2d0a]"
                         :class="item.isLocked ? 'opacity-50' : ''">
-                        <span class="text-[#c41e1e]">💰 {{ item.price }}</span>
+                        <span class="text-[#c41e1e]"><span class="iconify inline-block align-middle" data-icon="twemoji:money-bag"></span> {{ item.price }}</span>
                     </div>
                 </div>
             </div>
