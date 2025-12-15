@@ -1,5 +1,6 @@
 # 物品配置文件
 # 定义商店物品、道具等
+# icon 使用 Iconify 图标名格式 (twemoji:xxx)
 
 # 种子配置
 seeds:
@@ -10,7 +11,7 @@ seeds:
     description: "常见的蔬菜种子"
     requiredLevel: 1
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   tomato_seed:
     name: "西红柿种子"
@@ -19,7 +20,7 @@ seeds:
     description: "营养丰富的蔬菜种子"
     requiredLevel: 3
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   wheat_seed:
     name: "小麦种子"
@@ -28,7 +29,7 @@ seeds:
     description: "基础的谷物种子"
     requiredLevel: 2
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   lettuce_seed:
     name: "生菜种子"
@@ -37,7 +38,7 @@ seeds:
     description: "生菜的播种用种子"
     requiredLevel: 2
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   potato_seed:
     name: "土豆种子"
@@ -46,7 +47,7 @@ seeds:
     description: "土豆的播种用种子"
     requiredLevel: 4
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   corn_seed:
     name: "玉米种子"
@@ -55,7 +56,7 @@ seeds:
     description: "玉米的播种用种子"
     requiredLevel: 6
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   strawberry_seed:
     name: "草莓种子"
@@ -64,7 +65,7 @@ seeds:
     description: "草莓的播种用种子"
     requiredLevel: 8
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   blueberry_seed:
     name: "蓝莓种子"
@@ -73,7 +74,7 @@ seeds:
     description: "适合中后期种植的水果种子"
     requiredLevel: 10
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   grape_seed:
     name: "葡萄种子"
@@ -82,7 +83,7 @@ seeds:
     description: "葡萄的播种用种子"
     requiredLevel: 12
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   pumpkin_seed:
     name: "南瓜种子"
@@ -91,7 +92,7 @@ seeds:
     description: "南瓜的播种用种子"
     requiredLevel: 14
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   onion_seed:
     name: "洋葱种子"
@@ -100,7 +101,7 @@ seeds:
     description: "洋葱的播种用种子"
     requiredLevel: 5
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   cucumber_seed:
     name: "黄瓜种子"
@@ -109,7 +110,7 @@ seeds:
     description: "黄瓜的播种用种子"
     requiredLevel: 7
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   pepper_seed:
     name: "辣椒种子"
@@ -118,7 +119,7 @@ seeds:
     description: "辣椒的播种用种子"
     requiredLevel: 9
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   eggplant_seed:
     name: "茄子种子"
@@ -127,7 +128,7 @@ seeds:
     description: "茄子的播种用种子"
     requiredLevel: 11
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   melon_seed:
     name: "甜瓜种子"
@@ -136,7 +137,7 @@ seeds:
     description: "甜瓜的播种用种子"
     requiredLevel: 13
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   sunflower_seed:
     name: "向日葵种子"
@@ -145,7 +146,7 @@ seeds:
     description: "向日葵的播种用种子"
     requiredLevel: 15
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   beet_seed:
     name: "甜菜种子"
@@ -154,7 +155,7 @@ seeds:
     description: "甜菜的播种用种子"
     requiredLevel: 18
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   cauliflower_seed:
     name: "花椰菜种子"
@@ -163,7 +164,7 @@ seeds:
     description: "花椰菜的播种用种子"
     requiredLevel: 21
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   garlic_seed:
     name: "大蒜种子"
@@ -172,7 +173,7 @@ seeds:
     description: "大蒜的播种用种子"
     requiredLevel: 24
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   cranberry_seed:
     name: "蔓越莓种子"
@@ -181,7 +182,7 @@ seeds:
     description: "蔓越莓的播种用种子"
     requiredLevel: 27
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   pineapple_seed:
     name: "菠萝种子"
@@ -190,7 +191,7 @@ seeds:
     description: "菠萝的播种用种子"
     requiredLevel: 30
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   tea_leaf_seed:
     name: "茶叶种子"
@@ -199,7 +200,7 @@ seeds:
     description: "茶叶的播种用种子"
     requiredLevel: 35
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   lotus_root_seed:
     name: "莲藕种子"
@@ -208,7 +209,7 @@ seeds:
     description: "莲藕的播种用种子"
     requiredLevel: 40
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   cactus_fruit_seed:
     name: "仙人掌果种子"
@@ -217,7 +218,7 @@ seeds:
     description: "仙人掌果的播种用种子"
     requiredLevel: 45
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   starfruit_seed:
     name: "杨桃种子"
@@ -226,7 +227,7 @@ seeds:
     description: "杨桃的播种用种子"
     requiredLevel: 50
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   ancient_fruit_seed:
     name: "远古果实种子"
@@ -235,7 +236,7 @@ seeds:
     description: "远古果实的播种用种子"
     requiredLevel: 60
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   dragonfruit_seed:
     name: "火龙果种子"
@@ -244,7 +245,7 @@ seeds:
     description: "火龙果的播种用种子"
     requiredLevel: 70
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   ginseng_seed:
     name: "人参种子"
@@ -253,7 +254,7 @@ seeds:
     description: "人参的播种用种子"
     requiredLevel: 80
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   saffron_seed:
     name: "藏红花种子"
@@ -262,7 +263,7 @@ seeds:
     description: "藏红花的播种用种子"
     requiredLevel: 90
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
   eternal_fruit_seed:
     name: "永恒之果种子"
@@ -271,7 +272,7 @@ seeds:
     description: "永恒之果的播种用种子"
     requiredLevel: 100
     maxStack: 99
-    icon: 🌱
+    icon: "twemoji:seedling"
 
 # 肥料配置
 fertilizer:
@@ -284,7 +285,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.2 # 加速20%
-    icon: 💊
+    icon: "twemoji:pill"
 
   fertilizer_premium:
     name: "高级肥料"
@@ -295,7 +296,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.4 # 加速40%
-    icon: 💊
+    icon: "twemoji:pill"
 
   fertilizer_deluxe:
     name: "顶级肥料"
@@ -306,7 +307,7 @@ fertilizer:
     maxStack: 50
     effect:
       speedBonus: 0.6 # 加速60%
-    icon: 💊
+    icon: "twemoji:pill"
 
 # 杀虫剂配置
 pesticide:
@@ -319,7 +320,7 @@ pesticide:
     maxStack: 50
     effects:
       health: 15
-    icon: 🐛
+    icon: "twemoji:bug"
 
 # 狗粮配置（防御系统）
 # 注意：defense 物品使用短 ID (normal/premium/deluxe) 而非 defense_xxx 格式
@@ -334,7 +335,7 @@ defense:
     maxStack: 20
     defenseBonus: 20 # 防御加成20%
     duration: 30 # 持续30分钟
-    icon: 🦴
+    icon: "twemoji:bone"
   premium:
     name: "高级狗粮"
     price: 80
@@ -344,7 +345,7 @@ defense:
     maxStack: 20
     defenseBonus: 35 # 防御加成35%
     duration: 60 # 持续60分钟
-    icon: 🦴
+    icon: "twemoji:bone"
   deluxe:
     name: "优质狗粮"
     price: 150
@@ -354,7 +355,7 @@ defense:
     maxStack: 20
     defenseBonus: 50 # 防御加成50%
     duration: 120 # 持续120分钟
-    icon: 🦴
+    icon: "twemoji:bone"
 # 偷菜工具配置（未来扩展）
 tools:
   basic_lockpick:
@@ -367,7 +368,7 @@ tools:
     effect:
       successRateBonus: 10 # +10%成功率
       duration: 60 # 持续60分钟
-    icon: 🔐
+    icon: "twemoji:locked-with-key"
   advanced_gloves:
     name: "隐形手套"
     price: 250
@@ -379,7 +380,7 @@ tools:
       successRateBonus: 20 # +20%成功率
       stealthBonus: 15 # +15%隐匿加成
       duration: 90 # 持续90分钟
-    icon: 🧤
+    icon: "twemoji:gloves"
   master_toolkit:
     name: "大师工具包"
     price: 500
@@ -392,7 +393,7 @@ tools:
       rewardBonus: 25 # +25%收益加成
       cooldownReduction: 20 # -20%冷却时间
       duration: 120 # 持续120分钟
-    icon: 🔧
+    icon: "twemoji:wrench"
 # 土地进阶材料
 materials:
   copper_essence:
@@ -402,7 +403,7 @@ materials:
     description: "用于土地品质进阶的珍贵材料"
     requiredLevel: 10
     maxStack: 10
-    icon: 🟤
+    icon: "twemoji:brown-circle"
   silver_essence:
     name: "银质精华"
     price: 50000 # 商店价格（超稀有）
@@ -410,7 +411,7 @@ materials:
     description: "用于土地品质进阶的传奇材料"
     requiredLevel: 15
     maxStack: 5
-    icon: ⚪
+    icon: "twemoji:white-circle"
   gold_essence:
     name: "金质精华"
     price: 200000 # 商店价格（传说）
@@ -418,7 +419,7 @@ materials:
     description: "用于土地品质进阶的神话材料"
     requiredLevel: 20
     maxStack: 3
-    icon: 🟡
+    icon: "twemoji:yellow-circle"
 # 分类定义
 categories:
   - key: "seeds"

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../common/lib/daisyui.css">
     <script src="../common/lib/vue.js"></script>
     <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
 </head>
 <body class="bg-transparent w-250">
 
@@ -78,7 +79,7 @@
             <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-dashed border-[#8b4513]/40">
                 <div class="w-10 h-10 flex items-center justify-center bg-[#8b4513] rounded-1 border-2 border-[#5a2d0a]
                     shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_2px_0_#3e1a05]">
-                    <span class="text-6">{{ getCategoryIcon(category.key) }}</span>
+                    <span class="iconify text-6" :data-icon="getCategoryIcon(category.key)"></span>
                 </div>
                 <span class="text-5.5 font-black text-[#4a281a] drop-shadow-[1px_1px_0_rgba(255,255,255,0.5)]">{{ category.name }}</span>
                 <div class="flex-1 h-0.5 bg-gradient-to-r from-[#8b4513]/30 to-transparent ml-2"></div>
@@ -111,8 +112,9 @@
                         shadow-[0_3px_0_#440000]">Lv.{{ item.requiredLevel }}</div>
 
                     <!-- 商品图标 -->
-                    <div class="text-10 mb-1.5 drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-transform"
-                        :class="item.isLocked ? 'opacity-40 grayscale' : 'group-hover:-translate-y-1'">{{ item.icon }}</div>
+                    <span class="iconify text-10 mb-1.5 drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-transform"
+                        :class="item.isLocked ? 'opacity-40 grayscale' : 'group-hover:-translate-y-1'"
+                        :data-icon="item.icon"></span>
 
                     <!-- 商品名称 -->
                     <div class="text-3.5 font-bold text-[#4a281a] text-center leading-tight mb-auto line-clamp-2"
@@ -166,8 +168,15 @@ const { createApp, onMounted } = Vue;
 createApp({
     setup() {
         const data = window.FARM_DATA || {};
-        const iconMap = { seeds: '🌱', fertilizer: '💊', pesticide: '🐛', defense: '🐕', tools: '🔧', materials: '💎' };
-        const getCategoryIcon = (key) => iconMap[key] || '📦';
+        const iconMap = {
+            seeds: 'twemoji:seedling',
+            fertilizer: 'twemoji:pill',
+            pesticide: 'twemoji:bug',
+            defense: 'twemoji:bone',
+            tools: 'twemoji:wrench',
+            materials: 'twemoji:gem-stone'
+        };
+        const getCategoryIcon = (key) => iconMap[key] || 'twemoji:package';
 
         onMounted(() => document.body.classList.add('ready'));
 

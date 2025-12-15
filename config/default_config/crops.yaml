@@ -1,10 +1,11 @@
 # 作物配置文件
 # 定义各种作物的基本属性
+# icon 使用 Iconify 图标名格式 (twemoji:xxx)
 
 # 胡萝卜 - 快速作物
 carrot:
   name: "胡萝卜"
-  icon: "🥕"
+  icon: "twemoji:carrot"
   price: 8 # basePrice：动态定价基准
   is_dynamic_price: true
   growTime: 600 # 生长时间（秒）
@@ -16,7 +17,7 @@ carrot:
 # 西红柿 - 中等作物
 tomato:
   name: "西红柿"
-  icon: "🍅"
+  icon: "twemoji:tomato"
   price: 22
   is_dynamic_price: true
   growTime: 900
@@ -28,7 +29,7 @@ tomato:
 # 小麦 - 粮食作物
 wheat:
   name: "小麦"
-  icon: "🌾"
+  icon: "twemoji:sheaf-of-rice"
   price: 10
   is_dynamic_price: true
   growTime: 800
@@ -41,7 +42,7 @@ wheat:
 # 调整：提高产量，让极短周期在动态价下不会显得太亏
 lettuce:
   name: "生菜"
-  icon: "🥬"
+  icon: "twemoji:leafy-green"
   price: 10
   is_dynamic_price: true
   growTime: 360
@@ -53,7 +54,7 @@ lettuce:
 # 土豆 - 中期入门（Lv4）
 potato:
   name: "土豆"
-  icon: "🥔"
+  icon: "twemoji:potato"
   price: 21
   is_dynamic_price: true
   growTime: 720
@@ -65,7 +66,7 @@ potato:
 # 洋葱 - 中期过渡（Lv5）
 onion:
   name: "洋葱"
-  icon: "🧅"
+  icon: "twemoji:onion"
   price: 26
   is_dynamic_price: true
   growTime: 840
@@ -77,7 +78,7 @@ onion:
 # 玉米 - 中期主粮（Lv6）
 corn:
   name: "玉米"
-  icon: "🌽"
+  icon: "twemoji:ear-of-corn"
   price: 34
   is_dynamic_price: true
   growTime: 1200
@@ -89,7 +90,7 @@ corn:
 # 黄瓜 - 中后期前置（Lv7）
 cucumber:
   name: "黄瓜"
-  icon: "🥒"
+  icon: "twemoji:cucumber"
   price: 42
   is_dynamic_price: true
   growTime: 1500
@@ -101,7 +102,7 @@ cucumber:
 # 草莓 - 中后期高价值（Lv8）
 strawberry:
   name: "草莓"
-  icon: "🍓"
+  icon: "twemoji:strawberry"
   price: 52
   is_dynamic_price: true
   growTime: 1800
@@ -113,7 +114,7 @@ strawberry:
 # 辣椒 - 中后期活跃作物（Lv9）
 pepper:
   name: "辣椒"
-  icon: "🌶️"
+  icon: "twemoji:hot-pepper"
   price: 60
   is_dynamic_price: true
   growTime: 1600
@@ -125,7 +126,7 @@ pepper:
 # 蓝莓 - 中后期稳定高收益（Lv10）
 blueberry:
   name: "蓝莓"
-  icon: "🫐"
+  icon: "twemoji:blueberries"
   price: 78
   is_dynamic_price: true
   growTime: 2400
@@ -137,7 +138,7 @@ blueberry:
 # 茄子 - 后期前置（Lv11）
 eggplant:
   name: "茄子"
-  icon: "🍆"
+  icon: "twemoji:eggplant"
   price: 120
   is_dynamic_price: true
   growTime: 3600
@@ -150,7 +151,7 @@ eggplant:
 # 调整：略削弱产量，避免在 basePrice×1.5 时远超其它作物太多
 grape:
   name: "葡萄"
-  icon: "🍇"
+  icon: "twemoji:grapes"
   price: 172
   is_dynamic_price: true
   growTime: 5400
@@ -162,7 +163,7 @@ grape:
 # 甜瓜 - 后期高价值（Lv13）
 melon:
   name: "甜瓜"
-  icon: "🍈"
+  icon: "twemoji:melon"
   price: 160
   is_dynamic_price: true
   growTime: 4200
@@ -175,19 +176,19 @@ melon:
 # 调整：大幅提升产量，让极长周期在任何价格段都对得起占格时间
 pumpkin:
   name: "南瓜"
-  icon: "🎃"
+  icon: "twemoji:jack-o-lantern"
   price: 251
   is_dynamic_price: true
   growTime: 7200
   baseYield: 8  # 原为3 → 8，单位时间收益 ~ 草莓的1.2倍、略低于葡萄
-  experience: 150 # 原130，强化“后期挂机大额结算”的体验
+  experience: 150 # 原130，强化"后期挂机大额结算"的体验
   requiredLevel: 14
   description: "体积硕大，价值不俗的长周期作物"
 
 # 向日葵 - 活跃型高单价（Lv15）
 sunflower:
   name: "向日葵"
-  icon: "🌻"
+  icon: "twemoji:sunflower"
   price: 190
   is_dynamic_price: true
   growTime: 3000
@@ -199,7 +200,7 @@ sunflower:
 # 甜菜 - 稳定高产（Lv18）
 beet:
   name: "甜菜"
-  icon: "🫜"
+  icon: "streamline-ultimate-color:vegetables-beet-1"
   price: 220
   is_dynamic_price: true
   growTime: 4800
@@ -211,7 +212,7 @@ beet:
 # 花椰菜 - 中后期耐久作物（Lv21）
 cauliflower:
   name: "花椰菜"
-  icon: "🥦"
+  icon: "twemoji:broccoli"
   price: 260
   is_dynamic_price: true
   growTime: 5400
@@ -223,7 +224,7 @@ cauliflower:
 # 大蒜 - 料理香料作物（Lv24）
 garlic:
   name: "大蒜"
-  icon: "🧄"
+  icon: "twemoji:garlic"
   price: 240
   is_dynamic_price: true
   growTime: 3600
@@ -235,7 +236,7 @@ garlic:
 # 蔓越莓 - 长周期高产（Lv27）
 cranberry:
   name: "蔓越莓"
-  icon: "🍒"
+  icon: "twemoji:cherries"
   price: 320
   is_dynamic_price: true
   growTime: 7200
@@ -247,7 +248,7 @@ cranberry:
 # 菠萝 - 中后期精品（Lv30）
 pineapple:
   name: "菠萝"
-  icon: "🍍"
+  icon: "twemoji:pineapple"
   price: 420
   is_dynamic_price: true
   growTime: 10800
@@ -259,7 +260,7 @@ pineapple:
 # 茶叶 - 传奇作物前置（Lv35）
 tea_leaf:
   name: "茶叶"
-  icon: "🍃"
+  icon: "twemoji:leaf-fluttering-in-wind"
   price: 520
   is_dynamic_price: true
   growTime: 14400
@@ -271,7 +272,7 @@ tea_leaf:
 # 莲藕 - 后期高产（Lv40）
 lotus_root:
   name: "莲藕"
-  icon: "🪷"
+  icon: "twemoji:lotus"
   price: 680
   is_dynamic_price: true
   growTime: 18000
@@ -283,7 +284,7 @@ lotus_root:
 # 仙人掌果 - 极端环境作物（Lv45）
 cactus_fruit:
   name: "仙人掌果"
-  icon: "🌵"
+  icon: "twemoji:cactus"
   price: 820
   is_dynamic_price: true
   growTime: 21600
@@ -295,7 +296,7 @@ cactus_fruit:
 # 杨桃 - 传奇作物（Lv50）
 starfruit:
   name: "杨桃"
-  icon: "⭐"
+  icon: "twemoji:star"
   price: 1100
   is_dynamic_price: true
   growTime: 28800
@@ -307,7 +308,7 @@ starfruit:
 # 远古果实 - 史诗作物（Lv60）
 ancient_fruit:
   name: "远古果实"
-  icon: "🍏"
+  icon: "twemoji:green-apple"
   price: 1600
   is_dynamic_price: true
   growTime: 43200
@@ -319,7 +320,7 @@ ancient_fruit:
 # 火龙果 - 神话作物（Lv70）
 dragonfruit:
   name: "火龙果"
-  icon: "🐲"
+  icon: "twemoji:dragon-face"
   price: 2300
   is_dynamic_price: true
   growTime: 64800
@@ -331,7 +332,7 @@ dragonfruit:
 # 人参 - 终局稀有药材（Lv80）
 ginseng:
   name: "人参"
-  icon: "🌿"
+  icon: "twemoji:herb"
   price: 3200
   is_dynamic_price: true
   growTime: 86400
@@ -343,7 +344,7 @@ ginseng:
 # 藏红花 - 宇宙级珍稀花卉（Lv90）
 saffron:
   name: "藏红花"
-  icon: "🌺"
+  icon: "twemoji:hibiscus"
   price: 4800
   is_dynamic_price: true
   growTime: 129600
@@ -355,7 +356,7 @@ saffron:
 # 永恒之果 - 终极作物（Lv100）
 eternal_fruit:
   name: "永恒之果"
-  icon: "✨"
+  icon: "twemoji:sparkles"
   price: 7200
   is_dynamic_price: true
   growTime: 172800

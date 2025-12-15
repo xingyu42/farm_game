@@ -76,10 +76,9 @@
                         <div v-if="item.locked" class="absolute inset-0 bg-[#3e2515]/50 z-1 rounded-sm"></div>
 
                         <!-- Item Icon -->
-                        <div class="text-xl leading-none drop-shadow-sm"
-                             :class="item.locked ? 'opacity-50 grayscale-50' : ''">
-                            {{ item.icon }}
-                        </div>
+                        <span class="iconify text-xl leading-none drop-shadow-sm"
+                             :class="item.locked ? 'opacity-50 grayscale-50' : ''"
+                             :data-icon="item.icon"></span>
 
                         <!-- Item Name -->
                         <div class="text-[8px] text-[#fff8dc] text-center mt-0.5 max-w-full truncate text-shadow-[1px_1px_0_#3e2515]"

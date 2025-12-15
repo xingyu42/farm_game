@@ -240,33 +240,6 @@ class Puppeteer {
       const tplUrl = pathToFileURL(tplFile).href
       await page.goto(tplUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-      // 注入 Emoji 字体支持
-      const fontPath = path.join(_path, 'plugins', PLUGIN_NAME, 'resources', 'common', 'fonts', 'NotoColorEmoji.ttf')
-      if (fs.existsSync(fontPath)) {
-        const fontUrl = pathToFileURL(fontPath).href
-        await page.addStyleTag({
-          content: `
-            @font-face {
-              font-family: 'Emoji';
-              src: url('${fontUrl}');
-              unicode-range: U+10000-10FFFF;
-            }
-            body, * {
-              font-family: 'Emoji', system-ui, -apple-system, sans-serif;
-            }
-          `
-        })
-        // 等待字体加载完成
-        await page.evaluate(async () => {
-          await document.fonts.load('16px "Noto Color Emoji"', '🌱🥕🍅')
-          await document.fonts.ready
-        }).catch(() => {
-          this.logger.warn('[农场游戏] 等待字体加载超时')
-        })
-      } else {
-        this.logger.warn('[农场游戏] Emoji 字体文件不存在，emoji 可能显示为方块')
-      }
-
       // 等待 Vue 渲染完成
       await page.waitForSelector('body.ready', { timeout: 10000 }).catch(() => {
         this.logger.warn('[农场游戏] 等待 Vue 渲染超时，继续截图')

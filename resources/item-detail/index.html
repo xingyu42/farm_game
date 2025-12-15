@@ -32,7 +32,7 @@
         <!-- Item Header Card -->
         <div class="flex items-center gap-4 p-3 bg-[#e8d5b7] rounded border border-[#c9a86c]">
             <div class="w-14 h-14 bg-[#f5e6d3] border-2 border-[#8b5a2b] rounded flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]">
-                <span class="text-2xl">{{ item.icon }}</span>
+                <span class="iconify text-2xl" :data-icon="item.icon"></span>
             </div>
             <div class="flex flex-col gap-1">
                 <span class="px-2 py-0.5 bg-[#8b5a2b] text-[#fff8dc] text-[10px] font-bold rounded-sm w-fit">{{ item.categoryName }}</span>
@@ -84,8 +84,8 @@
                 <span class="text-xs font-bold text-[#5d3a1a]">种植信息</span>
             </div>
             <div class="flex items-start gap-3">
-                <div class="w-12 h-12 bg-[#f5e6d3] rounded flex items-center justify-center text-2xl border border-[#a89070]">
-                    {{ linkedCrop.icon }}
+                <div class="w-12 h-12 bg-[#f5e6d3] rounded flex items-center justify-center border border-[#a89070]">
+                    <span class="iconify text-2xl" :data-icon="linkedCrop.icon"></span>
                 </div>
                 <div class="flex-1">
                     <div class="font-bold text-[#3e2515] mb-1">{{ linkedCrop.name }}</div>
@@ -122,7 +122,7 @@
         setup() {
             const rawData = window.FARM_DATA || {
                 item: {
-                    icon: '🌱',
+                    icon: 'twemoji:seedling',
                     categoryName: '种子',
                     name: '未知物品',
                     description: '暂无描述',

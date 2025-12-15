@@ -43,24 +43,24 @@
             </div>
         </div>
         <div class="badge badge-lg bg-gradient-to-br from-orange-50 to-orange-100 border-orange-300 text-orange-700 font-semibold px-4 py-3 gap-1">
-            <span>🔥</span>
+            <span class="iconify" data-icon="twemoji:fire"></span>
             <span>连签 {{ consecutiveDays }} 天</span>
         </div>
     </div>
 
     <!-- Today Rewards -->
     <div class="glass rounded-2xl p-4 shadow-md">
-        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200">🎁 今日奖励</div>
+        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200"><span class="iconify inline-block align-middle" data-icon="twemoji:wrapped-gift"></span> 今日奖励</div>
         <div class="flex gap-3">
             <div class="flex-1 bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 flex items-center gap-3 border border-green-300">
-                <span class="text-3xl">💰</span>
+                <span class="iconify text-3xl" data-icon="twemoji:money-bag"></span>
                 <div class="flex flex-col">
                     <span class="text-[11px] text-green-700 uppercase tracking-wide">金币</span>
                     <span class="text-xl font-extrabold text-green-800">+{{ rewardCoins }}</span>
                 </div>
             </div>
             <div class="flex-1 bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 flex items-center gap-3 border border-green-300">
-                <span class="text-3xl">✨</span>
+                <span class="iconify text-3xl" data-icon="twemoji:sparkles"></span>
                 <div class="flex flex-col">
                     <span class="text-[11px] text-green-700 uppercase tracking-wide">经验</span>
                     <span class="text-xl font-extrabold text-green-800">+{{ rewardExp }}</span>
@@ -70,7 +70,7 @@
         <div v-if="rewardItems.length" class="flex flex-wrap gap-2 mt-3">
             <div v-for="item in rewardItems" :key="item.name"
                  class="badge badge-lg bg-amber-50/80 border-amber-200 text-stone-700">
-                📦 {{ item.name }} x{{ item.quantity }}
+                                <span class="iconify inline-block align-middle" data-icon="twemoji:package"></span> {{ item.name }} x{{ item.quantity }}
             </div>
         </div>
     </div>
@@ -78,7 +78,7 @@
     <!-- Milestone Banner -->
     <div v-if="hasMilestone" class="glass rounded-2xl p-4 shadow-md bg-gradient-to-br from-yellow-100/25 to-amber-100/25 border border-amber-400/50 relative overflow-hidden">
         <div class="flex items-center gap-3 relative z-10">
-            <span class="text-3xl">🏆</span>
+            <span class="iconify text-3xl" data-icon="twemoji:trophy"></span>
             <div class="flex flex-col">
                 <span class="text-[11px] font-bold text-orange-500 uppercase tracking-wider">达成里程碑!</span>
                 <span class="text-lg font-bold text-orange-700">{{ milestoneName }}</span>
@@ -89,7 +89,7 @@
 
     <!-- Week Grid -->
     <div class="glass rounded-2xl p-4 shadow-md">
-        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200">📅 本周签到</div>
+        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200"><span class="iconify inline-block align-middle" data-icon="twemoji:calendar"></span> 本周签到</div>
         <div class="grid grid-cols-7 gap-2">
             <div v-for="item in weekDays" :key="item.dayName" class="flex flex-col items-center gap-1">
                 <span class="text-xs text-slate-400 font-medium">{{ item.dayName }}</span>
@@ -107,11 +107,11 @@
     <div class="glass rounded-2xl p-4 shadow-md flex flex-col gap-3">
         <div class="flex justify-between">
             <div class="flex flex-col gap-0.5">
-                <span class="text-xs text-slate-400">📊 总签到</span>
+                <span class="text-xs text-slate-400"><span class="iconify inline-block align-middle" data-icon="twemoji:bar-chart"></span> 总签到</span>
                 <span class="text-base font-bold text-slate-700">{{ totalSignDays }} 天</span>
             </div>
             <div class="flex flex-col gap-0.5 text-right">
-                <span class="text-xs text-slate-400">🎯 下一目标</span>
+                <span class="text-xs text-slate-400"><span class="iconify inline-block align-middle" data-icon="twemoji:direct-hit"></span> 下一目标</span>
                 <span class="text-base font-bold text-orange-500">{{ nextMilestone }}</span>
             </div>
         </div>
@@ -126,10 +126,10 @@
 
     <!-- Tomorrow Preview -->
     <div class="glass rounded-2xl p-4 shadow-md flex justify-between items-center bg-blue-50/85 border border-blue-200/50">
-        <span class="text-sm font-semibold text-blue-700">🔮 明日奖励预览</span>
+        <span class="text-sm font-semibold text-blue-700"><span class="iconify inline-block align-middle" data-icon="twemoji:crystal-ball"></span> 明日奖励预览</span>
         <div class="flex gap-4">
-            <span class="text-sm font-semibold text-blue-800">💰 +{{ nextRewardCoins }}</span>
-            <span class="text-sm font-semibold text-blue-800">✨ +{{ nextRewardExp }}</span>
+            <span class="text-sm font-semibold text-blue-800"><span class="iconify inline-block align-middle" data-icon="twemoji:money-bag"></span> +{{ nextRewardCoins }}</span>
+            <span class="text-sm font-semibold text-blue-800"><span class="iconify inline-block align-middle" data-icon="twemoji:sparkles"></span> +{{ nextRewardExp }}</span>
         </div>
     </div>
 

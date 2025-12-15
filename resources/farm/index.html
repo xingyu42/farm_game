@@ -102,7 +102,7 @@
             <div v-if="opResult" class="flex flex-col items-end gap-0.5 text-right px-3 py-2 rounded-lg min-w-[100px]"
                  :class="opResult.type === 'warning' ? 'bg-amber-900/40 border border-amber-600/50' : 'bg-lime-900/40 border border-lime-600/50'">
                 <div class="flex items-center gap-1.5 text-sm font-bold" :class="opResult.type === 'warning' ? 'text-amber-300' : 'text-lime-300'">
-                    <span>{{ opResult.icon }}</span>
+                    <span class="iconify" :data-icon="opResult.icon"></span>
                     <span>{{ opResult.title }}</span>
                 </div>
                 <div v-for="(line, i) in opResult.details" :key="i" class="text-xs text-stone-200/90">{{ line }}</div>
@@ -134,9 +134,9 @@
                 <div v-else-if="plot.crop" class="relative w-full h-full flex justify-center items-center">
                     <div v-if="plot.state === 'growing'" class="absolute w-11 h-11 rounded-full opacity-60"
                          :style="getProgressStyle(plot.progress, plot.alert)"></div>
-                    <div class="text-2xl z-10 drop-shadow-sm filter select-none" :class="{'scale-110': plot.state === 'ready'}">
-                        {{ plot.cropIcon }}
-                    </div>
+                    <span class="iconify text-2xl z-10 drop-shadow-sm filter select-none"
+                          :class="{'scale-110': plot.state === 'ready'}"
+                          :data-icon="plot.cropIcon"></span>
                 </div>
 
                 <!-- Quality Star -->

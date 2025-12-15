@@ -53,17 +53,17 @@
         <!-- Core Stats -->
         <div class="grid grid-cols-3 gap-3">
             <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
-                <span class="text-2xl block">💰</span>
+                <span class="iconify text-2xl block" data-icon="twemoji:money-bag"></span>
                 <span class="text-sm font-bold text-stone-800 block">{{ coins }}</span>
                 <span class="text-[10px] text-stone-500">金币</span>
             </div>
             <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
-                <span class="text-2xl block">🏞️</span>
+                <span class="iconify text-2xl block" data-icon="twemoji:national-park"></span>
                 <span class="text-sm font-bold text-stone-800 block">{{ landCount }} / {{ maxLandCount }}</span>
                 <span class="text-[10px] text-stone-500">土地</span>
             </div>
             <div class="bg-amber-50/60 rounded-xl p-3 text-center border border-amber-200/50">
-                <span class="text-2xl block">📦</span>
+                <span class="iconify text-2xl block" data-icon="twemoji:package"></span>
                 <span class="text-sm font-bold text-stone-800 block">{{ inventoryUsage }} / {{ inventoryCapacity }}</span>
                 <span class="text-[10px] text-stone-500">仓库</span>
             </div>
@@ -72,17 +72,17 @@
 
     <!-- Protection -->
     <div class="glass rounded-2xl p-4 shadow-md">
-        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200">🛡️ 农场防护</div>
+        <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200"><span class="iconify inline-block align-middle" data-icon="twemoji:shield"></span> 农场防护</div>
         <div class="flex gap-3">
             <div class="flex-1 bg-[linear-gradient(135deg,#eff6ff,#dbeafe)] rounded-xl p-3 flex items-center gap-3 border border-blue-200">
-                <span class="text-2xl">🏰</span>
+                <span class="iconify text-2xl" data-icon="twemoji:castle"></span>
                 <div class="flex flex-col">
                     <span class="text-[11px] text-slate-500 font-bold">基础防御</span>
                     <span class="text-sm font-bold text-slate-800">+{{ defenseBonus }}%</span>
                 </div>
             </div>
             <div class="flex-1 bg-[linear-gradient(135deg,#fff7ed,#ffedd5)] rounded-xl p-3 flex items-center gap-3 border border-orange-200">
-                <span class="text-2xl">🐕</span>
+                <span class="iconify text-2xl" data-icon="twemoji:dog"></span>
                 <div class="flex flex-col">
                     <span class="text-[11px] text-orange-700 font-bold">看家萌宠</span>
                     <template v-if="dogFoodActive">
@@ -101,21 +101,21 @@
     <!-- Steal Status -->
     <div class="glass rounded-2xl p-4 shadow-md">
         <div class="flex items-center pb-2 mb-3 border-b-2 border-dashed border-stone-200">
-            <span class="text-sm font-bold text-stone-700">🥷 偷菜情报</span>
+            <span class="text-sm font-bold text-stone-700"><span class="iconify inline-block align-middle" data-icon="twemoji:ninja"></span> 偷菜情报</span>
             <span v-if="canSteal" class="ml-auto badge badge-success badge-sm text-white">准备就绪</span>
             <span v-else class="ml-auto badge badge-error badge-sm text-white">冷却中 {{ stealCooldown }}分钟</span>
         </div>
         <div class="bg-stone-100/50 rounded-xl p-3 flex justify-between">
             <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
-                <span>📅 今日次数</span>
+                <span><span class="iconify inline-block align-middle" data-icon="twemoji:calendar"></span> 今日次数</span>
                 <span class="text-sm font-bold text-stone-800">{{ todayStealCount }}</span>
             </div>
             <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
-                <span>🎯 成功率</span>
+                <span><span class="iconify inline-block align-middle" data-icon="twemoji:direct-hit"></span> 成功率</span>
                 <span class="text-sm font-bold text-stone-800">{{ stealRate }}%</span>
             </div>
             <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
-                <span>🌾 最多偷取</span>
+                <span><span class="iconify inline-block align-middle" data-icon="twemoji:sheaf-of-rice"></span> 最多偷取</span>
                 <span class="text-sm font-bold text-stone-800">{{ maxStealPerAttempt }}块</span>
             </div>
         </div>
@@ -125,11 +125,11 @@
     <div class="glass rounded-2xl p-4 shadow-md">
         <div class="flex justify-around bg-white/60 rounded-xl p-3">
             <div class="flex flex-col items-center gap-1">
-                <span class="text-xs text-slate-500">📅 总签到</span>
+                <span class="text-xs text-slate-500"><span class="iconify inline-block align-middle" data-icon="twemoji:calendar"></span> 总签到</span>
                 <span class="text-lg font-bold text-blue-600">{{ totalSignDays }} 天</span>
             </div>
             <div class="flex flex-col items-center gap-1">
-                <span class="text-xs text-slate-500">📈 连续签到</span>
+                <span class="text-xs text-slate-500"><span class="iconify inline-block align-middle" data-icon="twemoji:chart-increasing"></span> 连续签到</span>
                 <span class="text-lg font-bold text-orange-500">{{ consecutiveDays }} 天</span>
             </div>
         </div>
@@ -137,11 +137,11 @@
 
     <!-- Tips -->
     <div v-if="isNewPlayer" class="glass rounded-2xl p-4 shadow-md text-center">
-        <div class="text-sm font-bold text-green-700 mb-1">🎉 欢迎来到农场世界！</div>
-        <div class="text-xs text-stone-600">💡 输入 #nc帮助 查看游戏指令</div>
+        <div class="text-sm font-bold text-green-700 mb-1"><span class="iconify inline-block align-middle" data-icon="twemoji:party-popper"></span> 欢迎来到农场世界！</div>
+        <div class="text-xs text-stone-600"><span class="iconify inline-block align-middle" data-icon="twemoji:light-bulb"></span> 输入 #nc帮助 查看游戏指令</div>
     </div>
     <div v-else class="glass rounded-2xl p-4 shadow-md text-center">
-        <div class="text-xs text-stone-600">💡 使用 #使用狗粮 激活防护</div>
+        <div class="text-xs text-stone-600"><span class="iconify inline-block align-middle" data-icon="twemoji:light-bulb"></span> 使用 #使用狗粮 激活防护</div>
     </div>
 
     <!-- Footer -->
