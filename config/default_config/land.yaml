@@ -1,12 +1,10 @@
-# 土地配置文件
+﻿# 土地配置文件
 # 定义土地解锁、品质升级等
 
-# 土地系统配置（根据PRD v3.2设计）
 default:
   startingLands: 6          # 新玩家初始土地数量
   maxLands: 24              # 最大土地数量
 
-# 土地扩张配置（PRD要求）
 expansion:
   7:
     levelRequired: 5
@@ -63,37 +61,249 @@ expansion:
     levelRequired: 39
     goldCost: 2000000
 
-# 土地升级系统
 quality:
-  normal:
-    name: "普通土地"
-    productionBonus: 0      # 增产百分比
-    timeReduction: 0        # 时间减少百分比
-    experienceBonus: 0      # 经验加成百分比
-
   copper:
     name: "红土地"
-    starColor: "#C75B39"    # 星星颜色（红色）
-    productionBonus: 10     # +10%产量
-    timeReduction: 10       # -10%时间
-    experienceBonus: 0      # 无经验加成
-    levelRequired: 40
-    goldCost: 500000        # 50万
+    icon: "land_copper"
+    color: "#C75B39"
+    productionBonus: 10
+    timeReduction: 10
+    experienceBonus: 0
+    levels:
+      1:
+        levelRequired: 28
+        goldCost: 200000
+      2:
+        levelRequired: 29
+        goldCost: 220000
+      3:
+        levelRequired: 30
+        goldCost: 240000
+      4:
+        levelRequired: 31
+        goldCost: 260000
+      5:
+        levelRequired: 32
+        goldCost: 290000
+      6:
+        levelRequired: 33
+        goldCost: 320000
+      7:
+        levelRequired: 34
+        goldCost: 350000
+      8:
+        levelRequired: 35
+        goldCost: 380000
+      9:
+        levelRequired: 36
+        goldCost: 410000
+      10:
+        levelRequired: 37
+        goldCost: 440000
+      11:
+        levelRequired: 38
+        goldCost: 480000
+      12:
+        levelRequired: 39
+        goldCost: 520000
+      13:
+        levelRequired: 40
+        goldCost: 560000
+      14:
+        levelRequired: 41
+        goldCost: 600000
+      15:
+        levelRequired: 42
+        goldCost: 650000
+      16:
+        levelRequired: 43
+        goldCost: 700000
+      17:
+        levelRequired: 44
+        goldCost: 770000
+      18:
+        levelRequired: 45
+        goldCost: 900000
+      19:
+        levelRequired: 47
+        goldCost: 1500000
+      20:
+        levelRequired: 49
+        goldCost: 2000000
+      21:
+        levelRequired: 51
+        goldCost: 3000000
+      22:
+        levelRequired: 53
+        goldCost: 4000000
+      23:
+        levelRequired: 55
+        goldCost: 5500000
+      24:
+        levelRequired: 57
+        goldCost: 6800000
 
   silver:
     name: "黑土地"
-    starColor: "#2D2D2D"    # 星星颜色（黑色）
-    productionBonus: 20     # +20%产量
-    timeReduction: 20       # -20%时间
-    experienceBonus: 0      # 无经验加成
-    levelRequired: 40
-    goldCost: 1000000       # 100万
+    icon: "land_silver"
+    color: "#2D2D2D"
+    productionBonus: 20
+    timeReduction: 20
+    experienceBonus: 0
+    levels:
+      1:
+        levelRequired: 40
+        goldCost: 500000
+      2:
+        levelRequired: 41
+        goldCost: 600000
+      3:
+        levelRequired: 42
+        goldCost: 700000
+      4:
+        levelRequired: 43
+        goldCost: 800000
+      5:
+        levelRequired: 44
+        goldCost: 900000
+      6:
+        levelRequired: 45
+        goldCost: 1000000
+      7:
+        levelRequired: 46
+        goldCost: 2000000
+      8:
+        levelRequired: 47
+        goldCost: 2200000
+      9:
+        levelRequired: 48
+        goldCost: 2400000
+      10:
+        levelRequired: 49
+        goldCost: 2600000
+      11:
+        levelRequired: 50
+        goldCost: 2800000
+      12:
+        levelRequired: 51
+        goldCost: 3000000
+      13:
+        levelRequired: 52
+        goldCost: 4000000
+      14:
+        levelRequired: 53
+        goldCost: 4200000
+      15:
+        levelRequired: 54
+        goldCost: 4400000
+      16:
+        levelRequired: 55
+        goldCost: 4600000
+      17:
+        levelRequired: 56
+        goldCost: 4800000
+      18:
+        levelRequired: 57
+        goldCost: 5000000
+      19:
+        levelRequired: 59
+        goldCost: 6000000
+      20:
+        levelRequired: 61
+        goldCost: 6200000
+      21:
+        levelRequired: 63
+        goldCost: 6400000
+      22:
+        levelRequired: 65
+        goldCost: 6600000
+      23:
+        levelRequired: 67
+        goldCost: 6800000
+      24:
+        levelRequired: 69
+        goldCost: 7000000
 
   gold:
     name: "金土地"
-    starColor: "#FFB300"    # 星星颜色（金色）
-    productionBonus: 28     # +28%产量
-    timeReduction: 20       # -20%时间
-    experienceBonus: 28     # +28%经验
-    levelRequired: 40
-    goldCost: 2000000       # 200万
+    icon: "land_gold"
+    color: "#FFB300"
+    productionBonus: 28
+    timeReduction: 20
+    experienceBonus: 28
+    levels:
+      1:
+        levelRequired: 58
+        goldCost: 4000000
+      2:
+        levelRequired: 59
+        goldCost: 4200000
+      3:
+        levelRequired: 60
+        goldCost: 4400000
+      4:
+        levelRequired: 61
+        goldCost: 4600000
+      5:
+        levelRequired: 62
+        goldCost: 4800000
+      6:
+        levelRequired: 63
+        goldCost: 5000000
+      7:
+        levelRequired: 64
+        goldCost: 5200000
+      8:
+        levelRequired: 65
+        goldCost: 5400000
+      9:
+        levelRequired: 66
+        goldCost: 5600000
+      10:
+        levelRequired: 67
+        goldCost: 5800000
+      11:
+        levelRequired: 68
+        goldCost: 6000000
+      12:
+        levelRequired: 69
+        goldCost: 6200000
+      13:
+        levelRequired: 70
+        goldCost: 6600000
+      14:
+        levelRequired: 71
+        goldCost: 7000000
+      15:
+        levelRequired: 72
+        goldCost: 7400000
+      16:
+        levelRequired: 73
+        goldCost: 7800000
+      17:
+        levelRequired: 74
+        goldCost: 8200000
+      18:
+        levelRequired: 75
+        goldCost: 8600000
+
+      19:
+        levelRequired: 77
+        goldCost: 9500000
+
+      20:
+        levelRequired: 79
+        goldCost: 10400000
+      21:
+        levelRequired: 81
+        goldCost: 11300000
+      22:
+        levelRequired: 83
+        goldCost: 12200000
+      23:
+        levelRequired: 85
+        goldCost: 13100000
+      24:
+        levelRequired: 87
+        goldCost: 14000000
+

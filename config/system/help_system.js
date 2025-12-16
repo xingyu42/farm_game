@@ -121,10 +121,6 @@ export const helpList = [{
         title: '#nc土地扩张',
         desc: '扩张新的土地，增加种植面积'
     }, {
-        icon: 21,
-        title: '#nc土地信息',
-        desc: '查看所有土地的详细信息'
-    }, {
         icon: 23,
         title: '#nc土地进阶 [土地编号]',
         desc: '提升指定土地的品质等级'

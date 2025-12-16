@@ -30,7 +30,6 @@ config/
   - `seeds`: 种子配置
   - `fertilizers`: 肥料配置
   - `dogFood`: 狗粮配置
-  - `landMaterials`: 土地材料配置
   - `crops`: 作物产出配置
   - `shop`: 商店分类配置
   - `initial_gift`: 初始礼包配置
