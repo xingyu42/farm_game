@@ -315,15 +315,6 @@ class LandService {
                     throw new Error('土地已是目标品质');
                 }
 
-                // 检查是否降级
-                const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
-                const currentIdx = qualityOrder.indexOf(currentQuality);
-                const targetIdx = qualityOrder.indexOf(targetQuality);
-
-                if (targetIdx <= currentIdx) {
-                    throw new Error(`不能降级土地品质：${currentQualityName} 无法变更为 ${targetQualityConfig.name}`);
-                }
-
                 // 读取目标品质的升级条件（按土地编号）
                 const levelCfg = targetQualityConfig.levels?.[landId] ?? targetQualityConfig.levels?.[String(landId)];
                 if (!levelCfg) {
@@ -356,7 +347,7 @@ class LandService {
 
                 // 更新土地品质为目标品质
                 land.quality = targetQuality;
-                land.lastUpgraded = Date.now();
+                land.lastUpgradeTime = Date.now();
                 playerData.lands[landIndex] = land;
 
                 await dataService.savePlayer(uid, playerData);
@@ -582,13 +573,19 @@ class LandService {
                 };
             }
 
-            // 找第一块【不是】目标品质的地（使用 findIndex 避免二次遍历）
-            const landIndex = playerData.lands.findIndex(l => (l.quality || 'normal') !== targetQualityKey);
+            // 确定可升级的源品质（前一级）
+            const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
+            const targetIdx = qualityOrder.indexOf(targetQualityKey);
+            const sourceQuality = qualityOrder[targetIdx - 1];
+
+            // 找第一块源品质的土地
+            const landIndex = playerData.lands.findIndex(l => (l.quality || 'normal') === sourceQuality);
 
             if (landIndex === -1) {
+                const sourceName = sourceQuality === 'normal' ? '普通土地' : (qualityConfig[sourceQuality]?.name || sourceQuality);
                 return {
                     success: false,
-                    message: '未找到可升级的土地（所有土地已是目标品质）'
+                    message: `没有可升级为${qualityConfig[targetQualityKey]?.name}的土地（需要${sourceName}）`
                 };
             }
 

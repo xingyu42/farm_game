@@ -206,32 +206,6 @@ class Land {
   }
 
   /**
-   * 升级土地品质
-   * @param {string} newQuality 新品质
-   * @param {number} upgradeTime 升级时间戳
-   * @returns {Land} 返回自身以支持链式调用
-   */
-  upgradeQuality(newQuality, upgradeTime = Date.now()) {
-    const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
-    const currentIndex = qualityOrder.indexOf(this.quality);
-    const newIndex = qualityOrder.indexOf(newQuality);
-
-    if (newIndex === -1) {
-      throw new Error(`无效的土地品质: ${newQuality}`);
-    }
-
-    if (newIndex <= currentIndex) {
-      throw new Error(`无法降级土地品质，当前: ${this.quality}, 目标: ${newQuality}`);
-    }
-
-    this.quality = newQuality;
-    this.lastUpgradeTime = upgradeTime;
-    this.upgradeLevel += 1;
-
-    return this;
-  }
-
-  /**
    * 获取土地品质信息
    * @returns {Object} 品质信息
    */
@@ -254,37 +228,6 @@ class Land {
       timeReduction: qualityConfig.timeReduction,
       description: qualityConfig.description,
       upgradeLevel: this.upgradeLevel
-    };
-  }
-
-  /**
-   * 获取下一级品质的升级信息
-   * @returns {Object|null} 升级信息
-   */
-  getUpgradeInfo() {
-    if (!this.config) {
-      return null;
-    }
-
-    const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
-    const currentIndex = qualityOrder.indexOf(this.quality);
-
-    if (currentIndex === -1 || currentIndex >= qualityOrder.length - 1) {
-      return null; // 已是最高品质
-    }
-
-    const nextQuality = qualityOrder[currentIndex + 1];
-    const qualityConfig = this.config.land?.quality?.[nextQuality];
-
-    if (!qualityConfig || !qualityConfig.levelRequired) {
-      return null;
-    }
-
-    return {
-      targetQuality: nextQuality,
-      levelRequired: qualityConfig.levelRequired,
-      goldCost: qualityConfig.goldCost,
-      canUpgrade: true
     };
   }
 
