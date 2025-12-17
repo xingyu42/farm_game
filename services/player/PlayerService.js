@@ -9,7 +9,6 @@ import EconomyService from './EconomyService.js';
 import SignInService from './SignInService.js';
 // ProtectionService 将由 ServiceContainer 注入，避免循环依赖
 import PlayerStatsService from './PlayerStatsService.js';
-import LandManagerService from './LandManagerService.js';
 
 class PlayerService {
     constructor(redisClient, config) {
@@ -30,7 +29,8 @@ class PlayerService {
         this.signInService = new SignInService(redisClient, config, logger);
         this.protectionService = null; // 延迟注入
         this.statisticsService = new PlayerStatsService(redisClient, config, logger);
-        this.landManagerService = new LandManagerService(redisClient, config, logger);
+        this._serviceContainer = null; // 延迟注入ServiceContainer
+        this._landServiceCache = null; // LandService缓存
     }
 
     /**
@@ -39,6 +39,26 @@ class PlayerService {
      */
     setProtectionService(protectionService) {
         this.protectionService = protectionService;
+    }
+
+    /**
+     * 注入 ServiceContainer（用于获取 LandService 单例）
+     * @param {Object} serviceContainer ServiceContainer 实例
+     */
+    setServiceContainer(serviceContainer) {
+        this._serviceContainer = serviceContainer;
+    }
+
+    /**
+     * 获取 LandService 单例（Lazy 模式）
+     * @returns {LandService} LandService 实例
+     * @private
+     */
+    _getLandService() {
+        if (!this._landServiceCache && this._serviceContainer) {
+            this._landServiceCache = this._serviceContainer.getService('landService');
+        }
+        return this._landServiceCache;
     }
 
     // ==================== 核心玩家管理方法 ====================
@@ -396,7 +416,7 @@ class PlayerService {
      * @returns {Object} 扩张结果
      */
     async expandLand(userId) {
-        return await this.landManagerService.expandLand(userId);
+        return await this._getLandService().expandLand(userId);
     }
 
     /**
@@ -406,7 +426,7 @@ class PlayerService {
      * @returns {Object|null} 土地数据或null
      */
     async getLandByIndex(userId, index) {
-        return await this.landManagerService.getLandByIndex(userId, index);
+        return await this._getLandService().getLandByIndex(userId, index);
     }
 
     /**
@@ -416,7 +436,7 @@ class PlayerService {
      * @returns {Object|null} 土地数据或null
      */
     async getLandById(userId, landId) {
-        const result = await this.landManagerService.getLandById(userId, landId);
+        const result = await this._getLandService().getLandById(userId, landId);
         return result;
     }
 
@@ -428,7 +448,7 @@ class PlayerService {
      * @returns {Object} 更新结果
      */
     async updateLand(userId, landId, updates) {
-        return await this.landManagerService.updateLand(userId, landId, updates);
+        return await this._getLandService().updateLand(userId, landId, updates);
     }
 
     /**
@@ -437,7 +457,8 @@ class PlayerService {
      * @returns {Array} 土地数组
      */
     async getAllLands(userId) {
-        return await this.landManagerService.getAllLands(userId);
+        const result = await this._getLandService().getAllLands(userId);
+        return result?.lands ?? [];
     }
 
     /**
@@ -447,7 +468,7 @@ class PlayerService {
      * @returns {Object} 验证结果
      */
     async validateLandId(userId, landId) {
-        return await this.landManagerService.validateLandId(userId, landId);
+        return await this._getLandService().validateLandId(userId, landId);
     }
 
     /**
@@ -456,7 +477,7 @@ class PlayerService {
      * @returns {Object} 扩张信息
      */
     async getLandExpansionInfo(userId) {
-        return await this.landManagerService.getLandExpansionInfo(userId);
+        return await this._getLandService().getLandExpansionInfo(userId);
     }
 
     /**
@@ -464,7 +485,7 @@ class PlayerService {
      * @returns {Object} 土地系统配置
      */
     getLandSystemConfig() {
-        return this.landManagerService.getLandSystemConfig();
+        return this._getLandService().getLandSystemConfig();
     }
 
     // ==================== 私有辅助方法 ====================
@@ -534,13 +555,6 @@ class PlayerService {
         return this.statisticsService;
     }
 
-    /**
-     * 获取土地管理服务实例
-     * @returns {LandManagerService} 土地管理服务实例
-     */
-    getLandManagerService() {
-        return this.landManagerService;
-    }
 }
 
 export default PlayerService; 

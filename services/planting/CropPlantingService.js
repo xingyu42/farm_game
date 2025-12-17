@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 作物种植专门服务
  * 专门处理作物种植逻辑，包括种植条件检查、种子扣除、土地状态更新等
  */
@@ -17,7 +17,6 @@ class CropPlantingService {
     this.cropScheduleService = cropMonitorService;
     this.config = config;
     // 初始化依赖组件
-    this.calculator = new Calculator(config);
     this.validator = new PlantingUtils(config);
     this.messageBuilder = new PlantingMessageBuilder();
   }
@@ -61,7 +60,7 @@ class CropPlantingService {
 
         // 5. 计算生长时间
         const baseGrowTime = cropConfig.growTime * 1000; // 转换为毫秒
-        const actualGrowTime = this.calculator.calculateGrowTime(baseGrowTime, landData.quality || 'normal');
+        const actualGrowTime = Calculator.calculateGrowTime(baseGrowTime, landData.quality || 'normal', this.config);
 
         const now = Date.now();
         const harvestTime = now + actualGrowTime;
@@ -158,7 +157,7 @@ class CropPlantingService {
 
           // 计算生长时间
           const baseGrowTime = cropConfig.growTime * 1000;
-          const actualGrowTime = this.calculator.calculateGrowTime(baseGrowTime, landData.quality || 'normal');
+          const actualGrowTime = Calculator.calculateGrowTime(baseGrowTime, landData.quality || 'normal', this.config);
 
           const now = Date.now();
           const harvestTime = now + actualGrowTime;
@@ -246,7 +245,7 @@ class CropPlantingService {
         message: '可以种植',
         cropName: cropConfig.name,
         landQuality: landData.quality,
-        estimatedGrowTime: this.calculator.calculateGrowTime(cropConfig.growTime * 1000, landData.quality || 'normal')
+        estimatedGrowTime: Calculator.calculateGrowTime(cropConfig.growTime * 1000, landData.quality || 'normal', this.config)
       };
 
     } catch (error) {
@@ -294,3 +293,4 @@ class CropPlantingService {
 }
 
 export default CropPlantingService;
+

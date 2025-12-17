@@ -607,7 +607,7 @@ export class InventoryService {
    * @private
    */
   _calculateInventoryUsage(itemInstances) {
-    return Calculator.calculateInventoryUsage(itemInstances);
+    return Calculator.getTotalItems(itemInstances);
   }
 
   /**

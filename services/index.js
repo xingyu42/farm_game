@@ -108,12 +108,11 @@ class ServiceContainer {
         this.services.economyService // 注入economyService
       );
 
-      // 实例化LandService (需要依赖PlayerService和InventoryService)
+      // 实例化LandService（事务实现层；可选注入 PlayerService 供旧代码访问）
       this.services.landService = new LandService(
         redisClient,
         config,
-        this.services.playerService,
-        this.services.inventoryService
+        this.services.playerService
       );
 
       // 实例化PlantingDataService（种植模块的数据访问层）
@@ -156,6 +155,11 @@ class ServiceContainer {
       // 将 ProtectionService 注入到 PlayerService，解决循环依赖
       if (this.services.playerService?.setProtectionService) {
         this.services.playerService.setProtectionService(this.services.protectionService);
+      }
+
+      // 将 ServiceContainer 注入到 PlayerService，用于获取 LandService 单例
+      if (this.services.playerService?.setServiceContainer) {
+        this.services.playerService.setServiceContainer(this);
       }
 
       // 实例化StealService (需要依赖多个服务)

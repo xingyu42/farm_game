@@ -15,23 +15,23 @@
  */
 export class CommonUtils {
   /**
-   * 计算仓库使用率
-   * 
+   * 计算仓库使用率百分比
+   *
    * 统一管理所有服务中的仓库使用率计算逻辑，消除重复代码。
    * 支持边界情况处理，确保计算结果的准确性和可靠性。
-   * 
+   *
    * @param {Object} inventory - 仓库数据对象，键为物品ID，值为数量
    * @param {number} maxCapacity - 最大容量
    * @returns {number} 使用率百分比 (0-100)
-   * 
+   *
    * @example
-   * const usage = CommonUtils.calculateInventoryUsage({
+   * const usage = CommonUtils.getInventoryUsagePercent({
    *   'crop_wheat': 50,
    *   'tool_hoe': 1
    * }, 100);
    * console.log(usage); // 51
    */
-  static calculateInventoryUsage(inventory, maxCapacity) {
+  static getInventoryUsagePercent(inventory, maxCapacity) {
     // 边界情况处理
     if (!inventory || typeof inventory !== 'object') {
       return 0;
@@ -50,6 +50,16 @@ export class CommonUtils {
     // 计算使用率，确保不超过100%
     const usage = (totalItems / maxCapacity) * 100;
     return Math.min(100, Math.round(usage));
+  }
+
+  /**
+   * @deprecated 使用 getInventoryUsagePercent 代替
+   * @param {Object} inventory - 仓库数据对象
+   * @param {number} maxCapacity - 最大容量
+   * @returns {number} 使用率百分比 (0-100)
+   */
+  static calculateInventoryUsage(inventory, maxCapacity) {
+    return CommonUtils.getInventoryUsagePercent(inventory, maxCapacity);
   }
 
   /**
@@ -175,6 +185,76 @@ export class CommonUtils {
       minimumFractionDigits: 0,
       maximumFractionDigits: decimals
     });
+  }
+
+  // ==================== 时间工具方法 ====================
+
+  /**
+   * 计算剩余分钟数
+   * @param {number} endTime - 结束时间戳
+   * @param {number} currentTime - 当前时间戳（默认 Date.now()）
+   * @returns {number} 剩余分钟数（向上取整，最小为0）
+   */
+  static getRemainingMinutes(endTime, currentTime = Date.now()) {
+    const end = Number(endTime);
+    const now = Number(currentTime);
+    if (!Number.isFinite(end) || !Number.isFinite(now)) {
+      return 0;
+    }
+    const remaining = Math.max(0, end - now);
+    return Math.ceil(remaining / 60000);
+  }
+
+  /**
+   * 格式化剩余时间为可读字符串
+   * @param {number} endTime - 结束时间戳
+   * @param {number} currentTime - 当前时间戳（默认 Date.now()）
+   * @returns {string} 格式化后的时间字符串
+   */
+  static formatRemainingTime(endTime, currentTime = Date.now()) {
+    const minutes = CommonUtils.getRemainingMinutes(endTime, currentTime);
+    if (!Number.isFinite(minutes) || minutes <= 0) return '已结束';
+    if (minutes < 60) return `${minutes}分钟`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMins = minutes % 60;
+    return remainingMins > 0 ? `${hours}小时${remainingMins}分钟` : `${hours}小时`;
+  }
+
+  /**
+   * 获取今日日期字符串（用于Redis键等场景）
+   * @param {number} timestamp - 时间戳（默认 Date.now()）
+   * @returns {string} 日期字符串（格式如 "Mon Jan 01 2024"）
+   */
+  static getTodayKey(timestamp = Date.now()) {
+    return new Date(timestamp).toDateString();
+  }
+
+  // ==================== 物品数量工具方法 ====================
+
+  /**
+   * 获取单个物品条目的数量（统一处理多种数据格式）
+   * @param {number|string|Object} entry - 物品条目（可以是数字、数字字符串或包含quantity的对象）
+   * @returns {number} 物品数量（非负整数）
+   */
+  static getItemQuantity(entry) {
+    if (typeof entry === 'number') {
+      return Math.max(0, Math.floor(entry));
+    }
+    if (typeof entry === 'string') {
+      const parsed = parseInt(entry, 10);
+      return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    }
+    if (entry && typeof entry === 'object') {
+      const qty = entry.quantity;
+      if (typeof qty === 'number') {
+        return Math.max(0, Math.floor(qty));
+      }
+      if (typeof qty === 'string') {
+        const parsed = parseInt(qty, 10);
+        return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+      }
+    }
+    return 0;
   }
 }
 

@@ -4,6 +4,7 @@
  */
 
 import Calculator from '../utils/calculator.js';
+import { CommonUtils } from '../utils/CommonUtils.js';
 
 // {{CHENGQI: Action: Added; Timestamp: 2025-07-01 19:48:40 +08:00; Reason: Shrimp Task ID: #092f4ab7, creating Player class basic structure to replace dynamic method injection; Principle_Applied: OOP-Encapsulation-TypeSafety;}}
 // {{START MODIFICATIONS}}
@@ -311,37 +312,35 @@ class Player {
 
   /**
    * 获取仓库使用情况
-   * 使用统一的Calculator.calculateInventoryUsage方法，与PlayerService._addPlayerDataMethods.getInventoryUsage保持一致
+   * 使用统一的Calculator.getTotalItems方法，与PlayerService._addPlayerDataMethods.getInventoryUsage保持一致
    * @returns {number} 仓库使用量
    */
   getInventoryUsage() {
-    return Calculator.calculateInventoryUsage(this.inventory);
+    return Calculator.getTotalItems(this.inventory);
   }
 
   /**
    * 获取狗粮防护状态
-   * 与PlayerService._addPlayerDataMethods.getDogFoodStatus保持完全一致的行为
    * @returns {string} 防护状态描述
    */
   getDogFoodStatus() {
     const now = Date.now();
     if (this.protection?.dogFood?.effectEndTime > now) {
-      const remainingTime = Math.ceil((this.protection.dogFood.effectEndTime - now) / (1000 * 60));
-      return `${this.protection.dogFood.type} (${remainingTime}分钟)`;
+      const remainingMinutes = CommonUtils.getRemainingMinutes(this.protection.dogFood.effectEndTime, now);
+      return `${this.protection.dogFood.type} (${remainingMinutes}分钟)`;
     }
     return '无防护';
   }
 
   /**
    * 获取偷菜冷却状态
-   * 与PlayerService._addPlayerDataMethods.getStealCooldownStatus保持完全一致的行为
    * @returns {string} 冷却状态描述
    */
   getStealCooldownStatus() {
     const now = Date.now();
     if (this.stealing?.cooldownEndTime > now) {
-      const remainingTime = Math.ceil((this.stealing.cooldownEndTime - now) / (1000 * 60));
-      return `冷却中 (${remainingTime}分钟)`;
+      const remainingMinutes = CommonUtils.getRemainingMinutes(this.stealing.cooldownEndTime, now);
+      return `冷却中 (${remainingMinutes}分钟)`;
     }
     return '可偷菜';
   }

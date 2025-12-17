@@ -5,10 +5,16 @@
  */
 
 import Land from '../../models/Land.js';
+import Calculator from '../../utils/calculator.js';
+import { CommonUtils } from '../../utils/CommonUtils.js';
 
 class PlantingUtils {
     constructor(config) {
         this.config = config;
+    }
+
+    _getInventoryItemQuantity(inventory, itemId) {
+        return CommonUtils.getItemQuantity(inventory?.[itemId]);
     }
 
     // ==================== 验证功能（来自 PlantingValidator）====================
@@ -116,7 +122,7 @@ class PlantingUtils {
 
         // 检查种子数量
         const seedItemId = `${cropConfig.type || 'unknown'}_seed`;
-        const seedCount = playerData.inventory[seedItemId] || 0;
+        const seedCount = this._getInventoryItemQuantity(playerData.inventory, seedItemId);
         if (seedCount < 1) {
             return {
                 success: false,
@@ -133,8 +139,7 @@ class PlantingUtils {
      * @returns {Object|null} 验证失败时返回错误对象，成功时返回null
      */
     validateInventorySpace(playerData) {
-        const currentInventoryCount = Object.values(playerData.inventory || {})
-            .reduce((sum, count) => sum + count, 0);
+        const currentInventoryCount = Calculator.getTotalItems(playerData.inventory);
 
         if (currentInventoryCount >= playerData.inventory_capacity) {
             return {
@@ -269,7 +274,7 @@ class PlantingUtils {
     validateFertilizerAvailability(inventory, fertilizerType = null) {
         if (fertilizerType) {
             // 验证指定肥料
-            if (!inventory[fertilizerType] || inventory[fertilizerType] <= 0) {
+            if (this._getInventoryItemQuantity(inventory, fertilizerType) <= 0) {
                 return {
                     success: false,
                     message: `仓库中没有${fertilizerType}`,
@@ -300,7 +305,7 @@ class PlantingUtils {
         const availableFertilizers = ['fertilizer_deluxe', 'fertilizer_premium', 'fertilizer_normal'];
 
         for (const fertilizer of availableFertilizers) {
-            if (inventory[fertilizer] && inventory[fertilizer] > 0) {
+            if (this._getInventoryItemQuantity(inventory, fertilizer) > 0) {
                 return fertilizer;
             }
         }
@@ -320,8 +325,9 @@ class PlantingUtils {
         const available = [];
 
         for (const [fertilizerId, config] of Object.entries(fertilizersConfig)) {
-            if (inventory[fertilizerId] && inventory[fertilizerId] > 0) {
-                available.push(`${config.name}(${inventory[fertilizerId]}个)`);
+            const quantity = this._getInventoryItemQuantity(inventory, fertilizerId);
+            if (quantity > 0) {
+                available.push(config.name + '(' + quantity + '个)');
             }
         }
 

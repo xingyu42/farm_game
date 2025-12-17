@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 作物收获专门服务
  * 专门处理作物收获逻辑，包括成熟度检查、产量计算、经验计算、仓库更新等
  */
@@ -20,7 +20,6 @@ class CropHarvestService {
     this.cropScheduleService = cropMonitorService;
     this.config = config;
     // 初始化依赖组件
-    this.calculator = new Calculator(config);
     this.validator = new PlantingUtils(config, logger);
     this.messageBuilder = new PlantingMessageBuilder();
     this.levelCalculator = new LevelCalculator(config);
@@ -293,7 +292,7 @@ class CropHarvestService {
     const baseYield = cropConfig.baseYield || 1;
 
     // 品质加成
-    const qualityMultiplier = this.calculator.getQualityMultiplier(landData.quality || 'normal');
+    const qualityMultiplier = Calculator.getQualityMultiplier(landData.quality || 'normal', this.config);
 
     // 健康度影响
     const healthMultiplier = (landData.health || 100) / 100;
@@ -332,7 +331,7 @@ class CropHarvestService {
    */
   _estimateYield(landData, cropConfig) {
     const baseYield = cropConfig.baseYield || 1;
-    const qualityMultiplier = this.calculator.getQualityMultiplier(landData.quality || 'normal');
+    const qualityMultiplier = Calculator.getQualityMultiplier(landData.quality || 'normal', this.config);
     const healthMultiplier = (landData.health || 100) / 100;
 
     const estimatedYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
@@ -377,3 +376,4 @@ class CropHarvestService {
 }
 
 export default CropHarvestService;
+

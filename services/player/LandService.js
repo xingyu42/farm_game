@@ -1,478 +1,610 @@
-/**
- * 土地管理服务 - 管理土地扩张、品质升级等功能（根据PRD v3.2设计）
- * 包含：土地扩张、品质升级、信息查询等功能
+﻿/**
+ * 土地管理服务
+ * 处理玩家土地管理相关功能
  */
 
-// {{CHENGQI:
-// Action: Created; Timestamp: 2025-06-30T12:30:00+08:00; Reason: Shrimp Task ID: #b7430efe, implementing land management service for T6;
-// }}
-
-import ItemResolver from '../../utils/ItemResolver.js';
+import PlayerDataService from './PlayerDataService.js';
+import EconomyService from './EconomyService.js';
 
 class LandService {
-  constructor(redisClient, config, playerService, inventoryService) {
-    this.redis = redisClient;
-    this.config = config;
-    this.playerService = playerService;
-    this.inventoryService = inventoryService;
-    this.itemResolver = new ItemResolver(config);
-  }
-
-  /**
-   * 扩张土地（调用PlayerService的扩张方法）
-   * @param {string} userId 用户ID
-   * @returns {Object} 扩张结果
-   */
-  async expandLand(userId) {
-    try {
-      // 直接调用PlayerService的扩张方法
-      const result = await this.playerService.expandLand(userId);
-
-
-      return result;
-    } catch (error) {
-      logger.error(`[LandService] 土地扩张失败 [${userId}]: ${error.message}`);
-      throw error;
+    constructor(redisClient, config, playerService = null) {
+        this.redis = redisClient;
+        this.config = config;
+        this.playerService = playerService;
+        // 初始化数据服务
+        this.dataService = new PlayerDataService(redisClient, config, logger);
     }
-  }
 
-  /**
-   * 获取土地扩张信息
-   * @param {string} userId 用户ID
-   * @returns {Object} 土地信息
-   */
-  async getLandExpansionInfo(userId) {
-    try {
-      const playerData = await this.playerService.getPlayer(userId);
-
-      // 检查是否可以扩张
-      const canExpand = playerData.landCount < playerData.maxLandCount;
-
-      if (!canExpand) {
-        return {
-          canExpand: false,
-          currentLandCount: playerData.landCount,
-          maxLandCount: playerData.maxLandCount
-        };
-      }
-
-      // 获取下一块土地的配置
-      const nextLandNumber = playerData.landCount + 1;
-      const landConfig = this.config.land.expansion[nextLandNumber];
-
-      if (!landConfig) {
-        logger.warn(`[LandService] 找不到第 ${nextLandNumber} 块土地的配置`);
-        return {
-          canExpand: false,
-          error: '无法获取土地扩张配置'
-        };
-      }
-
-      // 检查是否满足扩张条件
-      const meetsLevelRequirement = playerData.level >= landConfig.levelRequired;
-      const meetsGoldRequirement = playerData.coins >= landConfig.goldCost;
-      const meetsRequirements = meetsLevelRequirement && meetsGoldRequirement;
-
-      return {
-        canExpand: true,
-        nextLandNumber,
-        nextCost: landConfig.goldCost,
-        nextLevelRequired: landConfig.levelRequired,
-        meetsRequirements,
-        meetsLevelRequirement,
-        meetsGoldRequirement,
-        currentLandCount: playerData.landCount,
-        maxLandCount: playerData.maxLandCount,
-        currentLevel: playerData.level,
-        currentCoins: playerData.coins
-      };
-    } catch (error) {
-      logger.error(`[LandService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取土地配置信息
-   * @param {number} landNumber 土地编号
-   * @returns {Object} 土地配置
-   */
-  getLandConfig(landNumber) {
-    try {
-      return this.config.land.expansion[landNumber];
-    } catch (error) {
-      logger.error(`[LandService] 获取土地配置失败 [${landNumber}]: ${error.message}`);
-      return null;
-    }
-  }
-
-  /**
-   * 获取土地扩张成本列表（用于显示扩张计划）
-   * @param {string} userId 用户ID
-   * @param {number} count 显示数量（默认5）
-   * @returns {Array} 扩张成本列表
-   */
-  async getLandExpansionPlan(userId, count = 5) {
-    try {
-      const playerData = await this.playerService.getPlayer(userId);
-      const expansionPlan = [];
-
-      for (let i = 1; i <= count; i++) {
-        const landNumber = playerData.landCount + i;
-
-        if (landNumber > playerData.maxLandCount) {
-          break;
-        }
-
-        const landConfig = this.getLandConfig(landNumber);
-
-        if (landConfig) {
-          expansionPlan.push({
-            landNumber,
-            levelRequired: landConfig.levelRequired,
-            goldCost: landConfig.goldCost,
-            meetsLevelRequirement: playerData.level >= landConfig.levelRequired,
-            meetsGoldRequirement: playerData.coins >= landConfig.goldCost
-          });
-        }
-      }
-
-      return expansionPlan;
-    } catch (error) {
-      logger.error(`[LandService] 获取土地扩张计划失败 [${userId}]: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取土地系统配置
-   * @returns {Object} 土地系统配置
-   */
-  getLandSystemConfig() {
-    try {
-      return {
-        startingLands: this.config.land.default.startingLands,
-        maxLands: this.config.land.default.maxLands,
-        expansionConfig: this.config.land.expansion,
-        qualityConfig: this.config.land.quality
-      };
-    } catch (error) {
-      logger.error(`[LandService] 获取土地系统配置失败: ${error.message}`);
-      return null;
-    }
-  }
-
-  /**
-   * 验证土地扩张条件
-   * @param {string} userId 用户ID
-   * @returns {Object} 验证结果
-   */
-  async validateExpansionConditions(userId) {
-    try {
-      const playerData = await this.playerService.getPlayer(userId);
-      const expansionInfo = await this.getLandExpansionInfo(userId);
-
-      if (!expansionInfo.canExpand) {
-        return {
-          valid: false,
-          reason: '已达到最大土地数量',
-          details: expansionInfo
-        };
-      }
-
-      const issues = [];
-
-      if (!expansionInfo.meetsLevelRequirement) {
-        issues.push(`等级不足，需要 ${expansionInfo.nextLevelRequired} 级，当前 ${playerData.level} 级`);
-      }
-
-      if (!expansionInfo.meetsGoldRequirement) {
-        issues.push(`金币不足，需要 ${expansionInfo.nextCost} 金币，当前 ${playerData.coins} 金币`);
-      }
-
-      return {
-        valid: issues.length === 0,
-        reason: issues.length > 0 ? issues.join('；') : '满足所有条件',
-        issues,
-        details: expansionInfo
-      };
-    } catch (error) {
-      logger.error(`[LandService] 验证土地扩张条件失败 [${userId}]: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取土地品质进阶信息
-   * @param {string} userId 用户ID
-   * @param {number} landId 土地ID (1-based)
-   * @returns {Object} 进阶信息
-   */
-  async getLandQualityUpgradeInfo(userId, landId) {
-    try {
-      // {{CHENGQI: Action: Modified; Timestamp: 2025-07-01 14:26:17 +08:00; Reason: Shrimp Task ID: #3e65c249, using smart land access methods for improved code structure; Principle_Applied: CodeStructure-Optimization;}}
-      // 使用智能土地访问方法验证土地ID
-      const validation = await this.playerService.validateLandId(userId, landId);
-      if (!validation.valid) {
-        return {
-          canUpgrade: false,
-          error: validation.message
-        };
-      }
-
-      // 获取玩家数据
-      const playerData = await this.playerService.getPlayer(userId);
-      if (!playerData) {
-        return {
-          canUpgrade: false,
-          error: '玩家数据不存在'
-        };
-      }
-
-      // 使用智能土地访问方法获取土地数据
-      const land = await this.playerService.getLandById(userId, landId);
-      if (!land) {
-        return {
-          canUpgrade: false,
-          error: `土地 ${landId} 数据不存在`
-        };
-      }
-
-      const currentQuality = land.quality || 'normal';
-
-      // 获取品质配置
-      const qualityConfig = this.config.land.quality;
-      const currentConfig = qualityConfig[currentQuality];
-
-      if (!currentConfig) {
-        return {
-          canUpgrade: false,
-          error: `未知的土地品质: ${currentQuality}`
-        };
-      }
-
-      // 确定下一个品质级别
-      const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
-      const currentIndex = qualityOrder.indexOf(currentQuality);
-
-      if (currentIndex === -1 || currentIndex >= qualityOrder.length - 1) {
-        return {
-          canUpgrade: false,
-          reason: '土地已达到最高品质',
-          currentQuality,
-          currentQualityName: currentConfig.name
-        };
-      }
-
-      const nextQuality = qualityOrder[currentIndex + 1];
-      const nextConfig = qualityConfig[nextQuality];
-
-      if (!nextConfig) {
-        return {
-          canUpgrade: false,
-          error: `下一级品质配置不存在: ${nextQuality}`
-        };
-      }
-
-      // 检查进阶条件
-      const meetsLevelRequirement = playerData.level >= nextConfig.levelRequired;
-      const meetsGoldRequirement = playerData.coins >= nextConfig.goldCost;
-
-      const meetsAllRequirements = meetsLevelRequirement && meetsGoldRequirement;
-
-      return {
-        canUpgrade: true,
-        landId,
-        currentQuality,
-        currentQualityName: currentConfig.name,
-        nextQuality,
-        nextQualityName: nextConfig.name,
-        requirements: {
-          level: nextConfig.levelRequired,
-          gold: nextConfig.goldCost
-        },
-        meetsAllRequirements,
-        meetsLevelRequirement,
-        meetsGoldRequirement,
-        playerStatus: {
-          level: playerData.level,
-          coins: playerData.coins
-        }
-      };
-    } catch (error) {
-      logger.error(`[LandService] 获取土地品质进阶信息失败 [${userId}, ${landId}]: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 执行土地品质进阶
-   * @param {string} userId 用户ID
-   * @param {number} landId 土地ID (1-based)
-   * @returns {Object} 进阶结果
-   */
-  async upgradeLandQuality(userId, landId) {
-    try {
-      // 获取进阶信息
-      const upgradeInfo = await this.getLandQualityUpgradeInfo(userId, landId);
-
-      if (!upgradeInfo.canUpgrade) {
-        return {
-          success: false,
-          message: upgradeInfo.error || upgradeInfo.reason || '无法进阶'
-        };
-      }
-
-      if (!upgradeInfo.meetsAllRequirements) {
-        const issues = [];
-
-        if (!upgradeInfo.meetsLevelRequirement) {
-          issues.push(`等级不足，需要 ${upgradeInfo.requirements.level} 级，当前 ${upgradeInfo.playerStatus.level} 级`);
-        }
-
-        if (!upgradeInfo.meetsGoldRequirement) {
-          issues.push(`金币不足，需要 ${upgradeInfo.requirements.gold} 金币，当前 ${upgradeInfo.playerStatus.coins} 金币`);
-        }
-
-        if (upgradeInfo.materialIssues.length > 0) {
-          issues.push(...upgradeInfo.materialIssues);
-        }
-
-        return {
-          success: false,
-          message: `进阶条件不满足：${issues.join('；')}`
-        };
-      }
-
-      // === 事务块：带回滚的资源消耗 ===
-      let coinsDeducted = false;
-      let remainingCoins = null;
-
-      try {
-        // Step 1: 扣除金币
-        const coinResult = await this.playerService.deductCoins(
-          userId,
-          upgradeInfo.requirements.gold
-        );
-        coinsDeducted = true;
-        if (coinResult && typeof coinResult.coins === 'number') {
-          remainingCoins = coinResult.coins;
-        } else {
-          remainingCoins = Math.max(
-            0,
-            (upgradeInfo.playerStatus.coins || 0) - upgradeInfo.requirements.gold
-          );
-        }
-
-        // Step 2: 更新土地品质
-        const updateResult = await this.playerService.updateLand(userId, landId, {
-          quality: upgradeInfo.nextQuality,
-          lastUpgraded: Date.now()
-        });
-
-        if (!updateResult.success) {
-          throw new Error(`土地更新失败: ${updateResult.message}`);
-        }
-
-        // === 成功路径 ===
-        let updatedPlayer = null;
+    /**
+     * 扩张土地
+     * @param {string} userId 用户ID
+     * @returns {Object} 扩张结果
+     */
+    async expandLand(userId) {
         try {
-          updatedPlayer = await this.playerService.getPlayer(userId);
-        } catch (infoError) {
-          logger.warn(
-            `[LandService] 获取升级后玩家数据失败 [${userId}, ${landId}]: ${infoError.message}`
-          );
+            // 执行扩张 - 所有检查和操作都在事务内进行，确保原子性
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                // 在事务内获取最新的玩家数据
+                const playerData = await dataService.getPlayer(userId);
+
+                if (!playerData) {
+                    throw new Error('玩家不存在');
+                }
+
+                // 在事务内检查是否已达到上限
+                if (playerData.landCount >= playerData.maxLandCount) {
+                    throw new Error('土地数量已达到上限！');
+                }
+
+                // 获取扩张配置
+                const nextLandNumber = playerData.landCount + 1;
+                const landConfig = this.config.land?.expansion?.[nextLandNumber];
+
+                if (!landConfig) {
+                    throw new Error('无法获取土地扩张配置！');
+                }
+
+                // 在事务内检查等级要求
+                if (playerData.level < landConfig.levelRequired) {
+                    throw new Error(`需要等级 ${landConfig.levelRequired} 才能扩张第 ${nextLandNumber} 块土地！当前等级: ${playerData.level}`);
+                }
+
+                // 在事务内检查金币是否足够
+                if (playerData.coins < landConfig.goldCost) {
+                    throw new Error(`金币不足！需要 ${landConfig.goldCost} 金币，当前拥有: ${playerData.coins}`);
+                }
+
+                // 扣除金币
+                EconomyService.updateCoinsInTransaction(playerData, -landConfig.goldCost);
+
+                // 增加土地数量
+                playerData.landCount += 1;
+
+                // 创建新土地
+                const newLand = {
+                    id: nextLandNumber,
+                    crop: null,
+                    quality: 'normal',
+                    plantTime: null,
+                    harvestTime: null,
+                    status: 'empty'
+                };
+
+                // 确保lands数组存在并添加新土地
+                if (!Array.isArray(playerData.lands)) {
+                    playerData.lands = [];
+                }
+                playerData.lands.push(newLand);
+
+                playerData.lastUpdated = Date.now();
+
+                // 保存更新后的数据
+                await dataService.savePlayer(userId, playerData);
+
+
+                return {
+                    success: true,
+                    message: `成功扩张第 ${nextLandNumber} 块土地！`,
+                    landNumber: nextLandNumber,
+                    costGold: landConfig.goldCost,
+                    currentLandCount: playerData.landCount,
+                    remainingCoins: playerData.coins,
+                    newLand
+                };
+            });
+        } catch (error) {
+            logger.error(`[LandService] 扩张土地失败 [${userId}]: ${error.message}`);
+
+            // 将内部错误转换为用户友好的返回格式
+            if (error.message === '土地数量已达到上限！') {
+                return {
+                    success: false,
+                    message: error.message,
+                    currentLandCount: null, // 无法获取，因为事务已回滚
+                    maxLandCount: null
+                };
+            }
+
+            if (error.message === '无法获取土地扩张配置！') {
+                return {
+                    success: false,
+                    message: error.message
+                };
+            }
+
+            if (error.message.includes('需要等级') || error.message.includes('金币不足')) {
+                return {
+                    success: false,
+                    message: error.message
+                };
+            }
+
+            // 对于其他错误，重新抛出
+            throw error;
         }
+    }
 
-        return {
-          success: true,
-          message: `🎉 土地 ${landId} 成功进阶为${upgradeInfo.nextQualityName}！`,
-          landId,
-          fromQuality: upgradeInfo.currentQuality,
-          toQuality: upgradeInfo.nextQuality,
-          fromQualityName: upgradeInfo.currentQualityName,
-          toQualityName: upgradeInfo.nextQualityName,
-          costGold: upgradeInfo.requirements.gold,
-          remainingCoins: updatedPlayer?.coins ?? remainingCoins ?? 0
-        };
+    /**
+     * 智能土地访问方法 - 通过索引获取土地
+     * @param {string} userId 用户ID
+     * @param {number} index 土地索引（0-based）
+     * @returns {Object|null} 土地数据或null
+     */
+    async getLandByIndex(userId, index) {
+        try {
+            const playerData = await this.dataService.getPlayer(userId);
 
-      } catch (txError) {
-        // === 回滚逻辑 ===
-        logger.warn(`[LandService] 土地进阶失败，执行回滚 [${userId}, ${landId}]: ${txError.message}`);
+            if (!playerData) {
+                logger.warn(`[LandService] 玩家 ${userId} 不存在`);
+                return null;
+            }
 
-        // 回滚金币
-        if (coinsDeducted) {
-          try {
-            await this.playerService.addCoins(userId, upgradeInfo.requirements.gold);
-          } catch (rollbackErr) {
-            logger.error(`[LandService] 回滚金币失败: ${rollbackErr.message}`);
-          }
+            // 边界检查
+            if (!Array.isArray(playerData.lands)) {
+                logger.warn(`[LandService] 玩家 ${userId} 土地数据结构异常`);
+                return null;
+            }
+
+            if (index < 0 || index >= playerData.lands.length) {
+                logger.warn(`[LandService] 土地索引越界 [${userId}]: index=${index}, length=${playerData.lands.length}`);
+                return null;
+            }
+
+            return playerData.lands[index];
+        } catch (error) {
+            logger.error(`[LandService] 获取土地失败 [${userId}, index=${index}]: ${error.message}`);
+            return null;
         }
-
-        return {
-          success: false,
-          message: `进阶失败: ${txError.message}`,
-          rolledBack: true
-        };
-      }
-    } catch (error) {
-      logger.error(`[LandService] 土地品质进阶失败 [${userId}, ${landId}]: ${error.message}`);
-      throw error;
     }
-  }
 
-  /**
- * 获取所有土地信息
- * @param {string} userId 用户ID
- * @returns {Object} 包含成功状态和土地数组的对象
- */
-  async getAllLands(userId) {
-    try {
-      const lands = await this.playerService.getAllLands(userId);
+    /**
+     * 智能土地访问方法 - 通过土地ID获取土地
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地ID（1-based）
+     * @returns {Object|null} 土地数据或null
+     */
+    async getLandById(userId, landId) {
+        try {
+            const playerData = await this.dataService.getPlayer(userId);
 
-      return {
-        success: true,
-        lands: lands
-      };
-    } catch (error) {
-      logger.error(`[LandService] 获取所有土地失败 [${userId}]: ${error.message}`);
-      return {
-        success: false,
-        lands: [],
-        error: error.message
-      };
+            if (!playerData) {
+                logger.warn(`[LandService] 玩家 ${userId} 不存在`);
+                return null;
+            }
+
+            // 边界检查
+            if (!Array.isArray(playerData.lands)) {
+                logger.warn(`[LandService] 玩家 ${userId} 土地数据结构异常`);
+                return null;
+            }
+            if (landId < 1 || landId > playerData.lands.length) {
+                logger.warn(`[LandService] 土地ID越界 [${userId}]: landId=${landId}, length=${playerData.lands.length}`);
+                return null;
+            }
+
+            return playerData.lands[landId - 1];
+        } catch (error) {
+            logger.error(`[LandService] 获取土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+            return null;
+        }
     }
-  }
 
-  /**
-   * 根据土地ID获取土地信息
-   * @param {string} userId 用户ID
-   * @param {number} landId 土地ID (1-based)
-   * @returns {Object|null} 土地数据或null
-   */
-  async getLandById(userId, landId) {
-    try {
-      const result = await this.playerService.getLandById(userId, landId);
-      return result;
-    } catch (error) {
-      logger.error(`[LandService] 获取土地失败 [${userId}, ${landId}]: ${error.message}`);
-      return null;
-    }
-  }
+    /**
+     * 智能土地更新方法 - 更新指定土地的属性
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地ID（1-based）
+     * @param {Object} updates 要更新的属性
+     * @returns {Object} 更新结果
+     */
+    async updateLand(userId, landId, updates) {
+        try {
+            return await this.dataService.executeWithTransaction(userId, async (dataService, userId) => {
+                const playerData = await dataService.getPlayer(userId);
 
-  /**
-   * 获取物品名称（使用统一的ItemResolver）
-   * @param {string} itemId 物品ID
-   * @returns {string} 物品名称
-   */
-  _getItemName(itemId) {
-    try {
-      return this.itemResolver.getItemName(itemId);
-    } catch (error) {
-      logger.warn(`[LandService] 获取物品名称失败 [${itemId}]: ${error.message}`);
-      return itemId;
+                if (!playerData) {
+                    return {
+                        success: false,
+                        message: '玩家不存在'
+                    };
+                }
+
+                // 边界检查
+                if (!Array.isArray(playerData.lands)) {
+                    return {
+                        success: false,
+                        message: '玩家土地数据结构异常'
+                    };
+                }
+
+                if (landId < 1 || landId > playerData.lands.length) {
+                    return {
+                        success: false,
+                        message: `无效的土地ID ${landId}，有效范围: 1-${playerData.lands.length}`
+                    };
+                }
+
+                const landIndex = landId - 1;
+                const land = playerData.lands[landIndex];
+
+                if (!land) {
+                    return {
+                        success: false,
+                        message: `土地 ${landId} 数据不存在`
+                    };
+                }
+
+                // 应用更新
+                const updatedLand = { ...land, ...updates };
+                playerData.lands[landIndex] = updatedLand;
+                playerData.lastUpdated = Date.now();
+
+                // 保存数据
+                await dataService.savePlayer(userId, playerData);
+
+
+                return {
+                    success: true,
+                    message: `土地 ${landId} 更新成功`,
+                    landId,
+                    updatedLand,
+                    updates
+                };
+            });
+        } catch (error) {
+            logger.error(`[LandService] 更新土地失败 [${userId}, landId=${landId}]: ${error.message}`);
+            throw error;
+        }
     }
-  }
+
+    /**
+     * 获取所有土地信息
+     * @param {string} userId 用户ID
+     * @returns {Array} 土地数组
+     */
+
+    /**
+     * 单事务原子升级土地品质（由外部传入目标品质）
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地ID（1-based）
+     * @param {string} targetQuality 目标品质 key（如：copper/silver）
+     * @returns {Promise<Object>} 升级结果
+     */
+    async upgradeLandQuality(userId, landId, targetQuality) {
+        try {
+            return await this.dataService.executeWithTransaction(userId, async (dataService, uid) => {
+                const playerData = await dataService.getPlayer(uid);
+
+                if (!playerData) {
+                    throw new Error('玩家不存在');
+                }
+
+                if (!Number.isInteger(landId) || landId < 1) {
+                    throw new Error(`无效的土地ID ${landId}`);
+                }
+
+                if (!Array.isArray(playerData.lands) || landId > playerData.lands.length) {
+                    throw new Error(`无效的土地ID ${landId}，有效范围 1-${Array.isArray(playerData.lands) ? playerData.lands.length : 0}`);
+                }
+
+                const landIndex = landId - 1;
+                const land = playerData.lands[landIndex];
+                if (!land) {
+                    throw new Error(`土地 ${landId} 数据不存在`);
+                }
+
+                const qualityConfig = this.config?.land?.quality;
+                if (!qualityConfig) {
+                    throw new Error('土地品质配置缺失');
+                }
+
+                const currentQuality = land.quality || 'normal';
+                // normal 是默认品质，不需要配置
+                const currentQualityConfig = qualityConfig?.[currentQuality];
+                const currentQualityName = currentQualityConfig?.name || '普通土地';
+
+                if (!targetQuality || typeof targetQuality !== 'string') {
+                    throw new Error('目标品质不能为空');
+                }
+
+                const targetQualityConfig = qualityConfig?.[targetQuality];
+                if (!targetQualityConfig) {
+                    throw new Error(`目标品质配置不存在: ${targetQuality}`);
+                }
+
+                if (currentQuality === targetQuality) {
+                    throw new Error('土地已是目标品质');
+                }
+
+                // 检查是否降级
+                const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
+                const currentIdx = qualityOrder.indexOf(currentQuality);
+                const targetIdx = qualityOrder.indexOf(targetQuality);
+
+                if (targetIdx <= currentIdx) {
+                    throw new Error(`不能降级土地品质：${currentQualityName} 无法变更为 ${targetQualityConfig.name}`);
+                }
+
+                // 读取目标品质的升级条件（按土地编号）
+                const levelCfg = targetQualityConfig.levels?.[landId] ?? targetQualityConfig.levels?.[String(landId)];
+                if (!levelCfg) {
+                    throw new Error(`缺少土地品质升级配置: quality.${targetQuality}.levels.${landId}`);
+                }
+
+                const levelRequired = Number(levelCfg.levelRequired);
+                const goldCost = Number(levelCfg.goldCost);
+
+                if (!Number.isFinite(levelRequired)) {
+                    throw new Error(`升级等级要求配置非法: quality.${targetQuality}.levels.${landId}.levelRequired`);
+                }
+                if (!Number.isFinite(goldCost) || goldCost < 0) {
+                    throw new Error(`升级金币消耗配置非法: quality.${targetQuality}.levels.${landId}.goldCost`);
+                }
+
+                // 校验等级/金币
+                if (playerData.level < levelRequired) {
+                    throw new Error(`等级不足：需要等级${levelRequired}，当前等级${playerData.level}`);
+                }
+
+                if (playerData.coins < goldCost) {
+                    throw new Error(`金币不足：需要${goldCost}，当前${playerData.coins}`);
+                }
+
+                // 扣除金币（事务内）
+                if (goldCost > 0) {
+                    EconomyService.updateCoinsInTransaction(playerData, -goldCost);
+                }
+
+                // 更新土地品质为目标品质
+                land.quality = targetQuality;
+                land.lastUpgraded = Date.now();
+                playerData.lands[landIndex] = land;
+
+                await dataService.savePlayer(uid, playerData);
+
+                return {
+                    success: true,
+                    message: `土地 ${landId} 升级成功：${currentQualityName} → ${targetQualityConfig.name}`,
+                    landId,
+                    fromQuality: currentQuality,
+                    toQuality: targetQuality,
+                    fromQualityName: currentQualityName,
+                    toQualityName: targetQualityConfig.name,
+                    costGold: goldCost,
+                    remainingCoins: playerData.coins
+                };
+            });
+        } catch (error) {
+            logger.error(`[LandService] 升级土地品质失败 [${userId}, landId=${landId}]: ${error.message}`);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+
+    /**
+     * 获取所有土地（兼容旧 LandService 返回结构）
+     * @param {string} userId 用户ID
+     * @returns {Promise<{success: boolean, lands: Array, error?: string}>}
+     */
+    async getAllLands(userId) {
+        try {
+            const playerData = await this.dataService.getPlayer(userId);
+
+            if (!playerData) {
+                logger.warn(`[LandService] 玩家 ${userId} 不存在`);
+                return { success: false, lands: [], error: '玩家不存在' };
+            }
+
+            if (!Array.isArray(playerData.lands)) {
+                logger.warn(`[LandService] 玩家 ${userId} 土地数据结构异常`);
+                return { success: false, lands: [], error: '玩家土地数据结构异常' };
+            }
+
+            return { success: true, lands: playerData.lands };
+        } catch (error) {
+            logger.error(`[LandService] 获取所有土地失败 [${userId}]: ${error.message}`);
+            return { success: false, lands: [], error: error.message };
+        }
+    }
+
+    /**
+     * 验证土地ID是否有效
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地ID（1-based）
+     * @returns {Object} 验证结果
+     */
+    async validateLandId(userId, landId) {
+        try {
+            const playerData = await this.dataService.getPlayer(userId);
+
+            if (!playerData) {
+                return {
+                    valid: false,
+                    message: '玩家不存在'
+                };
+            }
+
+            if (!Array.isArray(playerData.lands)) {
+                return {
+                    valid: false,
+                    message: '玩家土地数据结构异常'
+                };
+            }
+
+            if (landId < 1 || landId > playerData.lands.length) {
+                return {
+                    valid: false,
+                    message: `无效的土地ID ${landId}，有效范围: 1-${playerData.lands.length}`
+                };
+            }
+
+            return {
+                valid: true,
+                landId,
+                landIndex: landId - 1,
+                totalLands: playerData.lands.length
+            };
+        } catch (error) {
+            logger.error(`[LandService] 验证土地ID失败 [${userId}, landId=${landId}]: ${error.message}`);
+            return {
+                valid: false,
+                message: '验证失败'
+            };
+        }
+    }
+
+    /**
+     * 获取土地扩张信息
+     * @param {string} userId 用户ID
+     * @returns {Object} 扩张信息
+     */
+    async getLandExpansionInfo(userId) {
+        try {
+            const playerData = await this.dataService.getPlayer(userId);
+
+            if (!playerData) {
+                throw new Error('玩家不存在');
+            }
+
+            // 检查是否已达到上限
+            if (playerData.landCount >= playerData.maxLandCount) {
+                return {
+                    canExpand: false,
+                    reason: '已达到土地上限',
+                    currentLandCount: playerData.landCount,
+                    maxLandCount: playerData.maxLandCount
+                };
+            }
+
+            // 获取下一块土地的配置
+            const nextLandNumber = playerData.landCount + 1;
+            const landConfig = this.config.land?.expansion?.[nextLandNumber];
+
+            if (!landConfig) {
+                return {
+                    canExpand: false,
+                    reason: '无扩张配置',
+                    currentLandCount: playerData.landCount,
+                    maxLandCount: playerData.maxLandCount
+                };
+            }
+
+            // 检查是否满足扩张条件
+            const meetsLevelRequirement = playerData.level >= landConfig.levelRequired;
+            const meetsGoldRequirement = playerData.coins >= landConfig.goldCost;
+            const meetsRequirements = meetsLevelRequirement && meetsGoldRequirement;
+
+            return {
+                canExpand: true,
+                nextLandNumber,
+                nextCost: landConfig.goldCost,
+                nextLevelRequired: landConfig.levelRequired,
+                meetsRequirements,
+                meetsLevelRequirement,
+                meetsGoldRequirement,
+                currentLandCount: playerData.landCount,
+                maxLandCount: playerData.maxLandCount,
+                currentLevel: playerData.level,
+                currentCoins: playerData.coins
+            };
+        } catch (error) {
+            logger.error(`[LandService] 获取土地扩张信息失败 [${userId}]: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 获取土地系统配置
+     * @returns {Object} 土地系统配置
+     */
+    getLandSystemConfig() {
+        try {
+            return {
+                startingLands: this.config.land.default.startingLands,
+                maxLands: this.config.land.default.maxLands,
+                expansionConfig: this.config.land.expansion,
+                qualityConfig: this.config.land.quality
+            };
+        } catch (error) {
+            logger.error(`[LandService] 获取土地系统配置失败: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * 通过品质名称升级土地（自动匹配第一块可升级的土地）
+     * 封装了品质名称解析和土地查找的业务逻辑
+     * @param {string} userId 用户ID
+     * @param {string} qualityName 目标品质名称（如："红土地"）
+     * @returns {Promise<Object>} 升级结果
+     */
+    async upgradeLandByQualityName(userId, qualityName) {
+        try {
+            // 验证输入
+            if (!qualityName || typeof qualityName !== 'string') {
+                return {
+                    success: false,
+                    message: '请指定品质名称\n用法：#土地升级<品质名>\n例如：#土地升级红土地'
+                };
+            }
+
+            // 获取玩家数据
+            const playerData = await this.dataService.getPlayer(userId);
+            if (!playerData) {
+                return {
+                    success: false,
+                    message: '玩家不存在'
+                };
+            }
+
+            if (!Array.isArray(playerData.lands) || playerData.lands.length === 0) {
+                return {
+                    success: false,
+                    message: '您还没有土地'
+                };
+            }
+
+            // 解析品质配置
+            const qualityConfig = this.config?.land?.quality || {};
+            const validQualityNames = Object.values(qualityConfig).map(v => v?.name).filter(Boolean);
+
+            // 从品质名找到品质 key
+            const targetQualityKey = Object.keys(qualityConfig).find(
+                key => qualityConfig[key]?.name === qualityName
+            );
+
+            if (!targetQualityKey) {
+                const tips = validQualityNames.length ? `\n可选：${validQualityNames.join('、')}` : '';
+                return {
+                    success: false,
+                    message: `品质名称错误：${qualityName}${tips}`
+                };
+            }
+
+            // 找第一块【不是】目标品质的地（使用 findIndex 避免二次遍历）
+            const landIndex = playerData.lands.findIndex(l => (l.quality || 'normal') !== targetQualityKey);
+
+            if (landIndex === -1) {
+                return {
+                    success: false,
+                    message: '未找到可升级的土地（所有土地已是目标品质）'
+                };
+            }
+
+            // 计算土地 ID（1-based）
+            const landId = landIndex + 1;
+
+            // 调用底层升级方法
+            return await this.upgradeLandQuality(userId, landId, targetQualityKey);
+        } catch (error) {
+            logger.error(`[LandService] 通过品质名称升级土地失败 [${userId}, ${qualityName}]: ${error.message}`);
+            return {
+                success: false,
+                message: `升级失败：${error.message}`
+            };
+        }
+    }
 }
 
-export default LandService;
+export default LandService; 

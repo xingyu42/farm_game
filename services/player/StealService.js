@@ -3,6 +3,8 @@
  * 包含成功率计算、双重锁机制、防重复偷取等功能
  */
 
+import { CommonUtils } from '../../utils/CommonUtils.js';
+
 
 
 // {{RIPER-5:
@@ -493,18 +495,17 @@ export class StealService {
       const maxAttempts = antiRepeatConfig.maxAttemptsPerTarget;
 
       const now = Date.now();
-      const today = new Date(now).toDateString();
+      const today = CommonUtils.getTodayKey(now);
 
       // 检查对同一目标的冷却
       const cooldownKey = `farm_game:steal_target_cooldown:${attackerId}:${targetId}`;
       const lastAttemptTime = await this.redisClient.get(cooldownKey);
 
       if (lastAttemptTime) {
-        const timeDiff = now - parseInt(lastAttemptTime);
-        const cooldownMs = cooldownMinutes * 60 * 1000;
+        const cooldownEndTime = parseInt(lastAttemptTime) + cooldownMinutes * 60 * 1000;
+        const remainingMinutes = CommonUtils.getRemainingMinutes(cooldownEndTime, now);
 
-        if (timeDiff < cooldownMs) {
-          const remainingMinutes = Math.ceil((cooldownMs - timeDiff) / 60000);
+        if (remainingMinutes > 0) {
           return {
             allowed: false,
             reason: `对此目标的冷却中，剩余时间: ${remainingMinutes} 分钟`
@@ -542,7 +543,7 @@ export class StealService {
   async _recordStealAttempt(attackerId, targetId, success, rewards = [], penalty = 0) {
     try {
       const now = Date.now();
-      const today = new Date(now).toDateString();
+      const today = CommonUtils.getTodayKey(now);
 
       // 更新目标冷却时间
       const cooldownKey = `farm_game:steal_target_cooldown:${attackerId}:${targetId}`;
@@ -651,7 +652,7 @@ export class StealService {
    */
   async getStealStatistics(userId) {
     try {
-      const today = new Date().toDateString();
+      const today = CommonUtils.getTodayKey();
       const cooldownStatus = await this.getStealCooldownStatus(userId);
 
       // 获取今日偷窃次数（所有目标）
