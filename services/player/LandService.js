@@ -266,7 +266,7 @@ class LandService {
      * 单事务原子升级土地品质（由外部传入目标品质）
      * @param {string} userId 用户ID
      * @param {number} landId 土地ID（1-based）
-     * @param {string} targetQuality 目标品质 key（如：copper/silver）
+     * @param {string} targetQuality 目标品质 key（如：red/black/gold）
      * @returns {Promise<Object>} 升级结果
      */
     async upgradeLandQuality(userId, landId, targetQuality) {
@@ -574,7 +574,7 @@ class LandService {
             }
 
             // 确定可升级的源品质（前一级）
-            const qualityOrder = ['normal', 'copper', 'silver', 'gold'];
+            const qualityOrder = ['normal', 'red', 'black', 'gold'];
             const targetIdx = qualityOrder.indexOf(targetQualityKey);
             const sourceQuality = qualityOrder[targetIdx - 1];
 

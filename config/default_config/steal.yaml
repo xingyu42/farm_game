@@ -21,9 +21,9 @@
     maxRewardRate: 0.3 # 最大收益率
     bonusByQuality:
       normal: 1.0 # 普通土地收益系数
-      bronze: 1.2 # 铜质土地收益系数
-      silver: 1.5 # 银质土地收益系数
-      gold: 2.0 # 金质土地收益系数
+      red: 1.2 # 红土地收益系数
+      black: 1.5 # 黑土地收益系数
+      gold: 2.0 # 金土地收益系数
 
   # 失败惩罚配置
   penalties:

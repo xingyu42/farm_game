@@ -198,11 +198,7 @@
 
             const lands = Array.isArray(s.lands) ? s.lands : [];
             const maxSlots = s.maxLandCount || 24;
-            const qualityColors = s.qualityColors || {
-                copper: '#C75B39',
-                silver: '#2D2D2D',
-                gold: '#FFB300'
-            };
+            const qualityColors = s.qualityColors;
             const initialPlots = [];
 
             for (let i = 1; i <= maxSlots; i++) {

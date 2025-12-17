@@ -619,8 +619,8 @@ export class StealService {
         maxRewardRate: 0.3,
         bonusByQuality: {
           normal: 1.0,
-          bronze: 1.2,
-          silver: 1.5,
+          red: 1.2,
+          black: 1.5,
           gold: 2.0
         }
       },

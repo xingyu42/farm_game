@@ -62,9 +62,8 @@ expansion:
     goldCost: 2000000
 
 quality:
-  copper:
+  red:
     name: "红土地"
-    icon: "land_copper"
     color: "#C75B39"
     productionBonus: 10
     timeReduction: 0
@@ -143,9 +142,8 @@ quality:
         levelRequired: 57
         goldCost: 6800000
 
-  silver:
+  black:
     name: "黑土地"
-    icon: "land_silver"
     color: "#2D2D2D"
     productionBonus: 20
     timeReduction: 20
@@ -226,7 +224,6 @@ quality:
 
   gold:
     name: "金土地"
-    icon: "land_gold"
     color: "#FFB300"
     productionBonus: 28
     timeReduction: 20
