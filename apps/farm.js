@@ -217,8 +217,8 @@ export class farm extends plugin {
     // 提取品质配置的星星颜色（普通土地不显示星星，跳过）
     const qualityColors = {}
     for (const [qualityKey, qualityConfig] of Object.entries(this.config.land.quality)) {
-      if (qualityKey !== 'normal' && qualityConfig.starColor) {
-        qualityColors[qualityKey] = qualityConfig.starColor
+      if (qualityKey !== 'normal' && qualityConfig.color) {
+        qualityColors[qualityKey] = qualityConfig.color
       }
     }
 
