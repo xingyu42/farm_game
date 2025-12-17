@@ -291,7 +291,7 @@ class CropHarvestService {
     // 基础产量
     const baseYield = cropConfig.baseYield || 1;
 
-    // 品质加成
+    // 产量品质加成 (productionBonus)
     const qualityMultiplier = Calculator.getQualityMultiplier(landData.quality || 'normal', this.config);
 
     // 健康度影响
@@ -300,9 +300,10 @@ class CropHarvestService {
     // 计算最终产量
     const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
 
-    // 经验值计算
+    // 经验值计算 - 使用 experienceBonus (每次收获固定经验，不乘产量)
     const baseExp = cropConfig.experience || 10;
-    const experience = Math.floor(baseExp * qualityMultiplier);
+    const expMultiplier = Calculator.getExperienceMultiplier(landData.quality || 'normal', this.config);
+    const experience = Math.max(1, Math.floor(baseExp * expMultiplier));
 
     // 生成收获物品
     const items = {};

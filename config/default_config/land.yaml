@@ -67,7 +67,7 @@ quality:
     icon: "land_copper"
     color: "#C75B39"
     productionBonus: 10
-    timeReduction: 10
+    timeReduction: 0
     experienceBonus: 0
     levels:
       1:

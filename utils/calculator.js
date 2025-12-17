@@ -67,6 +67,18 @@ class Calculator {
   }
 
   /**
+   * 获取土地品质对应的经验加成倍数
+   * @param {string} landQuality 土地品质
+   * @param {Object} config 配置
+   * @returns {number} 倍数（例如 1.28 表示 +28%）
+   */
+  static getExperienceMultiplier(landQuality = 'normal', config) {
+    const qualityConfig = Calculator._getLandQualityConfig(landQuality, config) || { experienceBonus: 0 };
+    const experienceBonus = Number(qualityConfig.experienceBonus) || 0;
+    return 1 + (experienceBonus / 100);
+  }
+
+  /**
    * 计算作物经验值
    * @param {string} cropType 作物类型
    * @param {number} quantity 收获数量
