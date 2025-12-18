@@ -132,7 +132,6 @@ export class player extends plugin {
       stealCooldown,
       todayStealCount: stealStats.totalAttemptsToday,
       stealRate: stealStats.config.baseSuccessRate,
-      maxStealPerAttempt: stealStats.config.maxStealPerAttempt,
       totalSignDays: playerData.signIn.totalSignDays || 0,
       consecutiveDays: playerData.signIn.consecutiveDays || 0,
       isNewPlayer: playerData.isNewPlayer(),

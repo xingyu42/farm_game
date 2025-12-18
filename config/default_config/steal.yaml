@@ -5,7 +5,6 @@
   basic:
     cooldownMinutes: 60 # 偷窃冷却时间（分钟）
     baseSuccessRate: 50 # 基础成功率（%）
-    maxStealPerAttempt: 3 # 每次偷窃最大数量
     protectionMinutes: 30 # 被偷后的保护时间（分钟）
 
   # 成功率影响因素
@@ -24,12 +23,6 @@
       red: 1.2 # 红土地收益系数
       black: 1.5 # 黑土地收益系数
       gold: 2.0 # 金土地收益系数
-
-  # 失败惩罚配置
-  penalties:
-    basePenaltyRate: 0.05 # 基础惩罚率（失败时损失金币比例）
-    maxPenalty: 1000 # 最大惩罚金额
-    minPenalty: 10 # 最小惩罚金额
 
   # 土地可偷取状态配置
   landRequirements:

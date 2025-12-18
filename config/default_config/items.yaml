@@ -421,25 +421,32 @@ initial_gift:
 # 仓库系统配置
 inventory:
   startingCapacity: 20 # 初始仓库容量
-  maxCapacity: 200 # 最大仓库容量
-  upgradeSteps:
-    # 升级配置
-    - capacity: 30
-      cost: 500
-    - capacity: 40
-      cost: 1000
-    - capacity: 50
-      cost: 2000
-    - capacity: 70
-      cost: 4000
-    - capacity: 100
-      cost: 8000
-    - capacity: 150
-      cost: 15000
-    - capacity: 200
-      cost: 25000
+  maxCapacity: 999 # 最大仓库容量
+upgradeSteps:
+  # 新手期：让玩家快速扩充到 100
+  - { capacity: 30,  cost: 0 }       # 初始赠送
+  - { capacity: 45,  cost: 500 }     # 增量加大，单价降低
+  - { capacity: 60,  cost: 1200 }
+  - { capacity: 80,  cost: 3000 }
+  - { capacity: 100, cost: 6000 }
 
-# 效果字段映射配置（用于物品详情展示）
+  # 稳定期：金币产出开始爆发
+  - { capacity: 150, cost: 15000 }   # 跨度变大，给玩家“一下变大”的感觉
+  - { capacity: 200, cost: 30000 }
+  - { capacity: 250, cost: 55000 }
+  - { capacity: 300, cost: 90000 }
+  - { capacity: 350, cost: 140000 }
+
+  # 高压消耗期：针对重度玩家
+  - { capacity: 420, cost: 220000 }  # 增量从 50 提升到 70
+  - { capacity: 500, cost: 350000 }
+  - { capacity: 600, cost: 600000 }  # 增量提升到 100
+  - { capacity: 700, cost: 1200000 }
+  - { capacity: 800, cost: 2500000 }
+  - { capacity: 900, cost: 5000000 }
+  - { capacity: 1000, cost: 10000000 } # 最终圆满数值 1000
+
+#物品详情词条
 # format 类型: percent(小数转%), percent_raw(直接加%), plus_percent(+%), minus_percent(-%), plus(+数值), minutes(分钟), time_seconds(秒转时分), number(原样), xp(经验), boolean(布尔)
 effectMappings:
   # 肥料效果

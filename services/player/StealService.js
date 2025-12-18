@@ -50,12 +50,6 @@ export class StealService {
       throw new Error('不能偷窃自己的农场');
     }
 
-    // 前置检查：冷却状态（无需锁保护，提前拦截避免无效锁获取）
-    const cooldownStatus = await this.getStealCooldownStatus(attackerId);
-    if (!cooldownStatus.canSteal) {
-      throw new Error(`偷窃冷却中，剩余时间: ${Math.ceil(cooldownStatus.remainingTime / 60000)} 分钟`);
-    }
-
     // 使用批量锁：确保操作原子性，避免嵌套锁冲突
     const lockTimeout = Math.ceil(this.stealConfig.locks.timeout / 1000); // 转换为秒
 
@@ -80,28 +74,34 @@ export class StealService {
    * @private
    */
   async _executeStealCore(attackerId, targetId) {
-    // 1. 检查目标可偷状态
+    // 1. 检查冷却状态（在锁内检查，避免竞态条件）
+    const cooldownStatus = await this.getStealCooldownStatus(attackerId);
+    if (!cooldownStatus.canSteal) {
+      throw new Error(`偷窃冷却中，剩余时间: ${Math.ceil(cooldownStatus.remainingTime / 60000)} 分钟`);
+    }
+
+    // 2. 检查目标可偷状态
     const targetStatus = await this.getStealableStatus(targetId);
     if (!targetStatus.canBeStolen) {
       throw new Error(targetStatus.reason);
     }
 
-    // 2. 检查防重复偷取
+    // 3. 检查防重复偷取
     const repeatStatus = await this._checkAntiRepeat(attackerId, targetId);
     if (!repeatStatus.allowed) {
       throw new Error(repeatStatus.reason);
     }
 
-    // 3. 获取可偷取的土地
+    // 4. 获取可偷取的土地
     const stealableLands = await this._getStealableLands(targetId);
     if (stealableLands.length === 0) {
       throw new Error('目标没有可偷取的作物');
     }
 
-    // 4. 计算偷窃成功率
+    // 5. 计算偷窃成功率
     const successRate = await this._calculateSuccessRate(attackerId, targetId);
 
-    // 5. 执行偷窃判定
+    // 6. 执行偷窃判定
     const isSuccess = Math.random() * 100 < successRate;
 
     if (isSuccess) {
@@ -124,11 +124,8 @@ export class StealService {
     const rewards = [];
     const cropsConfig = this.config.crops || {};
 
-    // 随机选择要偷取的土地（最多maxStealPerAttempt块）
-    const maxSteal = this.stealConfig.basic.maxStealPerAttempt;
-    const selectedLands = this._selectRandomLands(stealableLands, maxSteal);
-
-    for (const land of selectedLands) {
+    // 遍历所有可偷取的土地
+    for (const land of stealableLands) {
       // 获取作物配置（land.crop 是作物ID字符串）
       const cropConfig = cropsConfig[land.crop];
       if (!cropConfig) {
@@ -149,8 +146,23 @@ export class StealService {
           quantity: stealAmount,
           fromLand: land.landId
         });
-
       }
+    }
+
+    // 检查是否实际偷到东西
+    if (rewards.length === 0) {
+      // 未偷到任何东西，仅设置冷却，不设置目标保护
+      await this._setStealCooldown(attackerId);
+      await this._recordStealAttempt(attackerId, targetId);
+
+      return {
+        success: false,
+        result: 'steal_empty',
+        successRate,
+        rewards: [],
+        totalStolen: 0,
+        message: '没有获得任何作物'
+      };
     }
 
     // 设置偷窃冷却
@@ -163,7 +175,7 @@ export class StealService {
     );
 
     // 记录偷窃记录
-    await this._recordStealAttempt(attackerId, targetId, true, rewards);
+    await this._recordStealAttempt(attackerId, targetId);
 
     return {
       success: true,
@@ -171,8 +183,7 @@ export class StealService {
       successRate,
       rewards,
       totalStolen: rewards.reduce((sum, r) => sum + r.quantity, 0),
-      message: `偷窃成功！获得了 ${rewards.length} 种作物`,
-      protectionSet: true
+      message: `偷窃成功！获得了 ${rewards.length} 种作物`
     };
   }
 
@@ -185,28 +196,17 @@ export class StealService {
    * @private
    */
   async _handleStealFailure(attackerId, targetId, successRate) {
-    // 计算失败惩罚
-    const penalty = await this._calculateFailurePenalty(attackerId);
-
-    if (penalty > 0) {
-      // 扣除偷窃者金币
-      await this.playerService.deductCoins(attackerId, penalty);
-
-    }
-
     // 设置偷窃冷却（失败也有冷却）
     await this._setStealCooldown(attackerId);
 
     // 记录偷窃记录
-    await this._recordStealAttempt(attackerId, targetId, false, [], penalty);
+    await this._recordStealAttempt(attackerId, targetId);
 
     return {
       success: false,
       result: 'steal_failed',
       successRate,
-      penalty,
-      message: `偷窃失败！被发现并罚款 ${penalty} 金币`,
-      protectionSet: false
+      message: '偷窃失败！被发现了'
     };
   }
 
@@ -229,7 +229,7 @@ export class StealService {
       }
 
       const now = Date.now();
-      const endTime = parseInt(cooldownEnd);
+      const endTime = parseInt(cooldownEnd, 10) || 0;
       const remainingTime = Math.max(0, endTime - now);
 
       return {
@@ -430,37 +430,6 @@ export class StealService {
   }
 
   /**
-   * 计算失败惩罚
-   * @param {string} attackerId 偷窃者ID
-   * @returns {number} 惩罚金额
-   * @private
-   */
-  async _calculateFailurePenalty(attackerId) {
-    try {
-      const penaltyConfig = this.stealConfig.penalties;
-      const penaltyRate = penaltyConfig.basePenaltyRate;
-      const maxPenalty = penaltyConfig.maxPenalty;
-      const minPenalty = penaltyConfig.minPenalty;
-
-      // 获取玩家金币
-      const playerData = await this.playerService.getDataService().getPlayer(attackerId);
-      const currentCoins = playerData.coins;
-
-      // 计算惩罚金额
-      let penalty = Math.floor(currentCoins * penaltyRate);
-      penalty = Math.min(maxPenalty, Math.max(minPenalty, penalty));
-
-      // 确保不超过玩家现有金币
-      penalty = Math.min(penalty, currentCoins);
-
-      return penalty;
-    } catch (error) {
-      logger.error(`[StealService] 计算失败惩罚失败: ${error.message}`);
-      return this.stealConfig.penalties.minPenalty;
-    }
-  }
-
-  /**
    * 设置偷窃冷却
    * @param {string} userId 用户ID
    * @private
@@ -502,7 +471,7 @@ export class StealService {
       const lastAttemptTime = await this.redisClient.get(cooldownKey);
 
       if (lastAttemptTime) {
-        const cooldownEndTime = parseInt(lastAttemptTime) + cooldownMinutes * 60 * 1000;
+        const cooldownEndTime = (parseInt(lastAttemptTime, 10) || 0) + cooldownMinutes * 60 * 1000;
         const remainingMinutes = CommonUtils.getRemainingMinutes(cooldownEndTime, now);
 
         if (remainingMinutes > 0) {
@@ -515,7 +484,7 @@ export class StealService {
 
       // 检查今日尝试次数
       const attemptsKey = `farm_game:steal_attempts:${attackerId}:${targetId}:${today}`;
-      const attemptCount = parseInt(await this.redisClient.get(attemptsKey));
+      const attemptCount = parseInt(await this.redisClient.get(attemptsKey), 10) || 0;
 
       if (attemptCount >= maxAttempts) {
         return {
@@ -535,12 +504,9 @@ export class StealService {
    * 记录偷窃尝试
    * @param {string} attackerId 偷窃者ID
    * @param {string} targetId 目标用户ID
-   * @param {boolean} success 是否成功
-   * @param {Array} rewards 奖励列表
-   * @param {number} penalty 惩罚金额
    * @private
    */
-  async _recordStealAttempt(attackerId, targetId, success, rewards = [], penalty = 0) {
+  async _recordStealAttempt(attackerId, targetId) {
     try {
       const now = Date.now();
       const today = CommonUtils.getTodayKey(now);
@@ -554,95 +520,10 @@ export class StealService {
       const attemptsKey = `farm_game:steal_attempts:${attackerId}:${targetId}:${today}`;
       await this.redisClient.incr(attemptsKey);
       await this.redisClient.expire(attemptsKey, 24 * 60 * 60); // 24小时过期
-
-      // 记录详细日志（可用于后续统计分析）
-      const logData = {
-        timestamp: now,
-        attackerId,
-        targetId,
-        success,
-        rewards: rewards.length,
-        totalStolen: rewards.reduce((sum, r) => sum + r.quantity, 0),
-        penalty
-      };
-
     } catch (error) {
       logger.error(`[StealService] 记录偷窃尝试失败: ${error.message}`);
       // 记录失败不应影响主流程
     }
-  }
-
-  /**
-   * 随机选择土地
-   * @param {Array} lands 土地列表
-   * @param {number} maxCount 最大选择数量
-   * @returns {Array} 选中的土地
-   * @private
-   */
-  _selectRandomLands(lands, maxCount) {
-    if (lands.length <= maxCount) {
-      return [...lands];
-    }
-
-    const selected = [];
-    const available = [...lands];
-
-    for (let i = 0; i < maxCount && available.length > 0; i++) {
-      const randomIndex = Math.floor(Math.random() * available.length);
-      selected.push(available.splice(randomIndex, 1)[0]);
-    }
-
-    return selected;
-  }
-
-  /**
-   * 获取默认配置
-   * @returns {Object} 默认配置
-   * @private
-   */
-  _getDefaultConfig() {
-    return {
-      basic: {
-        cooldownMinutes: 60,
-        baseSuccessRate: 50,
-        maxStealPerAttempt: 3,
-        protectionMinutes: 30
-      },
-      successRateFactors: {
-        targetProtectionPenalty: 0.5,
-        levelDifferenceFactor: 0.1,
-        maxSuccessRate: 95,
-        minSuccessRate: 5
-      },
-      rewards: {
-        baseRewardRate: 0.1,
-        maxRewardRate: 0.3,
-        bonusByQuality: {
-          normal: 1.0,
-          red: 1.2,
-          black: 1.5,
-          gold: 2.0
-        }
-      },
-      penalties: {
-        basePenaltyRate: 0.05,
-        maxPenalty: 1000,
-        minPenalty: 10
-      },
-      landRequirements: {
-        minGrowthProgress: 0.5,
-        excludeStates: ['empty', 'harvested']
-      },
-      antiRepeat: {
-        sameTargetCooldownMinutes: 30,
-        maxAttemptsPerTarget: 3
-      },
-      locks: {
-        timeout: 10000,
-        retryDelay: 100,
-        maxRetries: 50
-      }
-    };
   }
 
   /**
@@ -661,7 +542,7 @@ export class StealService {
       let totalAttemptsToday = 0;
 
       for (const key of keys) {
-        const count = parseInt(await this.redisClient.get(key));
+        const count = parseInt(await this.redisClient.get(key), 10) || 0;
         totalAttemptsToday += count;
       }
 
@@ -670,49 +551,11 @@ export class StealService {
         totalAttemptsToday,
         config: {
           cooldownMinutes: this.stealConfig.basic.cooldownMinutes,
-          maxStealPerAttempt: this.stealConfig.basic.maxStealPerAttempt,
           baseSuccessRate: this.stealConfig.basic.baseSuccessRate
         }
       };
     } catch (error) {
       logger.error(`[StealService] 获取偷窃统计失败 [${userId}]: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 清理过期的偷窃相关数据
-   * @returns {Object} 清理结果
-   */
-  async cleanupExpiredData() {
-    try {
-      const patterns = [
-        `farm_game:steal_cooldown:*`,
-        `farm_game:steal_target_cooldown:*`,
-        `farm_game:steal_attempts:*`
-      ];
-
-      let totalCleaned = 0;
-
-      for (const pattern of patterns) {
-        const keys = await this.redisClient.keys(pattern);
-        for (const key of keys) {
-          const ttl = await this.redisClient.ttl(key);
-          if (ttl === -1) { // 没有过期时间的键，手动清理
-            await this.redisClient.del(key);
-            totalCleaned++;
-          }
-        }
-      }
-
-      logger.info(`[StealService] 清理过期数据完成，清理 ${totalCleaned} 个键`);
-
-      return {
-        success: true,
-        cleanedKeys: totalCleaned
-      };
-    } catch (error) {
-      logger.error(`[StealService] 清理过期数据失败: ${error.message}`);
       throw error;
     }
   }

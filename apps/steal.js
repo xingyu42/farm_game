@@ -182,11 +182,7 @@ export class steal extends plugin {
       }
     } else {
       message += `😅 偷菜失败！\n`
-      message += `成功率: ${result.successRate}%\n`
-
-      if (result.penalty > 0) {
-        message += `被罚款: ${result.penalty} 金币`
-      }
+      message += `成功率: ${result.successRate}%`
     }
 
     return message
