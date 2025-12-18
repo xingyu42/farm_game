@@ -123,6 +123,7 @@ export class StealService {
   async _handleStealSuccess(attackerId, targetId, stealableLands, successRate) {
     const rewards = [];
     const cropsConfig = this.config.crops || {};
+    let inventoryFull = false;
 
     // 遍历所有可偷取的土地
     for (const land of stealableLands) {
@@ -137,15 +138,22 @@ export class StealService {
       const stealAmount = this._calculateStealAmount(land, cropConfig);
 
       if (stealAmount > 0) {
-        // 偷窃者获得作物
-        await this.inventoryService.addItem(attackerId, land.crop, stealAmount);
+        const addResult = await this.inventoryService.addItem(attackerId, land.crop, stealAmount);
 
-        rewards.push({
-          cropId: land.crop,
-          cropName: cropConfig.name,
-          quantity: stealAmount,
-          fromLand: land.landId
-        });
+        const addedQuantity = addResult?.success
+          ? stealAmount
+          : (addResult?.partialSuccess && Number.isFinite(addResult.added) ? addResult.added : 0);
+
+        if (addedQuantity > 0) {
+          rewards.push({
+            cropId: land.crop,
+            cropName: cropConfig.name,
+            quantity: addedQuantity,
+            fromLand: land.landId
+          });
+        } else if (typeof addResult?.message === 'string' && addResult.message.includes('仓库容量不足')) {
+          inventoryFull = true;
+        }
       }
     }
 
@@ -161,7 +169,7 @@ export class StealService {
         successRate,
         rewards: [],
         totalStolen: 0,
-        message: '没有获得任何作物'
+        message: inventoryFull ? '仓库容量不足，偷到的作物放不下' : '没有获得任何作物'
       };
     }
 
@@ -260,12 +268,21 @@ export class StealService {
       }
 
       // 检查目标是否受保护
-      const protectionStatus = await this.protectionService.isProtected(targetId);
-      if (protectionStatus.isProtected) {
-        const remainingMinutes = Math.ceil(protectionStatus.protectionRemaining / 60000);
+      const protectionStatus = await this.protectionService.getProtectionStatus(targetId);
+      if (protectionStatus?.farmProtection?.active) {
+        const remainingMs = protectionStatus.farmProtection.remainingTime || 0;
+        const remainingMinutes = Math.ceil(remainingMs / 60000);
         return {
           canBeStolen: false,
           reason: `目标受到保护，剩余时间: ${remainingMinutes} 分钟`
+        };
+      }
+      if (protectionStatus?.dogFood?.active) {
+        const remainingMs = protectionStatus.dogFood.remainingTime || 0;
+        const remainingMinutes = Math.ceil(remainingMs / 60000);
+        return {
+          canBeStolen: false,
+          reason: `目标狗粮防护中，剩余时间: ${remainingMinutes} 分钟`
         };
       }
 
@@ -305,7 +322,6 @@ export class StealService {
       const now = Date.now();
 
       for (const land of allLands) {
-        // 检查土地状态
         if (excludeStates.includes(land.status)) {
           continue;
         }
@@ -369,13 +385,6 @@ export class StealService {
       const levelDiff = attackerData.level - targetData.level;
       const levelFactor = factors.levelDifferenceFactor;
       finalRate += levelDiff * levelFactor * 10; // 每级差异影响1%（levelFactor * 10）
-
-      // 目标防护加成
-      const protectionBonus = await this.protectionService.getProtectionBonus(targetId);
-      if (protectionBonus > 0) {
-        const protectionPenalty = factors.targetProtectionPenalty;
-        finalRate -= protectionBonus * protectionPenalty;
-      }
 
       // 限制成功率范围
       const maxRate = factors.maxSuccessRate;

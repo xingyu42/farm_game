@@ -367,7 +367,7 @@ class PlantingUtils {
                 }
 
                 // 验证状态值
-                const validStatuses = ['empty', 'growing', 'mature', 'withered'];
+                const validStatuses = ['empty', 'growing', 'mature'];
                 if (!validStatuses.includes(land.status)) {
                     return { success: false, message: `第${i + 1}块土地状态无效: ${land.status}` };
                 }
@@ -449,7 +449,7 @@ class PlantingUtils {
             empty: '空地',
             growing: '生长中',
             mature: '成熟',
-            withered: '枯萎'
+
         };
         formatted.statusDescription = statusDescriptions[formatted.status] || formatted.status;
 

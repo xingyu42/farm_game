@@ -9,7 +9,6 @@
 
   # 成功率影响因素
   successRateFactors:
-    targetProtectionPenalty: 0.5 # 目标有防护时成功率降低系数
     levelDifferenceFactor: 0.1 # 等级差异影响系数（每级差异的影响）
     maxSuccessRate: 95 # 最大成功率
     minSuccessRate: 5 # 最小成功率

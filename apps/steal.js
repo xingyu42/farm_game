@@ -18,7 +18,7 @@ export class steal extends plugin {
           fnc: 'stealCrop'
         },
         {
-          reg: '^#(nc)?狗粮(.+)?$',
+          reg: '^#(nc)?(?:使用)?狗粮(.+)?$',
           fnc: 'useDogFood'
         }
       ]
@@ -51,6 +51,11 @@ export class steal extends plugin {
       // 1. 提取被@用户的QQ号
       const targetUserId = e.at
       const thiefUserId = e.user_id
+
+      if (!targetUserId) {
+        e.reply('请先@一位玩家，然后发送 "#nc偷菜"')
+        return true
+      }
 
       // 3. 确保偷菜者已注册
       if (!(await this.playerService.isPlayer(thiefUserId))) return e.reply('您未注册，请先"#nc注册"')
@@ -99,7 +104,7 @@ export class steal extends plugin {
    */
   async useDogFood(e) {
     try {
-      const match = e.msg.match(/^#(nc)?狗粮(.+)?$/)
+      const match = e.msg.match(/^#(nc)?(?:使用)?狗粮(.+)?$/)
       if (!match) {
         e.reply('❌ 格式错误！使用: #狗粮[狗粮类型]')
         return true

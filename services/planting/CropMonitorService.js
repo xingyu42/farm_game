@@ -177,14 +177,6 @@ class CropMonitorService {
                 hasUpdates = true;
             }
 
-            // 检查是否枯萎
-            const witherResult = this._checkWithering(landData, now);
-            if (witherResult.shouldWither) {
-                landUpdates.status = 'withered';
-                landUpdates.stealable = false;
-                hasUpdates = true;
-            }
-
             if (hasUpdates) {
                 await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
 
@@ -226,7 +218,6 @@ class CropMonitorService {
                 empty: 0,
                 growing: 0,
                 mature: 0,
-                withered: 0,
                 needsCare: 0,
                 crops: []
             };
@@ -275,7 +266,9 @@ class CropMonitorService {
                 }
 
                 // 统计状态
-                statusInfo[land.status]++;
+                if (typeof statusInfo[land.status] === 'number') {
+                    statusInfo[land.status]++;
+                }
 
                 if (land.needsWater || land.hasPests) {
                     statusInfo.needsCare++;
@@ -640,31 +633,6 @@ class CropMonitorService {
         }
     }
 
-    /**
-     * 检查是否应该枯萎
-     * @param {Object} landData 土地数据
-     * @param {number} now 当前时间
-     * @returns {Object} 枯萎检查结果
-     * @private
-     */
-    _checkWithering(landData, now) {
-        // 成熟后超过一定时间未收获会枯萎
-        const witherTime = 24 * 60 * 60 * 1000; // 24小时
-
-        if (landData.status === 'mature' && landData.harvestTime) {
-            const timeSinceMature = now - landData.harvestTime;
-            if (timeSinceMature > witherTime) {
-                return { shouldWither: true, reason: 'timeout' };
-            }
-        }
-
-        // 健康度过低会枯萎
-        if ((landData.health || 100) <= 10) {
-            return { shouldWither: true, reason: 'low_health' };
-        }
-
-        return { shouldWither: false };
-    }
 }
 
 export default CropMonitorService; 

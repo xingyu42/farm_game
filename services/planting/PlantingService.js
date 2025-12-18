@@ -205,14 +205,6 @@ class PlantingService {
     return await this._cropMonitorService.getPlayerCropsStatus(userId);
   }
 
-  /**
-   * 清理枯萎的作物
-   * @param {string} userId 用户ID
-   * @returns {Object} 清理结果
-   */
-  async cleanWitheredCrops(userId) {
-    return await this._cropMonitorService.cleanWitheredCrops(userId);
-  }
 }
 
 export default PlantingService;

@@ -93,6 +93,7 @@ export class InventoryService {
       }
 
       let targetItem;
+      let partialAdd = null;
 
       if (inventory.items[itemId]) {
         // 现有物品，尝试添加数量
@@ -105,13 +106,7 @@ export class InventoryService {
             const canAdd = targetItem.maxStack - targetItem.quantity;
             if (canAdd > 0) {
               targetItem.addQuantity(canAdd);
-              return {
-                success: false,
-                message: `部分添加成功，还有 ${quantity - canAdd} 个物品因堆叠限制无法添加`,
-                partialSuccess: true,
-                added: canAdd,
-                remaining: quantity - canAdd
-              };
+              partialAdd = { added: canAdd, remaining: quantity - canAdd };
             } else {
               return {
                 success: false,
@@ -147,6 +142,24 @@ export class InventoryService {
 
       const displayInfo = targetItem.getDisplayInfo();
       const newUsage = this._calculateInventoryUsage(inventory.items);
+
+      if (partialAdd) {
+        return {
+          success: false,
+          partialSuccess: true,
+          message: `部分添加成功，还有 ${partialAdd.remaining} 个物品因堆叠限制无法添加`,
+          added: partialAdd.added,
+          remaining: partialAdd.remaining,
+          item: {
+            id: itemId,
+            name: displayInfo.name,
+            quantity: targetItem.quantity,
+            category: targetItem.category,
+            displayInfo: displayInfo
+          },
+          newUsage: newUsage
+        };
+      }
 
       return {
         success: true,

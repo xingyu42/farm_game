@@ -33,7 +33,7 @@ class Land {
       errors.push(`土地品质必须是以下之一: ${validQualities.join(', ')}`);
     }
 
-    const validStatuses = ['empty', 'growing', 'ready', 'withered'];
+    const validStatuses = ['empty', 'growing', 'ready'];
     if (!validStatuses.includes(this.status)) {
       errors.push(`土地状态必须是以下之一: ${validStatuses.join(', ')}`);
     }
