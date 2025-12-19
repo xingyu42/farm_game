@@ -414,6 +414,7 @@ class PlantingUtils {
             quality: quality,
             plantTime: plantTime,
             harvestTime: harvestTime,
+            originalHarvestTime: harvestTime,
             status: 'growing',
             health: 100,
             needsWater: false,

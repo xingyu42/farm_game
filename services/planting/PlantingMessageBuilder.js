@@ -158,7 +158,7 @@ class PlantingMessageBuilder {
 
   /**
    * 构建护理成功消息
-   * @param {string} careType 护理类型 (water, fertilizer, pesticide)
+   * @param {string} careType 护理类型 (water, fertilize, pesticide)
    * @param {string} cropName 作物名称
    * @param {number} landId 土地编号
    * @param {Object} effectData 效果数据
@@ -169,7 +169,7 @@ class PlantingMessageBuilder {
 
     const careNames = {
       water: '浇水',
-      fertilizer: '施肥',
+      fertilize: '施肥',
       pesticide: '除虫'
     };
 

@@ -101,21 +101,27 @@ class CropCareService {
           throw new Error(`肥料不足: ${actualFertilizerType}`);
         }
 
-        // 5. 施肥效果
-        const fertilizerConfig = this.config.items[actualFertilizerType];
-        const healthBonus = fertilizerConfig?.effects?.health || 20;
-        const growthSpeedBonus = fertilizerConfig?.effects?.growthSpeed || 0.1;
+        // 5. 获取肥料配置并验证
+        const fertilizerConfig = this.config.items.fertilizer?.[actualFertilizerType];
+        if (!fertilizerConfig) {
+          throw new Error(`无效的肥料类型: ${actualFertilizerType}`);
+        }
+        const growthSpeedBonus = fertilizerConfig.effect?.speedBonus;
+        if (!growthSpeedBonus || growthSpeedBonus <= 0) {
+          throw new Error(`肥料配置错误: ${actualFertilizerType} 缺少有效的加速效果`);
+        }
 
         const landUpdates = {
-          health: Math.min(100, (land.health ?? 100) + healthBonus),
           lastFertilized: Date.now()
         };
 
-        // 如果有加速效果，更新收获时间
-        if (growthSpeedBonus > 0 && land.harvestTime) {
-          const remainingTime = land.harvestTime - Date.now();
-          const speedUpTime = Math.floor(remainingTime * growthSpeedBonus);
-          landUpdates.harvestTime = land.harvestTime - speedUpTime;
+        // 如果有加速效果，更新收获时间（按原始总生长时间计算）
+        if (land.originalHarvestTime && land.plantTime) {
+          const totalGrowTime = land.originalHarvestTime - land.plantTime;
+          if (totalGrowTime > 0) {
+            const speedUpTime = Math.floor(totalGrowTime * growthSpeedBonus);
+            landUpdates.harvestTime = land.harvestTime - speedUpTime;
+          }
         }
 
         // 6. 扣除肥料并更新土地（带回滚机制保证原子性）
@@ -185,15 +191,22 @@ class CropCareService {
           throw new Error(`杀虫剂不足: ${actualPesticideType}`);
         }
 
-        // 5. 除虫效果
-        const pesticideConfig = this.config.items[actualPesticideType];
-        const healthRecovery = pesticideConfig?.effects?.health || 15;
+        // 5. 获取杀虫剂配置并验证
+        const pesticideConfig = this.config.items.pesticide?.[actualPesticideType];
+        if (!pesticideConfig) {
+          throw new Error(`无效的杀虫剂类型: ${actualPesticideType}`);
+        }
+        const healthRecovery = pesticideConfig.effects?.health;
 
         const landUpdates = {
           hasPests: false,
-          health: Math.min(100, (land.health ?? 100) + healthRecovery),
           lastTreated: Date.now()
         };
+
+        // 只有配置了健康恢复效果时才恢复健康
+        if (healthRecovery > 0) {
+          landUpdates.health = Math.min(100, (land.health ?? 100) + healthRecovery);
+        }
 
         // 6. 扣除杀虫剂并更新土地（带回滚机制保证原子性）
         await this.inventoryService.removeItem(userId, actualPesticideType, 1);
@@ -233,6 +246,7 @@ class CropCareService {
         const results = [];
         const landUpdates = {};
         const inventoryUpdates = {};
+        const landCache = new Map();
 
         // 1. 获取玩家数据用于验证
         const playerData = await this.landService.playerService.getPlayer(userId);
@@ -240,13 +254,18 @@ class CropCareService {
           throw new Error('获取玩家数据失败');
         }
 
-        // 2. 验证所有护理动作
+        // 2. 预加载并验证所有护理动作
         for (const action of careActions) {
           const { landId, action: careAction, itemType } = action;
 
-          const landData = await this.landService.getLandById(userId, landId);
+          // 使用缓存避免重复查询
+          let landData = landCache.get(landId);
           if (!landData) {
-            throw new Error(`土地 ${landId} 不存在`);
+            landData = await this.landService.getLandById(userId, landId);
+            if (!landData) {
+              throw new Error(`土地 ${landId} 不存在`);
+            }
+            landCache.set(landId, landData);
           }
 
           const validation = this.validator.validateCareOperation(playerData, landId, careAction);
@@ -254,13 +273,16 @@ class CropCareService {
             throw new Error(`土地 ${landId}: ${validation.error.message}`);
           }
 
-          // 累计物品需求
-          if (itemType) {
+          // 累计物品需求，fertilize 和 pesticide 必须提供 itemType
+          if (careAction === 'fertilize' || careAction === 'pesticide') {
+            if (!itemType) {
+              throw new Error(`土地 ${landId}: ${careAction} 操作必须指定物品类型`);
+            }
             inventoryUpdates[itemType] = (inventoryUpdates[itemType] || 0) + 1;
           }
         }
 
-        // 2. 验证总物品库存
+        // 3. 验证总物品库存
         for (const [itemType, requiredAmount] of Object.entries(inventoryUpdates)) {
           const hasEnoughItems = await this.inventoryService.hasItem(userId, itemType, requiredAmount);
           if (!hasEnoughItems.success) {
@@ -268,55 +290,65 @@ class CropCareService {
           }
         }
 
-        // 3. 执行批量护理
+        // 4. 执行批量护理（使用缓存的土地数据，合并同一土地的多个操作）
         for (const action of careActions) {
           const { landId, action: careAction, itemType } = action;
-          const landData = await this.landService.getLandById(userId, landId);
+          const landData = landCache.get(landId);
+          const baseHealth = landData.health ?? 100;
 
-          let landUpdate = {};
+          // 获取或初始化该土地的累积更新
+          const existing = landUpdates[landId] || {};
+          const currentHealth = existing.health ?? baseHealth;
 
           switch (careAction) {
             case 'water':
-              landUpdate = {
-                needsWater: false,
-                health: Math.min(100, (landData.health || 100) + 10)
-              };
+              existing.needsWater = false;
+              existing.health = Math.min(100, currentHealth + 10);
               break;
 
             case 'fertilize':
               {
-                const fertilizerConfig = this.config.items[itemType];
-                const healthBonus = fertilizerConfig?.effects?.health || 20;
-                const growthSpeedBonus = fertilizerConfig?.effects?.growthSpeed || 0.1;
+                const fertilizerConfig = this.config.items.fertilizer?.[itemType];
+                if (!fertilizerConfig) {
+                  throw new Error(`无效的肥料类型: ${itemType}`);
+                }
+                const growthSpeedBonus = fertilizerConfig.effect?.speedBonus;
+                if (!growthSpeedBonus || growthSpeedBonus <= 0) {
+                  throw new Error(`肥料配置错误: ${itemType} 缺少有效的加速效果`);
+                }
 
-                landUpdate = {
-                  health: Math.min(100, (landData.health || 100) + healthBonus),
-                  lastFertilized: Date.now()
-                };
+                existing.lastFertilized = Date.now();
 
-                if (growthSpeedBonus > 0 && landData.harvestTime) {
-                  const remainingTime = landData.harvestTime - Date.now();
-                  const speedUpTime = Math.floor(remainingTime * growthSpeedBonus);
-                  landUpdate.harvestTime = landData.harvestTime - speedUpTime;
+                if (landData.originalHarvestTime && landData.plantTime) {
+                  const baseHarvestTime = existing.harvestTime ?? landData.harvestTime;
+                  const totalGrowTime = landData.originalHarvestTime - landData.plantTime;
+                  if (totalGrowTime > 0) {
+                    const speedUpTime = Math.floor(totalGrowTime * growthSpeedBonus);
+                    existing.harvestTime = baseHarvestTime - speedUpTime;
+                  }
                 }
                 break;
               }
 
             case 'pesticide':
               {
-                const pesticideConfig = this.config.items[itemType];
-                const healthRecovery = pesticideConfig?.effects?.health || 15;
+                const pesticideConfig = this.config.items.pesticide?.[itemType];
+                if (!pesticideConfig) {
+                  throw new Error(`无效的杀虫剂类型: ${itemType}`);
+                }
+                const healthRecovery = pesticideConfig.effects?.health;
 
-                landUpdate = {
-                  hasPests: false,
-                  health: Math.min(100, (landData.health || 100) + healthRecovery),
-                  lastTreated: Date.now()
-                };
+                existing.hasPests = false;
+                existing.lastTreated = Date.now();
+
+                if (healthRecovery > 0) {
+                  existing.health = Math.min(100, currentHealth + healthRecovery);
+                }
                 break;
               }
           }
 
-          landUpdates[landId] = landUpdate;
+          landUpdates[landId] = existing;
 
           results.push({
             landId,
@@ -326,15 +358,23 @@ class CropCareService {
           });
         }
 
-        // 4. 批量扣除物品
+        // 5. 批量扣除物品
         for (const [itemType, amount] of Object.entries(inventoryUpdates)) {
           await this.inventoryService.removeItem(userId, itemType, amount);
         }
 
-        // 5. 批量更新土地
-        await this.plantingDataService.updateMultipleLands(userId, landUpdates);
+        // 6. 批量更新土地（带回滚机制）
+        try {
+          await this.plantingDataService.updateMultipleLands(userId, landUpdates);
+        } catch (updateError) {
+          // 土地更新失败，回滚已扣除的物品
+          for (const [itemType, amount] of Object.entries(inventoryUpdates)) {
+            await this.inventoryService.addItem(userId, itemType, amount);
+          }
+          throw updateError;
+        }
 
-        // 6. 批量更新收获计划
+        // 7. 批量更新收获计划
         for (const [landId, updates] of Object.entries(landUpdates)) {
           if (updates.harvestTime) {
             await this.cropMonitorService.updateHarvestSchedule(userId, parseInt(landId, 10), updates.harvestTime);

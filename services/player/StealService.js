@@ -317,7 +317,6 @@ export class StealService {
       const result = await this.landService.getAllLands(targetId);
       const allLands = result?.lands || [];
       const stealableLands = [];
-      const minGrowthProgress = this.stealConfig.landRequirements.minGrowthProgress;
       const excludeStates = this.stealConfig.landRequirements.excludeStates;
       const now = Date.now();
 
@@ -341,8 +340,8 @@ export class StealService {
         const timeSincePlant = now - land.plantTime;
         const growthProgress = totalGrowTime > 0 ? timeSincePlant / totalGrowTime : 0;
 
-        // 检查生长进度
-        if (growthProgress < minGrowthProgress) {
+        // 只有成熟作物才能偷
+        if (growthProgress < 1.0) {
           continue;
         }
 

@@ -115,9 +115,6 @@ class CropMonitorService {
                         stealable: true // 成熟后可以被偷
                     };
 
-                    // 检查是否需要生成护理需求
-                    this._generateCareNeeds(landUpdate, landData, now);
-
                     landUpdates[landId] = landUpdate;
                     updatedLandsCount++;
 
@@ -579,34 +576,6 @@ class CropMonitorService {
     }
 
     // ==================== 私有辅助方法 ====================
-
-    /**
-     * 生成护理需求（在作物成熟时调用）
-     * @param {Object} landUpdate 土地更新对象
-     * @param {Object} landData 土地数据
-     * @param {number} now 当前时间
-     * @private
-     */
-    _generateCareNeeds(landUpdate, landData, _now) {
-        // 基于作物类型和生长时间生成护理需求
-        const cropConfig = this.config.crops[landData.crop];
-        if (!cropConfig) return;
-
-        const growTime = landData.harvestTime - landData.plantTime;
-        const growTimeHours = growTime / (1000 * 60 * 60);
-
-        // 生长时间越长，需要护理的概率越高
-        const waterProbability = Math.min(0.2 + (growTimeHours * 0.05), 0.6);
-        const pestProbability = Math.min(0.1 + (growTimeHours * 0.03), 0.4);
-
-        if (Math.random() < waterProbability) {
-            landUpdate.needsWater = true;
-        }
-
-        if (Math.random() < pestProbability) {
-            landUpdate.hasPests = true;
-        }
-    }
 
     /**
      * 更新护理需求

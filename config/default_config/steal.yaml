@@ -25,7 +25,6 @@
 
   # 土地可偷取状态配置
   landRequirements:
-    minGrowthProgress: 0.5 # 最小生长进度（50%以上才能偷）
     excludeStates: ["empty", "harvested"] # 排除的土地状态
 
   # 防重复偷取配置
