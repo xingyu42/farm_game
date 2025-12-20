@@ -75,7 +75,10 @@ class CropPlantingService {
           health: 100,
           needsWater: false,
           hasPests: false,
-          stealable: false
+          stealable: false,
+          waterDelayApplied: false,
+          waterNeededAt: null,
+          pestAppearedAt: null
         };
 
         // 7. 执行原子操作：扣除种子 + 更新土地
@@ -85,7 +88,13 @@ class CropPlantingService {
         // 8. 添加到收获计划
         await this.cropScheduleService.addHarvestSchedule(userId, landId, harvestTime);
 
-        // 9. 构建返回消息
+        // 9. 添加护理检查点调度（多检查点抽奖模式）
+        const careScheduleResult = await this.cropScheduleService.addCareSchedulesForCrop(userId, landId, now, harvestTime);
+        if (!careScheduleResult.success) {
+          logger.warn(`[CropPlantingService] 添加护理调度失败 [${userId}][${landId}]: ${careScheduleResult.message}`);
+        }
+
+        // 10. 构建返回消息
         return this.messageBuilder.buildPlantingMessage(
           cropConfig.name,
           landId,
@@ -173,11 +182,20 @@ class CropPlantingService {
             health: 100,
             needsWater: false,
             hasPests: false,
-            stealable: false
+            stealable: false,
+            waterDelayApplied: false,
+            waterNeededAt: null,
+            pestAppearedAt: null
           };
 
           // 添加到收获计划
           await this.cropScheduleService.addHarvestSchedule(userId, landId, harvestTime);
+
+          // 添加护理检查点调度（多检查点抽奖模式）
+          const careScheduleResult = await this.cropScheduleService.addCareSchedulesForCrop(userId, landId, now, harvestTime);
+          if (!careScheduleResult.success) {
+            logger.warn(`[CropPlantingService] 批量种植添加护理调度失败 [${userId}][${landId}]: ${careScheduleResult.message}`);
+          }
 
           results.push({
             landId,

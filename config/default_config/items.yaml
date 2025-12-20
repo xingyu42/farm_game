@@ -494,3 +494,27 @@ effectMappings:
     label: "价格类型"
     format: "boolean"
     trueValue: "动态浮动"
+
+# 作物护理系统配置
+# 多检查点抽奖模式：在生长周期内设置多个检查点，每个点有独立触发概率
+care:
+  water:
+    # 浇水检查点（生长进度百分比）
+    checkpoints: [0.35, 0.50, 0.65]
+    # 每个检查点的触发概率
+    probability: 0.40
+    # 惩罚机制：缺水延缓生长
+    penalty:
+      type: "growthDelay"
+      # 延缓剩余生长时间的百分比
+      delayPercent: 15
+  pest:
+    # 虫害检查点（生长进度百分比）
+    checkpoints: [0.55, 0.70, 0.85]
+    # 每个检查点的触发概率
+    probability: 0.35
+    # 惩罚机制：虫害减少产量
+    penalty:
+      type: "yieldReduction"
+      # 减少产量的百分比
+      reductionPercent: 20

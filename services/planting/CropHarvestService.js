@@ -108,7 +108,10 @@ class CropHarvestService {
               health: 100,
               needsWater: false,
               hasPests: false,
-              stealable: false
+              stealable: false,
+              waterDelayApplied: false,
+              waterNeededAt: null,
+              pestAppearedAt: null
             };
 
             for (const [itemId, amount] of Object.entries(candidate.harvestResult.items)) {
@@ -165,6 +168,11 @@ class CropHarvestService {
           const harvestedLandIds = harvestedCrops.map(crop => crop.landId);
           const scheduleMembers = harvestedLandIds.map(lid => `${userId}:${lid}`);
           await this.cropScheduleService.batchRemoveHarvestSchedules(scheduleMembers);
+
+          // 清理护理调度
+          for (const lid of harvestedLandIds) {
+            await this.cropMonitorService.removeCareSchedulesForLand(userId, lid);
+          }
         }
 
         // 5. 构建返回消息
@@ -297,8 +305,18 @@ class CropHarvestService {
     // 健康度影响
     const healthMultiplier = (landData.health || 100) / 100;
 
+    // 虫害惩罚：如果收获时仍有未处理的虫害，减少产量
+    let pestPenaltyMultiplier = 1;
+    if (landData.hasPests) {
+      const pestPenalty = this.config.items?.care?.pest?.penalty;
+      if (pestPenalty?.type === 'yieldReduction') {
+        const reductionPercent = pestPenalty.reductionPercent || 20;
+        pestPenaltyMultiplier = 1 - (reductionPercent / 100);
+      }
+    }
+
     // 计算最终产量
-    const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
+    const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier * pestPenaltyMultiplier));
 
     // 经验值计算 - 使用 experienceBonus (每次收获固定经验，不乘产量)
     const baseExp = cropConfig.experience || 10;
@@ -319,7 +337,8 @@ class CropHarvestService {
       items: items,
       experience: experience,
       quality: landData.quality || 'normal',
-      yield: finalYield
+      yield: finalYield,
+      hasPestPenalty: landData.hasPests || false
     };
   }
 

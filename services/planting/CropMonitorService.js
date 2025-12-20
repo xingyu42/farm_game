@@ -17,6 +17,8 @@ class CropMonitorService {
 
         // Redis ZSet 键名（调度功能）
         this.scheduleKey = `farm_game:schedule:harvest`;
+        // 护理调度键（多检查点抽奖模式）
+        this.careScheduleKey = `farm_game:schedule:care`;
     }
 
     // ==================== 状态监控功能（来自 CropStatusService）====================
@@ -31,48 +33,49 @@ class CropMonitorService {
             let updatedPlayersCount = 0;
             let updatedLandsCount = 0;
 
-            // 1. 高效获取所有到期的作物成员
+            // 1. 处理护理调度（多检查点抽奖模式）
+            const careResult = await this._processCareSchedules(now);
+
+            // 2. 高效获取所有到期的作物成员
             const dueSchedules = await this.getDueHarvestSchedules(now);
 
-            if (!dueSchedules || dueSchedules.length === 0) {
-                logger.info('[CropMonitorService] 没有需要更新的作物状态');
-                return { success: true, updatedPlayers: 0, updatedLands: 0 };
-            }
+            if (dueSchedules && dueSchedules.length > 0) {
+                // 3. 按玩家ID对需要更新的土地进行分组
+                const updatesByUser = await this.getDueSchedulesByUser(now);
 
-            // 2. 按玩家ID对需要更新的土地进行分组
-            const updatesByUser = await this.getDueSchedulesByUser(now);
+                // 4. 批量处理每个玩家的更新
+                for (const userId in updatesByUser) {
+                    try {
+                        // 使用分布式锁确保数据一致性
+                        await this.redis.withLock(userId, async () => {
+                            const updateResult = await this._updatePlayerCropsStatus(userId, updatesByUser[userId], now);
+                            if (updateResult.hasUpdates) {
+                                updatedPlayersCount++;
+                                updatedLandsCount += updateResult.updatedLandsCount;
+                            }
+                        }, 'updateCrops');
 
-            // 3. 批量处理每个玩家的更新
-            for (const userId in updatesByUser) {
-                try {
-                    // 使用分布式锁确保数据一致性
-                    await this.redis.withLock(userId, async () => {
-                        const updateResult = await this._updatePlayerCropsStatus(userId, updatesByUser[userId], now);
-                        if (updateResult.hasUpdates) {
-                            updatedPlayersCount++;
-                            updatedLandsCount += updateResult.updatedLandsCount;
-                        }
-                    }, 'updateCrops');
-
-                } catch (error) {
-                    logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
-                    // 继续处理其他玩家，不因单个玩家失败而中断整个批量更新
+                    } catch (error) {
+                        logger.error(`[CropMonitorService] 更新玩家${userId}作物状态失败: ${error.message}`);
+                    }
                 }
-            }
 
-            // 4. 从计划中移除已处理的成员
-            if (dueSchedules.length > 0) {
+                // 5. 从计划中移除已处理的成员
                 const dueMembers = dueSchedules.map(schedule => schedule.member);
                 await this.batchRemoveHarvestSchedules(dueMembers);
             }
 
-            logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态`);
+            const hasUpdates = updatedLandsCount > 0 || careResult.triggeredCount > 0;
+            if (hasUpdates) {
+                logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态，触发${careResult.triggeredCount}个护理事件`);
+            }
 
             return {
                 success: true,
                 updatedPlayers: updatedPlayersCount,
                 updatedLands: updatedLandsCount,
-                processedSchedules: dueSchedules.length
+                processedSchedules: dueSchedules?.length || 0,
+                careEvents: careResult
             };
 
         } catch (error) {
@@ -342,14 +345,14 @@ class CropMonitorService {
         try {
             const scheduleMember = `${userId}:${landId}`;
 
-            // The zAdd command will automatically update the score if the member already exists.
-            const result = await this.redis.client.zAdd(this.scheduleKey, {
+            // ZADD 会自动更新已存在成员的分数，返回值为新增成员数（更新时返回0也是成功的）
+            await this.redis.client.zAdd(this.scheduleKey, {
                 score: newHarvestTime,
                 value: scheduleMember
             });
 
             logger.debug(`[CropMonitorService] 更新收获计划: ${scheduleMember} to ${newHarvestTime}`);
-            return result > 0;
+            return true;
 
         } catch (error) {
             logger.error(`[CropMonitorService] 更新收获计划失败 [${userId}:${landId}]: ${error.message}`);
@@ -578,10 +581,347 @@ class CropMonitorService {
     // ==================== 私有辅助方法 ====================
 
     /**
-     * 更新护理需求
-     * @param {Object} landUpdate 土地更新对象
-     * @param {Object} landData 土地数据
-     * @param {number} now 当前时间
+     * 处理护理调度（多检查点抽奖模式）
+     * @param {number} now 当前时间戳
+     * @returns {Object} 处理结果
+     * @private
+     */
+    async _processCareSchedules(now) {
+        const result = { processedCount: 0, triggeredCount: 0, penalties: [] };
+
+        try {
+            const careConfig = this.config.items?.care || {};
+
+            // 使用原子操作逐个弹出并处理到期的护理检查点，避免并发重复处理
+            let processedInBatch = 0;
+            const maxBatchSize = 100; // 防止单次处理过多
+
+            while (processedInBatch < maxBatchSize) {
+                // 原子弹出一个最早到期的成员
+                const popped = await this.redis.client.zPopMin(this.careScheduleKey);
+                if (!popped || popped.length === 0) {
+                    break; // 没有更多到期成员
+                }
+
+                const { value: member, score } = popped[0];
+
+                // 检查是否真的到期
+                if (score > now) {
+                    // 未到期，放回去
+                    await this.redis.client.zAdd(this.careScheduleKey, {
+                        score: score,
+                        value: member
+                    });
+                    break;
+                }
+
+                // 解析成员信息: userId:landId:careType:checkpointIndex
+                const parts = member.split(':');
+                if (parts.length !== 4) {
+                    logger.warn(`[CropMonitorService] 无效的护理调度成员格式: ${member}`);
+                    continue;
+                }
+
+                const schedule = {
+                    userId: parts[0],
+                    landId: parseInt(parts[1], 10),
+                    careType: parts[2],
+                    checkpointIndex: parseInt(parts[3], 10),
+                    member: member
+                };
+
+                processedInBatch++;
+
+                // 处理单个护理事件（在锁内执行）
+                try {
+                    await this.redis.withLock(schedule.userId, async () => {
+                        result.processedCount++;
+                        const triggerResult = await this._processSingleCareEvent(
+                            schedule.userId, schedule, careConfig, now
+                        );
+                        if (triggerResult.triggered) {
+                            result.triggeredCount++;
+                            if (triggerResult.penalty) {
+                                result.penalties.push(triggerResult.penalty);
+                            }
+                        }
+                    }, 'processCare');
+                } catch (error) {
+                    logger.error(`[CropMonitorService] 处理护理事件失败 [${schedule.userId}][${schedule.landId}]: ${error.message}`);
+                    // 处理失败，将成员重新加入调度（延迟5秒后重试）
+                    await this.redis.client.zAdd(this.careScheduleKey, {
+                        score: now + 5000,
+                        value: member
+                    });
+                }
+            }
+
+            return result;
+        } catch (error) {
+            logger.error(`[CropMonitorService] 处理护理调度失败: ${error.message}`);
+            return result;
+        }
+    }
+
+    /**
+     * 处理单个护理事件
+     * @private
+     */
+    async _processSingleCareEvent(userId, schedule, careConfig, now) {
+        const { landId, careType } = schedule;
+        const result = { triggered: false, penalty: null };
+
+        try {
+            const landData = await this.landService.getLandById(userId, landId);
+            if (!landData || landData.status !== 'growing') {
+                return result;
+            }
+
+            // 获取对应护理类型的配置
+            const typeConfig = careConfig[careType];
+            if (!typeConfig) {
+                return result;
+            }
+
+            // 幂等性检查：如果土地已经有该护理需求，跳过（避免惩罚叠加）
+            if (careType === 'water' && landData.needsWater) {
+                logger.debug(`[CropMonitorService] 土地已缺水，跳过重复触发 [${userId}][${landId}]`);
+                return result;
+            }
+            if (careType === 'pest' && landData.hasPests) {
+                logger.debug(`[CropMonitorService] 土地已有虫害，跳过重复触发 [${userId}][${landId}]`);
+                return result;
+            }
+
+            // 抽奖判定
+            const probability = typeConfig.probability || 0.4;
+            if (Math.random() >= probability) {
+                return result; // 未中奖，检查点消耗但不触发
+            }
+
+            // 中奖！触发护理需求
+            result.triggered = true;
+            const landUpdates = {};
+
+            if (careType === 'water') {
+                landUpdates.needsWater = true;
+                landUpdates.waterNeededAt = now;
+
+                // 立即应用缺水惩罚：延缓生长时间
+                const penalty = typeConfig.penalty;
+                if (penalty?.type === 'growthDelay' && !landData.waterDelayApplied) {
+                    const remainingTime = landData.harvestTime - now;
+                    if (remainingTime > 0) {
+                        const delayPercent = penalty.delayPercent || 15;
+                        const delayTime = Math.floor(remainingTime * (delayPercent / 100));
+                        landUpdates.harvestTime = landData.harvestTime + delayTime;
+                        landUpdates.waterDelayApplied = true;
+                        result.penalty = { type: 'growthDelay', delayTime };
+
+                        // 同步更新收获调度
+                        await this.updateHarvestSchedule(userId, landId, landUpdates.harvestTime);
+                    }
+                }
+            } else if (careType === 'pest') {
+                landUpdates.hasPests = true;
+                landUpdates.pestAppearedAt = now;
+                // 虫害惩罚在收获时应用（产量减少）
+            }
+
+            await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
+            logger.debug(`[CropMonitorService] 触发护理需求 [${userId}][${landId}]: ${careType}${result.penalty ? `, 惩罚: ${JSON.stringify(result.penalty)}` : ''}`);
+
+            return result;
+        } catch (error) {
+            logger.error(`[CropMonitorService] 处理护理事件失败 [${userId}][${landId}]: ${error.message}`);
+            throw error; // 抛出异常，让外层 retry 机制生效
+        }
+    }
+
+    /**
+     * 应用护理惩罚（缺水延缓生长）
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地编号
+     * @returns {Object} 惩罚结果
+     */
+    async applyCareDelayPenalty(userId, landId) {
+        try {
+            const landData = await this.landService.getLandById(userId, landId);
+            if (!landData || landData.status !== 'growing' || !landData.needsWater) {
+                return { success: false, message: '不需要应用惩罚' };
+            }
+
+            const careConfig = this.config.items?.care?.water?.penalty;
+            if (!careConfig || careConfig.type !== 'growthDelay') {
+                return { success: false, message: '未配置延缓惩罚' };
+            }
+
+            const now = Date.now();
+            const remainingTime = landData.harvestTime - now;
+            if (remainingTime <= 0) {
+                return { success: false, message: '作物已成熟' };
+            }
+
+            // 计算延缓时间
+            const delayPercent = careConfig.delayPercent || 15;
+            const delayTime = Math.floor(remainingTime * (delayPercent / 100));
+            const newHarvestTime = landData.harvestTime + delayTime;
+
+            // 更新收获时间
+            await this.plantingDataService.updateLandCropData(userId, landId, {
+                harvestTime: newHarvestTime,
+                waterDelayApplied: true
+            });
+
+            // 同步更新收获调度
+            await this.updateHarvestSchedule(userId, landId, newHarvestTime);
+
+            logger.debug(`[CropMonitorService] 应用缺水惩罚 [${userId}][${landId}]: 延缓${Math.floor(delayTime / 1000)}秒`);
+
+            return {
+                success: true,
+                delayTime,
+                newHarvestTime
+            };
+        } catch (error) {
+            logger.error(`[CropMonitorService] 应用护理惩罚失败 [${userId}][${landId}]: ${error.message}`);
+            return { success: false, message: error.message };
+        }
+    }
+
+    // ==================== 护理调度管理 ====================
+
+    /**
+     * 添加护理检查点调度
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地编号
+     * @param {string} careType 护理类型 ('water' | 'pest')
+     * @param {number} checkpointIndex 检查点索引
+     * @param {number} triggerTime 触发时间戳
+     */
+    async addCareSchedule(userId, landId, careType, checkpointIndex, triggerTime) {
+        try {
+            // member 格式: userId:landId:careType:checkpointIndex
+            const scheduleMember = `${userId}:${landId}:${careType}:${checkpointIndex}`;
+            await this.redis.client.zAdd(this.careScheduleKey, {
+                score: triggerTime,
+                value: scheduleMember
+            });
+
+            logger.debug(`[CropMonitorService] 添加护理调度: ${scheduleMember} at ${triggerTime}`);
+            return true;
+        } catch (error) {
+            logger.error(`[CropMonitorService] 添加护理调度失败: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 批量添加护理检查点（种植时调用）
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地编号
+     * @param {number} plantTime 种植时间
+     * @param {number} harvestTime 收获时间
+     */
+    async addCareSchedulesForCrop(userId, landId, plantTime, harvestTime) {
+        try {
+            const careConfig = this.config.items?.care;
+            if (!careConfig) {
+                return { success: false, message: '未配置护理系统' };
+            }
+
+            const growthDuration = harvestTime - plantTime;
+            const schedules = [];
+
+            // 添加浇水检查点
+            if (careConfig.water?.checkpoints) {
+                for (let i = 0; i < careConfig.water.checkpoints.length; i++) {
+                    const progress = careConfig.water.checkpoints[i];
+                    const triggerTime = plantTime + Math.floor(growthDuration * progress);
+                    await this.addCareSchedule(userId, landId, 'water', i, triggerTime);
+                    schedules.push({ type: 'water', index: i, time: triggerTime });
+                }
+            }
+
+            // 添加虫害检查点
+            if (careConfig.pest?.checkpoints) {
+                for (let i = 0; i < careConfig.pest.checkpoints.length; i++) {
+                    const progress = careConfig.pest.checkpoints[i];
+                    const triggerTime = plantTime + Math.floor(growthDuration * progress);
+                    await this.addCareSchedule(userId, landId, 'pest', i, triggerTime);
+                    schedules.push({ type: 'pest', index: i, time: triggerTime });
+                }
+            }
+
+            logger.debug(`[CropMonitorService] 为作物添加${schedules.length}个护理检查点 [${userId}][${landId}]`);
+            return { success: true, schedules };
+        } catch (error) {
+            logger.error(`[CropMonitorService] 批量添加护理调度失败: ${error.message}`);
+            return { success: false, message: error.message };
+        }
+    }
+
+    /**
+     * 获取到期的护理调度
+     * @param {number} currentTime 当前时间戳
+     * @returns {Promise<Array>} 到期的护理调度列表
+     */
+    async getDueCareSchedules(currentTime = Date.now()) {
+        try {
+            const dueMembers = await this.redis.client.zRange(this.careScheduleKey, 0, currentTime, {
+                BY: 'SCORE'
+            });
+
+            if (!dueMembers || dueMembers.length === 0) {
+                return [];
+            }
+
+            // 解析成员信息: userId:landId:careType:checkpointIndex
+            const schedules = dueMembers.map(member => {
+                const parts = member.split(':');
+                return {
+                    userId: parts[0],
+                    landId: parseInt(parts[1], 10),
+                    careType: parts[2],
+                    checkpointIndex: parseInt(parts[3], 10),
+                    member: member
+                };
+            });
+
+            return schedules;
+        } catch (error) {
+            logger.error(`[CropMonitorService] 获取到期护理调度失败: ${error.message}`);
+            return [];
+        }
+    }
+
+    /**
+     * 移除指定土地的所有护理调度（收获/铲除时调用）
+     * @param {string} userId 用户ID
+     * @param {number} landId 土地编号
+     */
+    async removeCareSchedulesForLand(userId, landId) {
+        try {
+            // 获取所有调度并过滤
+            const allMembers = await this.redis.client.zRange(this.careScheduleKey, 0, -1);
+            const prefix = `${userId}:${landId}:`;
+            const toRemove = allMembers.filter(m => m.startsWith(prefix));
+
+            if (toRemove.length > 0) {
+                await this.redis.client.zRem(this.careScheduleKey, toRemove);
+                logger.debug(`[CropMonitorService] 移除护理调度 [${userId}][${landId}]: ${toRemove.length}个`);
+            }
+
+            return { success: true, removed: toRemove.length };
+        } catch (error) {
+            logger.error(`[CropMonitorService] 移除护理调度失败: ${error.message}`);
+            return { success: false, message: error.message };
+        }
+    }
+
+    /**
+     * 更新护理需求（保留兼容性，但不再由定时任务调用）
+     * @deprecated 使用多检查点调度模式替代
      * @private
      */
     _updateCareNeeds(landUpdate, landData, now) {
