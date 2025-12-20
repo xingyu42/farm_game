@@ -409,6 +409,7 @@ export class StealService {
       const baseRate = rewardConfig.baseRewardRate;
       const maxRate = rewardConfig.maxRewardRate;
       const qualityBonus = rewardConfig.bonusByQuality;
+      const randomRange = rewardConfig.randomRange;
 
       // 获取作物基础产量
       const baseYield = cropConfig.baseYield || 1;
@@ -427,8 +428,12 @@ export class StealService {
       // 限制最大偷取比例
       stealRate = Math.min(maxRate, stealRate);
 
-      // 计算偷取数量（基于作物基础产量，至少偷1个）
-      const stealAmount = Math.max(1, Math.floor(baseYield * stealRate));
+      // 计算基础偷取数量
+      const baseAmount = baseYield * stealRate;
+
+      // 应用随机波动
+      const randomFactor = randomRange.min + Math.random() * (randomRange.max - randomRange.min);
+      const stealAmount = Math.max(1, Math.floor(baseAmount * randomFactor));
 
       return stealAmount;
     } catch (error) {
