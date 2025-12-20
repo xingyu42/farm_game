@@ -312,20 +312,20 @@ class CropCareService {
                 if (!fertilizerConfig) {
                   throw new Error(`无效的肥料类型: ${itemType}`);
                 }
-                const growthSpeedBonus = fertilizerConfig.effect?.speedBonus;
-                if (!growthSpeedBonus || growthSpeedBonus <= 0) {
-                  throw new Error(`肥料配置错误: ${itemType} 缺少有效的加速效果`);
+                const speedUpHours = fertilizerConfig.effect?.speedUpHours;
+                if (!speedUpHours || speedUpHours <= 0) {
+                  throw new Error(`肥料配置错误: ${itemType} 缺少有效的加速时间`);
                 }
 
                 existing.lastFertilized = Date.now();
 
-                if (landData.originalHarvestTime && landData.plantTime) {
-                  const baseHarvestTime = existing.harvestTime ?? landData.harvestTime;
-                  const totalGrowTime = landData.originalHarvestTime - landData.plantTime;
-                  if (totalGrowTime > 0) {
-                    const speedUpTime = Math.floor(totalGrowTime * growthSpeedBonus);
-                    existing.harvestTime = baseHarvestTime - speedUpTime;
-                  }
+                const baseHarvestTime = existing.harvestTime ?? landData.harvestTime;
+                const now = Date.now();
+                const remainingTime = baseHarvestTime - now;
+                if (remainingTime > 0) {
+                  const speedUpMs = speedUpHours * 3600 * 1000;
+                  const actualSpeedUp = Math.min(speedUpMs, remainingTime);
+                  existing.harvestTime = baseHarvestTime - actualSpeedUp;
                 }
                 break;
               }

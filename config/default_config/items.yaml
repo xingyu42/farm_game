@@ -3,10 +3,11 @@
 # icon 使用 Iconify 图标名格式 (twemoji:xxx)
 
 # 种子配置
+# ROI 目标: 起始期(Lv1-5)150-200%, 平稳期(Lv6-30)300-500%, 大后期(Lv35+)≤1200-1500%
 seeds:
   carrot_seed:
     name: "胡萝卜种子"
-    price: 5
+    price: 9
     category: "seeds"
     description: "常见的蔬菜种子"
     requiredLevel: 1
@@ -15,7 +16,7 @@ seeds:
 
   tomato_seed:
     name: "西红柿种子"
-    price: 8
+    price: 40
     category: "seeds"
     description: "营养丰富的蔬菜种子"
     requiredLevel: 3
@@ -24,7 +25,7 @@ seeds:
 
   wheat_seed:
     name: "小麦种子"
-    price: 3
+    price: 22
     category: "seeds"
     description: "基础的谷物种子"
     requiredLevel: 2
@@ -33,7 +34,7 @@ seeds:
 
   lettuce_seed:
     name: "生菜种子"
-    price: 6
+    price: 11
     category: "seeds"
     description: "生菜的播种用种子"
     requiredLevel: 2
@@ -42,7 +43,7 @@ seeds:
 
   potato_seed:
     name: "土豆种子"
-    price: 10
+    price: 30
     category: "seeds"
     description: "土豆的播种用种子"
     requiredLevel: 4
@@ -51,7 +52,7 @@ seeds:
 
   corn_seed:
     name: "玉米种子"
-    price: 14
+    price: 41
     category: "seeds"
     description: "玉米的播种用种子"
     requiredLevel: 6
@@ -60,7 +61,7 @@ seeds:
 
   strawberry_seed:
     name: "草莓种子"
-    price: 16
+    price: 83
     category: "seeds"
     description: "草莓的播种用种子"
     requiredLevel: 8
@@ -69,7 +70,7 @@ seeds:
 
   blueberry_seed:
     name: "蓝莓种子"
-    price: 22
+    price: 140
     category: "seeds"
     description: "适合中后期种植的水果种子"
     requiredLevel: 10
@@ -78,7 +79,7 @@ seeds:
 
   grape_seed:
     name: "葡萄种子"
-    price: 28
+    price: 344
     category: "seeds"
     description: "葡萄的播种用种子"
     requiredLevel: 12
@@ -87,7 +88,7 @@ seeds:
 
   pumpkin_seed:
     name: "南瓜种子"
-    price: 35
+    price: 400
     category: "seeds"
     description: "南瓜的播种用种子"
     requiredLevel: 14
@@ -96,7 +97,7 @@ seeds:
 
   onion_seed:
     name: "洋葱种子"
-    price: 12
+    price: 47
     category: "seeds"
     description: "洋葱的播种用种子"
     requiredLevel: 5
@@ -105,7 +106,7 @@ seeds:
 
   cucumber_seed:
     name: "黄瓜种子"
-    price: 16
+    price: 59
     category: "seeds"
     description: "黄瓜的播种用种子"
     requiredLevel: 7
@@ -114,7 +115,7 @@ seeds:
 
   pepper_seed:
     name: "辣椒种子"
-    price: 20
+    price: 72
     category: "seeds"
     description: "辣椒的播种用种子"
     requiredLevel: 9
@@ -123,7 +124,7 @@ seeds:
 
   eggplant_seed:
     name: "茄子种子"
-    price: 26
+    price: 192
     category: "seeds"
     description: "茄子的播种用种子"
     requiredLevel: 11
@@ -132,7 +133,7 @@ seeds:
 
   melon_seed:
     name: "甜瓜种子"
-    price: 30
+    price: 288
     category: "seeds"
     description: "甜瓜的播种用种子"
     requiredLevel: 13
@@ -141,7 +142,7 @@ seeds:
 
   sunflower_seed:
     name: "向日葵种子"
-    price: 32
+    price: 228
     category: "seeds"
     description: "向日葵的播种用种子"
     requiredLevel: 15
@@ -150,7 +151,7 @@ seeds:
 
   beet_seed:
     name: "甜菜种子"
-    price: 36
+    price: 440
     category: "seeds"
     description: "甜菜的播种用种子"
     requiredLevel: 18
@@ -159,7 +160,7 @@ seeds:
 
   cauliflower_seed:
     name: "花椰菜种子"
-    price: 40
+    price: 468
     category: "seeds"
     description: "花椰菜的播种用种子"
     requiredLevel: 21
@@ -168,7 +169,7 @@ seeds:
 
   garlic_seed:
     name: "大蒜种子"
-    price: 38
+    price: 336
     category: "seeds"
     description: "大蒜的播种用种子"
     requiredLevel: 24
@@ -177,7 +178,7 @@ seeds:
 
   cranberry_seed:
     name: "蔓越莓种子"
-    price: 45
+    price: 768
     category: "seeds"
     description: "蔓越莓的播种用种子"
     requiredLevel: 27
@@ -186,7 +187,7 @@ seeds:
 
   pineapple_seed:
     name: "菠萝种子"
-    price: 55
+    price: 840
     category: "seeds"
     description: "菠萝的播种用种子"
     requiredLevel: 30
@@ -195,7 +196,7 @@ seeds:
 
   tea_leaf_seed:
     name: "茶叶种子"
-    price: 65
+    price: 670
     category: "seeds"
     description: "茶叶的播种用种子"
     requiredLevel: 35
@@ -204,7 +205,7 @@ seeds:
 
   lotus_root_seed:
     name: "莲藕种子"
-    price: 80
+    price: 1020
     category: "seeds"
     description: "莲藕的播种用种子"
     requiredLevel: 40
@@ -213,7 +214,7 @@ seeds:
 
   cactus_fruit_seed:
     name: "仙人掌果种子"
-    price: 95
+    price: 1000
     category: "seeds"
     description: "仙人掌果的播种用种子"
     requiredLevel: 45
@@ -222,7 +223,7 @@ seeds:
 
   starfruit_seed:
     name: "杨桃种子"
-    price: 120
+    price: 1430
     category: "seeds"
     description: "杨桃的播种用种子"
     requiredLevel: 50
@@ -231,7 +232,7 @@ seeds:
 
   ancient_fruit_seed:
     name: "远古果实种子"
-    price: 170
+    price: 2040
     category: "seeds"
     description: "远古果实的播种用种子"
     requiredLevel: 60
@@ -240,7 +241,7 @@ seeds:
 
   dragonfruit_seed:
     name: "火龙果种子"
-    price: 230
+    price: 2880
     category: "seeds"
     description: "火龙果的播种用种子"
     requiredLevel: 70
@@ -249,7 +250,7 @@ seeds:
 
   ginseng_seed:
     name: "人参种子"
-    price: 300
+    price: 2960
     category: "seeds"
     description: "人参的播种用种子"
     requiredLevel: 80
@@ -258,7 +259,7 @@ seeds:
 
   saffron_seed:
     name: "藏红花种子"
-    price: 400
+    price: 3430
     category: "seeds"
     description: "藏红花的播种用种子"
     requiredLevel: 90
@@ -267,7 +268,7 @@ seeds:
 
   eternal_fruit_seed:
     name: "永恒之果种子"
-    price: 500
+    price: 5760
     category: "seeds"
     description: "永恒之果的播种用种子"
     requiredLevel: 100
@@ -275,38 +276,39 @@ seeds:
     icon: "twemoji:seedling"
 
 # 肥料配置
+# speedUpHours: 固定加速小时数（不超过剩余生长时间）
 fertilizer:
   fertilizer_normal:
     name: "普通肥料"
-    price: 10
+    price: 500
     category: "fertilizer"
-    description: "加速作物生长"
-    requiredLevel: 1
+    description: "加速作物生长1小时"
+    requiredLevel: 25
     maxStack: 50
     effect:
-      speedBonus: 0.2 # 加速20%
+      speedUpHours: 1
     icon: "twemoji:pill"
 
   fertilizer_premium:
-    name: "高级肥料"
-    price: 25
+    name: "高速肥料"
+    price: 3000
     category: "fertilizer"
-    description: "显著加速作物生长"
-    requiredLevel: 5
+    description: "加速作物生长5.5小时"
+    requiredLevel: 50
     maxStack: 50
     effect:
-      speedBonus: 0.4 # 加速40%
+      speedUpHours: 5.5
     icon: "twemoji:pill"
 
   fertilizer_deluxe:
-    name: "顶级肥料"
-    price: 50
+    name: "急速肥料"
+    price: 5000
     category: "fertilizer"
-    description: "极大加速作物生长"
-    requiredLevel: 10
+    description: "加速作物生长8小时"
+    requiredLevel: 70
     maxStack: 50
     effect:
-      speedBonus: 0.6 # 加速60%
+      speedUpHours: 8
     icon: "twemoji:pill"
 
 # 杀虫剂配置
