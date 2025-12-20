@@ -772,7 +772,7 @@ export class farm extends plugin {
   }
 
   /**
-   * 智能选择作物进行批量种植
+   * 智能选择作物进行批量种植（种完所有种子）
    */
   async plantWithSmartSelection(userId, e, emptyLands) {
     try {
@@ -785,17 +785,27 @@ export class farm extends plugin {
         }
       }
 
-      const selectedCrop = this.selectOptimalCrop(seedInventory);
+      const sortedCrops = this.getSortedAvailableCrops(seedInventory);
 
-      if (!selectedCrop) {
+      if (sortedCrops.length === 0) {
         return e.reply('您没有任何种子可以种植！请先到商店购买种子。');
       }
 
-      const plantCount = Math.min(selectedCrop.inventory, emptyLands.length);
-      const landIds = emptyLands.slice(0, plantCount);
-      const results = await this.executeBatchPlanting(userId, landIds, selectedCrop.cropType);
+      let remainingLands = [...emptyLands];
+      let totalPlanted = 0;
 
-      if (results.successCount > 0) {
+      for (const crop of sortedCrops) {
+        if (remainingLands.length === 0) break;
+
+        const plantCount = Math.min(crop.inventory, remainingLands.length);
+        const landIds = remainingLands.slice(0, plantCount);
+        const results = await this.executeBatchPlanting(userId, landIds, crop.cropType);
+
+        totalPlanted += results.successCount;
+        remainingLands = remainingLands.slice(plantCount);
+      }
+
+      if (totalPlanted > 0) {
         await this._renderFarmWithResult(e, userId)
       } else {
         await e.reply('智能种植失败，请稍后重试')
@@ -806,6 +816,29 @@ export class farm extends plugin {
       e.reply('智能种植失败，请稍后重试');
       return true;
     }
+  }
+
+  /**
+   * 获取按评分排序的所有可用作物
+   */
+  getSortedAvailableCrops(seedInventory) {
+    const cropsConfig = this.config.crops;
+    const seedsConfig = this.config.items.seeds;
+    const crops = [];
+
+    for (const [cropType, cropConfig] of Object.entries(cropsConfig)) {
+      const seedId = `${cropType}_seed`;
+      const seedConfig = seedsConfig[seedId];
+      if (!seedConfig) continue;
+
+      const inventory = seedInventory[seedId] || 0;
+      if (inventory <= 0) continue;
+
+      const score = this.calculateCropScore(cropType, cropConfig, seedConfig, inventory);
+      crops.push({ seedId, cropType, cropName: cropConfig.name, score, inventory });
+    }
+
+    return crops.sort((a, b) => b.score - a.score);
   }
 
   /**
