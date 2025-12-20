@@ -180,9 +180,15 @@ export class steal extends plugin {
 
       if (result.rewards && result.rewards.length > 0) {
         message += `获得奖励:\n`
-        result.rewards.forEach(reward => {
-          message += `${reward.cropName} x${reward.quantity}\n`
-        })
+        const merged = new Map()
+        for (const reward of result.rewards) {
+          const existing = merged.get(reward.cropId) || { cropName: reward.cropName, quantity: 0 }
+          existing.quantity += reward.quantity
+          merged.set(reward.cropId, existing)
+        }
+        for (const { cropName, quantity } of merged.values()) {
+          message += `${cropName} x${quantity}\n`
+        }
         message += `总共偷得: ${result.totalStolen} 个作物`
       }
     } else {
