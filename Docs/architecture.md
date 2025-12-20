@@ -197,7 +197,7 @@ class PlayerService {
     totalSignDays: number
   },
   protection: {
-    dogFood: { type, effectEndTime, defenseBonus }
+    dogFood: { type, effectEndTime }
   },
   stealing: { lastStealTime, cooldownEndTime },
   statistics: { ... }

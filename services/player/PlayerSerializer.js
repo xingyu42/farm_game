@@ -81,8 +81,7 @@ class PlayerSerializer {
                 return {
                     dogFood: {
                         type: null,
-                        effectEndTime: 0,
-                        defenseBonus: 0
+                        effectEndTime: 0
                     },
                     farmProtection: {
                         endTime: 0

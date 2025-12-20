@@ -150,7 +150,6 @@ export class steal extends plugin {
         `🛡️ 防护激活成功！`,
         `\n`,
         `使用物品：${result.itemName}`,
-        `防御加成：+${result.defenseBonus}%`,
         `持续时间：${result.durationMinutes}分钟`,
         `\n`,
         `💡 防护状态可通过 #信息 查看`

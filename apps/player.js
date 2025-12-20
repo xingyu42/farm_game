@@ -61,10 +61,9 @@ export class player extends plugin {
 
       const playerData = await this.playerService.getPlayer(userId, userName);
       const levelInfo = await this.playerService.getLevelInfo(playerData.level);
-      const currentBonus = await this.protectionService.getProtectionBonus(userId);
       const stealStats = await this.stealService.getStealStatistics(userId);
 
-      const renderData = this._buildPlayerRenderData(userId, playerData, userName, levelInfo, currentBonus, stealStats);
+      const renderData = this._buildPlayerRenderData(userId, playerData, userName, levelInfo, stealStats);
       await Puppeteer.renderVue('player/index', renderData, { e, scale: 2.0 });
       return true;
     } catch (error) {
@@ -77,7 +76,7 @@ export class player extends plugin {
   /**
    * 构建玩家信息渲染数据
    */
-  _buildPlayerRenderData(userId, playerData, userName, levelInfo, currentBonus, stealStats) {
+  _buildPlayerRenderData(userId, playerData, userName, levelInfo, stealStats) {
     const now = Date.now();
     const experienceToNext = levelInfo ? levelInfo.experienceRequired : playerData.experience;
     const expPercentage = levelInfo ? Math.min((playerData.experience / experienceToNext) * 100, 100) : 100;
@@ -96,12 +95,10 @@ export class player extends plugin {
     const dogFood = playerData.protection?.dogFood;
     const dogFoodActive = dogFood?.effectEndTime > now;
     let dogFoodName = '未激活';
-    let dogFoodBonus = 0;
     let dogFoodRemaining = 0;
 
     if (dogFoodActive) {
       dogFoodName = this.itemResolver.getItemName(dogFood.type);
-      dogFoodBonus = dogFood.defenseBonus;
       dogFoodRemaining = Math.ceil((dogFood.effectEndTime - now) / (1000 * 60));
     }
 
@@ -123,10 +120,8 @@ export class player extends plugin {
       maxLandCount: playerData.maxLandCount,
       inventoryUsage: inventoryInfo.usage,
       inventoryCapacity: inventoryInfo.capacity,
-      defenseBonus: currentBonus,
       dogFoodActive,
       dogFoodName,
-      dogFoodBonus,
       dogFoodRemaining,
       canSteal,
       stealCooldown,

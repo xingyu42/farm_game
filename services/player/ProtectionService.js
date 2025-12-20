@@ -69,8 +69,7 @@ export class ProtectionService {
         ...playerData.protection,
         dogFood: {
           type: itemId,
-          effectEndTime: now + duration,
-          defenseBonus: dogFoodConfig.defenseBonus
+          effectEndTime: now + duration
         }
       };
 
@@ -81,55 +80,17 @@ export class ProtectionService {
         { protection: newProtection }
       );
 
-
       return {
         success: true,
         itemId,
         itemName: dogFoodConfig.name,
-        defenseBonus: dogFoodConfig.defenseBonus,
         durationMinutes: dogFoodConfig.duration,
         endTime: now + duration,
-        message: `成功使用${dogFoodConfig.name}，获得${dogFoodConfig.defenseBonus}%防御加成，持续${dogFoodConfig.duration}分钟`
+        message: `成功使用${dogFoodConfig.name}，持续${dogFoodConfig.duration}分钟`
       };
     } catch (error) {
       logger.error(`[ProtectionService] 应用狗粮失败 [${userId}]: ${error.message}`);
       throw error;
-    }
-  }
-
-  /**
-   * 获取当前防御加成
-   * @param {string} userId 用户ID
-   * @returns {number} 防御加成百分比
-   */
-  async getProtectionBonus(userId) {
-    try {
-      if (!userId) {
-        throw new Error('用户ID不能为空');
-      }
-
-      const playerData = await this.playerService.getDataService().getPlayer(userId);
-      if (!playerData) {
-        throw new Error('玩家不存在');
-      }
-
-      const now = Date.now();
-      let totalBonus = 0;
-
-      // 检查狗粮防御效果
-      if (playerData.protection?.dogFood?.effectEndTime > now) {
-        totalBonus += playerData.protection.dogFood.defenseBonus || 0;
-      }
-
-      // 未来可扩展其他防御类型
-      // if (playerData.protection?.otherDefense?.effectEndTime > now) {
-      //   totalBonus += playerData.protection.otherDefense.defenseBonus || 0;
-      // }
-
-      return totalBonus;
-    } catch (error) {
-      logger.error(`[ProtectionService] 获取防御加成失败 [${userId}]: ${error.message}`);
-      throw error; // 重新抛出错误而不是返回默认值
     }
   }
 
@@ -157,7 +118,6 @@ export class ProtectionService {
       const dogFoodInfo = {
         active: dogFoodActive,
         type: dogFoodActive ? protection.dogFood.type : null,
-        defenseBonus: dogFoodActive ? protection.dogFood.defenseBonus : 0,
         endTime: protection.dogFood?.effectEndTime || 0,
         remainingTime: dogFoodActive ? protection.dogFood.effectEndTime - now : 0
       };
@@ -178,14 +138,10 @@ export class ProtectionService {
         remainingTime: stealCooldownActive ? playerData.stealing.cooldownEndTime - now : 0
       };
 
-      // 总防御加成
-      const totalDefenseBonus = dogFoodInfo.defenseBonus;
-
       return {
         dogFood: dogFoodInfo,
         farmProtection: farmProtectionInfo,
         stealCooldown: stealCooldownInfo,
-        totalDefenseBonus,
         isProtected: dogFoodActive || farmProtectionActive
       };
     } catch (error) {
@@ -268,8 +224,7 @@ export class ProtectionService {
       if (newProtection.dogFood?.effectEndTime > 0 && newProtection.dogFood.effectEndTime <= now) {
         newProtection.dogFood = {
           type: null,
-          effectEndTime: 0,
-          defenseBonus: 0
+          effectEndTime: 0
         };
         hasChanges = true;
         clearedEffects.push('狗粮防御');
@@ -323,7 +278,6 @@ export class ProtectionService {
           dogFood: status.dogFood.active,
           farmProtection: status.farmProtection.active
         },
-        defenseBonus: status.totalDefenseBonus,
         protectionRemaining: Math.max(
           status.dogFood.remainingTime,
           status.farmProtection.remainingTime
@@ -347,40 +301,12 @@ export class ProtectionService {
         type,
         name: dogFoodConfig[type].name,
         price: dogFoodConfig[type].price,
-        defenseBonus: dogFoodConfig[type].defenseBonus,
         duration: dogFoodConfig[type].duration,
         description: dogFoodConfig[type].description
       }));
     } catch (error) {
       logger.error(`[ProtectionService] 获取狗粮类型失败: ${error.message}`);
       throw error; // 重新抛出错误而不是返回默认值
-    }
-  }
-
-  /**
-   * 计算防御成功率
-   * @param {number} defenseBonus 防御加成
-   * @param {number} attackPower 攻击力（可选）
-   * @returns {number} 防御成功率（0-100）
-   */
-  calculateDefenseSuccessRate(defenseBonus, attackPower = 100) {
-    try {
-      // 基础防御成功率为50%
-      const baseRate = 50;
-
-      // 防御加成影响
-      const bonusRate = defenseBonus || 0;
-
-      // 攻击力影响（简化计算）
-      const validAttackPower = isNaN(Number(attackPower)) ? 100 : Number(attackPower);
-      const attackPenalty = Math.max(0, (validAttackPower - 100) / 10);
-
-      const finalRate = Math.min(95, Math.max(5, baseRate + bonusRate - attackPenalty));
-
-      return Math.round(finalRate);
-    } catch (error) {
-      logger.error(`[ProtectionService] 计算防御成功率失败: ${error.message}`);
-      return 50; // 出错时返回默认值
     }
   }
 

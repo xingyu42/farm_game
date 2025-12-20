@@ -73,28 +73,20 @@
     <!-- Protection -->
     <div class="glass rounded-2xl p-4 shadow-md">
         <div class="text-sm font-bold text-stone-700 pb-2 mb-3 border-b-2 border-dashed border-stone-200"><span class="iconify inline-block align-middle" data-icon="twemoji:shield"></span> 农场防护</div>
-        <div class="flex gap-3">
-            <div class="flex-1 bg-[linear-gradient(135deg,#eff6ff,#dbeafe)] rounded-xl p-3 flex items-center gap-3 border border-blue-200">
-                <span class="iconify text-2xl" data-icon="twemoji:castle"></span>
-                <div class="flex flex-col">
-                    <span class="text-[11px] text-slate-500 font-bold">基础防御</span>
-                    <span class="text-sm font-bold text-slate-800">+{{ defenseBonus }}%</span>
-                </div>
+        <div class="bg-[linear-gradient(135deg,#fff7ed,#ffedd5)] rounded-xl p-3 flex items-center gap-3 border border-orange-200">
+            <span class="iconify text-2xl" data-icon="twemoji:dog"></span>
+            <div class="flex flex-col flex-1">
+                <span class="text-[11px] text-orange-700 font-bold">看家萌宠</span>
+                <template v-if="dogFoodActive">
+                    <span class="text-sm font-bold text-orange-800">{{ dogFoodName }}</span>
+                    <span class="text-[10px] text-stone-500">剩余 {{ dogFoodRemaining }}分钟</span>
+                </template>
+                <template v-else>
+                    <span class="text-sm font-bold text-orange-800">未激活</span>
+                    <span class="text-[10px] text-stone-500">使用狗粮激活防护</span>
+                </template>
             </div>
-            <div class="flex-1 bg-[linear-gradient(135deg,#fff7ed,#ffedd5)] rounded-xl p-3 flex items-center gap-3 border border-orange-200">
-                <span class="iconify text-2xl" data-icon="twemoji:dog"></span>
-                <div class="flex flex-col">
-                    <span class="text-[11px] text-orange-700 font-bold">看家萌宠</span>
-                    <template v-if="dogFoodActive">
-                        <span class="text-sm font-bold text-orange-800">{{ dogFoodName }}</span>
-                        <span class="text-[10px] text-stone-500">+{{ dogFoodBonus }}% | 剩余 {{ dogFoodRemaining }}分钟</span>
-                    </template>
-                    <template v-else>
-                        <span class="text-sm font-bold text-orange-800">未激活</span>
-                        <span class="text-[10px] text-stone-500">使用狗粮激活防护</span>
-                    </template>
-                </div>
-            </div>
+            <div v-if="dogFoodActive" class="badge badge-warning badge-sm">防护中</div>
         </div>
     </div>
 
@@ -105,7 +97,7 @@
             <span v-if="canSteal" class="ml-auto badge badge-success badge-sm text-white">准备就绪</span>
             <span v-else class="ml-auto badge badge-error badge-sm text-white">冷却中 {{ stealCooldown }}分钟</span>
         </div>
-        <div class="bg-stone-100/50 rounded-xl p-3 flex justify-between">
+        <div class="bg-stone-100/50 rounded-xl p-3 flex justify-around">
             <div class="flex flex-col items-center gap-1 text-[11px] text-stone-600">
                 <span><span class="iconify inline-block align-middle" data-icon="twemoji:calendar"></span> 今日次数</span>
                 <span class="text-sm font-bold text-stone-800">{{ todayStealCount }}</span>
@@ -167,10 +159,8 @@
             const maxLandCount = ref(s.maxLandCount || 0);
             const inventoryUsage = ref(s.inventoryUsage || 0);
             const inventoryCapacity = ref(s.inventoryCapacity || 0);
-            const defenseBonus = ref(s.defenseBonus || 0);
             const dogFoodActive = ref(s.dogFoodActive || false);
             const dogFoodName = ref(s.dogFoodName || '');
-            const dogFoodBonus = ref(s.dogFoodBonus || 0);
             const dogFoodRemaining = ref(s.dogFoodRemaining || 0);
             const canSteal = ref(s.canSteal || false);
             const stealCooldown = ref(s.stealCooldown || 0);
@@ -187,8 +177,8 @@
             return {
                 playerName, avatarUrl, oderId, level, expPercentage, experience, experienceToNext,
                 nextLevel, nextUnlocksText, coins, landCount, maxLandCount,
-                inventoryUsage, inventoryCapacity, defenseBonus,
-                dogFoodActive, dogFoodName, dogFoodBonus, dogFoodRemaining,
+                inventoryUsage, inventoryCapacity,
+                dogFoodActive, dogFoodName, dogFoodRemaining,
                 canSteal, stealCooldown, todayStealCount, stealRate,
                 totalSignDays, consecutiveDays, isNewPlayer
             };

@@ -255,7 +255,7 @@ class PlayerService {
      * @returns {Object} 使用结果
      */
     async useDogFood(userId, dogFoodType) {
-        return await this.protectionService.useDogFood(userId, dogFoodType);
+        return await this.protectionService.applyDogFood(userId, dogFoodType);
     }
 
     /**
@@ -309,7 +309,7 @@ class PlayerService {
      * @returns {Object} 清理结果
      */
     async clearExpiredProtections(userId) {
-        return await this.protectionService.clearExpiredProtections(userId);
+        return await this.protectionService.removeExpiredProtections(userId);
     }
 
     /**
@@ -318,16 +318,6 @@ class PlayerService {
      */
     getAvailableDogFoodTypes() {
         return this.protectionService.getAvailableDogFoodTypes();
-    }
-
-    /**
-     * 计算防御成功率
-     * @param {number} defenseBonus 防御加成
-     * @param {number} attackPower 攻击力（可选）
-     * @returns {number} 防御成功率（0-100）
-     */
-    calculateDefenseSuccessRate(defenseBonus, attackPower = 100) {
-        return this.protectionService.calculateDefenseSuccessRate(defenseBonus, attackPower);
     }
 
     // ==================== 统计系统方法（委托） ====================

@@ -330,33 +330,30 @@ pesticide:
 defense:
   normal:
     name: "普通狗粮"
-    price: 30
+    price: 500
     category: "defense"
     description: "提供基础防御"
-    requiredLevel: 1
+    requiredLevel: 10
     maxStack: 20
-    defenseBonus: 20 # 防御加成20%
-    duration: 30 # 持续30分钟
+    duration: 360 # 持续6小时
     icon: "twemoji:bone"
   premium:
     name: "高级狗粮"
-    price: 80
+    price: 2000
     category: "defense"
     description: "提供中等防御"
     requiredLevel: 5
-    maxStack: 20
-    defenseBonus: 35 # 防御加成35%
-    duration: 60 # 持续60分钟
+    maxStack: 30
+    duration: 720 # 持续12小时
     icon: "twemoji:bone"
   deluxe:
     name: "优质狗粮"
-    price: 150
+    price: 5000
     category: "defense"
     description: "提供强力防御"
-    requiredLevel: 10
+    requiredLevel: 50
     maxStack: 20
-    defenseBonus: 50 # 防御加成50%
-    duration: 120 # 持续120分钟
+    duration: 1440 # 持续24小时
     icon: "twemoji:bone"
 # 偷菜工具配置（未来扩展）
 tools:
@@ -458,9 +455,6 @@ effectMappings:
     label: "恢复健康"
     format: "plus"
   # 防御效果
-  "defenseBonus":
-    label: "防御加成"
-    format: "percent_raw"
   "duration":
     label: "持续时间"
     format: "minutes"
