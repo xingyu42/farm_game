@@ -41,10 +41,9 @@ class CropCareService {
         // 2. 使用验证返回的 land 对象，确保数据一致性
         const land = validation.land;
 
-        // 3. 浇水效果：恢复健康度，移除缺水状态
+        // 3. 浇水效果：移除缺水状态
         const landUpdates = {
-          needsWater: false,
-          health: Math.min(100, (land.health ?? 100) + 10)
+          needsWater: false
         };
 
         // 4. 更新土地数据
@@ -54,7 +53,6 @@ class CropCareService {
 
         // 5. 构建返回消息
         return this.messageBuilder.buildCareMessage('water', cropName, landId, {
-          health: landUpdates.health,
           needsWater: landUpdates.needsWater
         });
       });
@@ -143,7 +141,6 @@ class CropCareService {
 
         // 8. 构建返回消息
         return this.messageBuilder.buildCareMessage('fertilize', cropName, landId, {
-          health: landUpdates.health,
           fertilizerType: actualFertilizerType,
           speedUp: growthSpeedBonus > 0
         });
@@ -196,17 +193,11 @@ class CropCareService {
         if (!pesticideConfig) {
           throw new Error(`无效的杀虫剂类型: ${actualPesticideType}`);
         }
-        const healthRecovery = pesticideConfig.effects?.health;
 
         const landUpdates = {
           hasPests: false,
           lastTreated: Date.now()
         };
-
-        // 只有配置了健康恢复效果时才恢复健康
-        if (healthRecovery > 0) {
-          landUpdates.health = Math.min(100, (land.health ?? 100) + healthRecovery);
-        }
 
         // 6. 扣除杀虫剂并更新土地（带回滚机制保证原子性）
         await this.inventoryService.removeItem(userId, actualPesticideType, 1);
@@ -222,7 +213,6 @@ class CropCareService {
 
         // 7. 构建返回消息
         return this.messageBuilder.buildCareMessage('pesticide', cropName, landId, {
-          health: landUpdates.health,
           pesticideType: actualPesticideType,
           hasPests: false
         });
@@ -294,16 +284,13 @@ class CropCareService {
         for (const action of careActions) {
           const { landId, action: careAction, itemType } = action;
           const landData = landCache.get(landId);
-          const baseHealth = landData.health ?? 100;
 
           // 获取或初始化该土地的累积更新
           const existing = landUpdates[landId] || {};
-          const currentHealth = existing.health ?? baseHealth;
 
           switch (careAction) {
             case 'water':
               existing.needsWater = false;
-              existing.health = Math.min(100, currentHealth + 10);
               break;
 
             case 'fertilize':
@@ -336,14 +323,9 @@ class CropCareService {
                 if (!pesticideConfig) {
                   throw new Error(`无效的杀虫剂类型: ${itemType}`);
                 }
-                const healthRecovery = pesticideConfig.effects?.health;
 
                 existing.hasPests = false;
                 existing.lastTreated = Date.now();
-
-                if (healthRecovery > 0) {
-                  existing.health = Math.min(100, currentHealth + healthRecovery);
-                }
                 break;
               }
           }

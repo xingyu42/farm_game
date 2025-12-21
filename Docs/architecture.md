@@ -215,8 +215,7 @@ class PlayerService {
   harvestTime: number,
   status: 'empty' | 'growing' | 'mature',
   needsWater: boolean,
-  hasPests: boolean,
-  health: number
+  hasPests: boolean
 }
 ```
 

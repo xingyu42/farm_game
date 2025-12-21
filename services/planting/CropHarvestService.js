@@ -105,7 +105,6 @@ class CropHarvestService {
               plantTime: null,
               harvestTime: null,
               status: 'empty',
-              health: 100,
               needsWater: false,
               hasPests: false,
               stealable: false,
@@ -302,9 +301,6 @@ class CropHarvestService {
     // 产量品质加成 (productionBonus)
     const qualityMultiplier = Calculator.getQualityMultiplier(landData.quality || 'normal', this.config);
 
-    // 健康度影响
-    const healthMultiplier = (landData.health || 100) / 100;
-
     // 虫害惩罚：如果收获时仍有未处理的虫害，减少产量
     let pestPenaltyMultiplier = 1;
     if (landData.hasPests) {
@@ -316,7 +312,7 @@ class CropHarvestService {
     }
 
     // 计算最终产量
-    const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier * pestPenaltyMultiplier));
+    const finalYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * pestPenaltyMultiplier));
 
     // 经验值计算 - 使用 experienceBonus (每次收获固定经验，不乘产量)
     const baseExp = cropConfig.experience || 10;
@@ -352,9 +348,8 @@ class CropHarvestService {
   _estimateYield(landData, cropConfig) {
     const baseYield = cropConfig.baseYield || 1;
     const qualityMultiplier = Calculator.getQualityMultiplier(landData.quality || 'normal', this.config);
-    const healthMultiplier = (landData.health || 100) / 100;
 
-    const estimatedYield = Math.max(1, Math.floor(baseYield * qualityMultiplier * healthMultiplier));
+    const estimatedYield = Math.max(1, Math.floor(baseYield * qualityMultiplier));
 
     return {
       min: Math.max(1, estimatedYield - 1),
@@ -396,4 +391,3 @@ class CropHarvestService {
 }
 
 export default CropHarvestService;
-

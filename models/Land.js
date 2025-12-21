@@ -10,7 +10,6 @@ class Land {
     this.crop = data.crop;
     this.plantTime = data.plantTime;
     this.harvestTime = data.harvestTime;
-    this.health = data.health;
     this.needsWater = data.needsWater;
     this.hasPests = data.hasPests;
     this.stealable = data.stealable;
@@ -36,10 +35,6 @@ class Land {
     const validStatuses = ['empty', 'growing', 'ready'];
     if (!validStatuses.includes(this.status)) {
       errors.push(`土地状态必须是以下之一: ${validStatuses.join(', ')}`);
-    }
-
-    if (this.health < 0 || this.health > 100) {
-      errors.push('土地健康度必须在0-100之间');
     }
 
     if (this.plantTime && (!Number.isInteger(this.plantTime) || this.plantTime < 0)) {

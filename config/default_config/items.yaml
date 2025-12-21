@@ -317,11 +317,9 @@ pesticide:
     name: "基础杀虫剂"
     price: 8
     category: "pesticide"
-    description: "清除作物害虫，恢复健康"
+    description: "清除作物害虫"
     requiredLevel: 1
     maxStack: 50
-    effects:
-      health: 15
     icon: "twemoji:bug"
 
 # 狗粮配置（防御系统）
@@ -450,10 +448,6 @@ effectMappings:
   "effect.speedBonus":
     label: "生长加速"
     format: "percent"
-  # 杀虫剂效果
-  "effects.health":
-    label: "恢复健康"
-    format: "plus"
   # 防御效果
   "duration":
     label: "持续时间"

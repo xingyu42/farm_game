@@ -178,10 +178,6 @@ class PlantingMessageBuilder {
     let message = `${this.icons.success} 成功为第${landId}块土地的${cropName}${careName}！`;
 
     // 添加具体效果信息
-    if (effectData.health !== undefined) {
-      message += `\n${this.icons.health} 健康度恢复到${effectData.health}%`;
-    }
-
     if (effectData.timeReduced) {
       message += `\n${this.icons.time} 生长时间减少${Math.floor(effectData.timeReduced / 1000)}秒`;
     }

@@ -1,6 +1,6 @@
 # 等级系统配置（根据PRD v3.2设计）
 default:
-  startingCoins: 100 # 新玩家初始金币
+  startingCoins: 500 # 新玩家初始金币
 
 # 等级经验需求表
 requirements:

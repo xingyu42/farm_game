@@ -34,21 +34,17 @@ class Calculator {
    * 计算带有土地品质加成的产量
    * @param {number} baseYield 基础产量
    * @param {string} landQuality 土地品质
-   * @param {number} landHealth 土地健康度（0-100）
    * @param {Object} config 配置
    * @returns {number} 实际产量
    */
-  static calculateYield(baseYield, landQuality = 'normal', landHealth = 100, config) {
+  static calculateYield(baseYield, landQuality = 'normal', config) {
     const qualityConfig = Calculator._getLandQualityConfig(landQuality, config);
     const productionBonus = Number(qualityConfig.productionBonus) || 0;
 
     // 品质加成计算
     const qualityMultiplier = 1 + (productionBonus / 100);
 
-    // 健康度影响计算（健康度低于50%时开始影响产量）
-    const healthMultiplier = landHealth >= 50 ? 1 : (landHealth / 50);
-
-    const actualYield = Math.floor(baseYield * qualityMultiplier * healthMultiplier);
+    const actualYield = Math.floor(baseYield * qualityMultiplier);
 
     return Math.max(actualYield, 1); // 最小产量为1
   }

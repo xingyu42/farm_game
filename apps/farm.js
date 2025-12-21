@@ -174,11 +174,6 @@ export class farm extends plugin {
         landData.cropIcon = cropConfig?.icon || 'twemoji:seedling'
 
         // 计算健康度并分级
-        const rawHealth = land.health != null ? Number(land.health) : 100
-        const health = Number.isFinite(rawHealth) ? Math.max(0, Math.min(100, rawHealth)) : 100
-        landData.health = health
-        landData.healthLevel = health >= 70 ? 'high' : (health >= 40 ? 'medium' : 'low')
-
         // 计算生长进度
         if (isMature) {
           landData.growthPercent = 100
@@ -275,6 +270,41 @@ export class farm extends plugin {
   }
 
   /**
+   * 构建操作结果对象（用于图片渲染）
+   * @param {Object} result 服务层返回结果
+   * @param {string} operationType 操作类型
+   * @returns {Object|null} 渲染用操作结果
+   */
+  _buildOperationResult(result, operationType) {
+    if (!result || !result.success) return null
+
+    const iconMap = {
+      water: '💧',
+      fertilize: '🧪',
+      pesticide: '🐛'
+    }
+
+    const titleMap = {
+      water: '浇水完成',
+      fertilize: '施肥完成',
+      pesticide: '除虫完成'
+    }
+
+    const details = []
+    if (result.message) {
+      const lines = result.message.split('\n').filter(line => !line.includes('成功'))
+      details.push(...lines.filter(Boolean))
+    }
+
+    return {
+      type: 'success',
+      icon: iconMap[operationType] || '✅',
+      title: titleMap[operationType] || '操作完成',
+      details: details.length > 0 ? details : ['操作已成功完成']
+    }
+  }
+
+  /**
    * 种植作物 - 统一处理单块种植和批量种植
    * 命令格式：#种植[作物名][土地号] | #种植[作物名]全部 | #种植全部
    */
@@ -359,7 +389,8 @@ export class farm extends plugin {
       const result = await this.plantingService.waterCrop(userId, landIdNum)
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId)
+        const operationResult = this._buildOperationResult(result, 'water')
+        await this._renderFarmWithResult(e, userId, operationResult)
       } else {
         e.reply(result.message)
       }
@@ -376,9 +407,17 @@ export class farm extends plugin {
    */
   async fertilizeCrop(e) {
     try {
-      const match = e.msg.match(/^#(nc)?施肥(\d+|全部)(.+)?$/);
+      const msg = e.msg.trim()
+
+      // 仅输入 #施肥 时给出使用示例
+      if (/^#(nc)?施肥$/i.test(msg)) {
+        await e.reply('施肥示例：#施肥3普通肥料（指定地块），#施肥全部高速肥料（批量，可省略肥料名自动选择）');
+        return true;
+      }
+
+      const match = msg.match(/^#(nc)?施肥(\d+|全部)(.+)?$/);
       if (!match) {
-        await e.reply('格式错误！使用: #施肥[土地编号] 或 #施肥全部');
+        await e.reply('格式错误！使用: #施肥[土地编号][肥料名可选] 或 #施肥全部[肥料名可选]');
         return true;
       }
 
@@ -409,7 +448,8 @@ export class farm extends plugin {
       const result = await this.plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId)
+        const operationResult = this._buildOperationResult(result, 'fertilize')
+        await this._renderFarmWithResult(e, userId, operationResult)
       } else {
         await e.reply(result.message);
       }
@@ -449,7 +489,8 @@ export class farm extends plugin {
       const result = await this.plantingService.treatPests(userId, landIdNum)
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId)
+        const operationResult = this._buildOperationResult(result, 'pesticide')
+        await this._renderFarmWithResult(e, userId, operationResult)
       } else {
         await e.reply(result.message)
       }
@@ -670,7 +711,8 @@ export class farm extends plugin {
       const result = await this.plantingService.batchCareCrops(userId, targets);
 
       if (result.success) {
-        await this._renderFarmWithResult(e, userId);
+        const operationResult = this._buildOperationResult(result, careType)
+        await this._renderFarmWithResult(e, userId, operationResult);
       } else {
         await e.reply(result.message || '批量操作失败，请稍后重试');
       }

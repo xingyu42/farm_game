@@ -72,7 +72,6 @@ class CropPlantingService {
           harvestTime: harvestTime,
           originalHarvestTime: harvestTime,
           status: 'growing',
-          health: 100,
           needsWater: false,
           hasPests: false,
           stealable: false,
@@ -179,7 +178,6 @@ class CropPlantingService {
             harvestTime: harvestTime,
             originalHarvestTime: harvestTime,
             status: 'growing',
-            health: 100,
             needsWater: false,
             hasPests: false,
             stealable: false,
@@ -313,4 +311,3 @@ class CropPlantingService {
 }
 
 export default CropPlantingService;
-

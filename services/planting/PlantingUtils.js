@@ -391,7 +391,6 @@ class PlantingUtils {
             plantTime: null,
             harvestTime: null,
             status: 'empty',
-            health: 100,
             needsWater: false,
             hasPests: false,
             stealable: false
@@ -416,7 +415,6 @@ class PlantingUtils {
             harvestTime: harvestTime,
             originalHarvestTime: harvestTime,
             status: 'growing',
-            health: 100,
             needsWater: false,
             hasPests: false,
             stealable: false
