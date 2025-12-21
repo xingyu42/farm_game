@@ -76,6 +76,7 @@ class CropPlantingService {
           hasPests: false,
           stealable: false,
           waterDelayApplied: false,
+          waterDelayMs: 0,
           waterNeededAt: null,
           pestAppearedAt: null
         };
@@ -182,6 +183,7 @@ class CropPlantingService {
             hasPests: false,
             stealable: false,
             waterDelayApplied: false,
+            waterDelayMs: 0,
             waterNeededAt: null,
             pestAppearedAt: null
           };

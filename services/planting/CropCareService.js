@@ -41,10 +41,21 @@ class CropCareService {
         // 2. 使用验证返回的 land 对象，确保数据一致性
         const land = validation.land;
 
-        // 3. 浇水效果：移除缺水状态
+        // 3. 浇水效果：移除缺水状态并回撤缺水延时
         const landUpdates = {
-          needsWater: false
+          needsWater: false,
+          waterDelayApplied: false,
+          waterDelayMs: 0,
+          waterNeededAt: null
         };
+
+        // 若缺水曾延后收获时间，浇水时撤回该延迟
+        const delayMs = land.waterDelayApplied ? (land.waterDelayMs || 0) : 0;
+        if (delayMs > 0 && land.harvestTime) {
+          const targetTime = Math.max(Date.now(), land.harvestTime - delayMs);
+          landUpdates.harvestTime = targetTime;
+          await this.cropMonitorService.updateHarvestSchedule(userId, landId, targetTime);
+        }
 
         // 4. 更新土地数据
         await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
@@ -104,8 +115,16 @@ class CropCareService {
         if (!fertilizerConfig) {
           throw new Error(`无效的肥料类型: ${actualFertilizerType}`);
         }
-        const growthSpeedBonus = fertilizerConfig.effect?.speedBonus;
-        if (!growthSpeedBonus || growthSpeedBonus <= 0) {
+
+        const fertilizerEffect = fertilizerConfig.effect || {};
+        const speedUpHours = fertilizerEffect.speedUpHours;
+
+        let speedUpMs = 0;
+        if (speedUpHours && speedUpHours > 0) {
+          speedUpMs = speedUpHours * 3600 * 1000;
+        }
+
+        if (!speedUpMs || speedUpMs <= 0) {
           throw new Error(`肥料配置错误: ${actualFertilizerType} 缺少有效的加速效果`);
         }
 
@@ -113,12 +132,15 @@ class CropCareService {
           lastFertilized: Date.now()
         };
 
-        // 如果有加速效果，更新收获时间（按原始总生长时间计算）
-        if (land.originalHarvestTime && land.plantTime) {
-          const totalGrowTime = land.originalHarvestTime - land.plantTime;
-          if (totalGrowTime > 0) {
-            const speedUpTime = Math.floor(totalGrowTime * growthSpeedBonus);
-            landUpdates.harvestTime = land.harvestTime - speedUpTime;
+        let actualSpeedUp = 0;
+
+        // 如果有加速效果，更新收获时间（按剩余生长时间计算）
+        if (land.harvestTime) {
+          const now = Date.now();
+          const remainingTime = land.harvestTime - now;
+          if (remainingTime > 0) {
+            actualSpeedUp = Math.min(speedUpMs, remainingTime);
+            landUpdates.harvestTime = land.harvestTime - actualSpeedUp;
           }
         }
 
@@ -133,7 +155,7 @@ class CropCareService {
         }
 
         // 7. 如果收获时间更新了，同步更新收获计划
-        if (landUpdates.harvestTime) {
+        if (landUpdates.harvestTime !== undefined) {
           await this.cropMonitorService.updateHarvestSchedule(userId, landId, landUpdates.harvestTime);
         }
 
@@ -142,7 +164,9 @@ class CropCareService {
         // 8. 构建返回消息
         return this.messageBuilder.buildCareMessage('fertilize', cropName, landId, {
           fertilizerType: actualFertilizerType,
-          speedUp: growthSpeedBonus > 0
+          fertilizerUsed: actualFertilizerType,
+          speedUp: actualSpeedUp > 0,
+          timeReduced: actualSpeedUp
         });
       });
 

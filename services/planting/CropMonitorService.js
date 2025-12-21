@@ -714,6 +714,7 @@ class CropMonitorService {
                         const delayTime = Math.floor(remainingTime * (delayPercent / 100));
                         landUpdates.harvestTime = landData.harvestTime + delayTime;
                         landUpdates.waterDelayApplied = true;
+                        landUpdates.waterDelayMs = delayTime;
                         result.penalty = { type: 'growthDelay', delayTime };
 
                         // 同步更新收获调度
@@ -768,7 +769,8 @@ class CropMonitorService {
             // 更新收获时间
             await this.plantingDataService.updateLandCropData(userId, landId, {
                 harvestTime: newHarvestTime,
-                waterDelayApplied: true
+                waterDelayApplied: true,
+                waterDelayMs: delayTime
             });
 
             // 同步更新收获调度

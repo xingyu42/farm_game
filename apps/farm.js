@@ -1,6 +1,7 @@
 import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
 import { Puppeteer } from '../models/services.js'
+import PlantingMessageBuilder from '../services/planting/PlantingMessageBuilder.js'
 
 /**
  * 农场管理功能模块
@@ -270,41 +271,6 @@ export class farm extends plugin {
   }
 
   /**
-   * 构建操作结果对象（用于图片渲染）
-   * @param {Object} result 服务层返回结果
-   * @param {string} operationType 操作类型
-   * @returns {Object|null} 渲染用操作结果
-   */
-  _buildOperationResult(result, operationType) {
-    if (!result || !result.success) return null
-
-    const iconMap = {
-      water: '💧',
-      fertilize: '🧪',
-      pesticide: '🐛'
-    }
-
-    const titleMap = {
-      water: '浇水完成',
-      fertilize: '施肥完成',
-      pesticide: '除虫完成'
-    }
-
-    const details = []
-    if (result.message) {
-      const lines = result.message.split('\n').filter(line => !line.includes('成功'))
-      details.push(...lines.filter(Boolean))
-    }
-
-    return {
-      type: 'success',
-      icon: iconMap[operationType] || '✅',
-      title: titleMap[operationType] || '操作完成',
-      details: details.length > 0 ? details : ['操作已成功完成']
-    }
-  }
-
-  /**
    * 种植作物 - 统一处理单块种植和批量种植
    * 命令格式：#种植[作物名][土地号] | #种植[作物名]全部 | #种植全部
    */
@@ -365,6 +331,7 @@ export class farm extends plugin {
    * 浇水
    */
   async waterCrop(e) {
+    let userId = null;
     try {
       const match = e.msg.match(/^#(nc)?浇水(\d+|全部)$/);
       if (!match) {
@@ -373,7 +340,7 @@ export class farm extends plugin {
       }
 
       const landParam = match[2];
-      const userId = await this._requirePlayer(e);
+      userId = await this._requirePlayer(e);
       if (!userId) return true;
 
       if (landParam === '全部') {
@@ -387,17 +354,16 @@ export class farm extends plugin {
       }
 
       const result = await this.plantingService.waterCrop(userId, landIdNum)
-
       if (result.success) {
-        const operationResult = this._buildOperationResult(result, 'water')
+        const operationResult = PlantingMessageBuilder.buildRenderResult(result, 'water')
         await this._renderFarmWithResult(e, userId, operationResult)
       } else {
-        e.reply(result.message)
+        await e.reply(result.message || '浇水失败，请稍后重试')
       }
       return true
     } catch (error) {
       logger.error('[农场游戏] 浇水失败:', error)
-      e.reply('浇水失败，请稍后重试')
+      await e.reply('浇水失败，请稍后重试')
       return true
     }
   }
@@ -406,6 +372,7 @@ export class farm extends plugin {
    * 施肥
    */
   async fertilizeCrop(e) {
+    let userId = null;
     try {
       const msg = e.msg.trim()
 
@@ -423,7 +390,7 @@ export class farm extends plugin {
 
       const landParam = match[2];
       const fertilizer = match[3];
-      const userId = await this._requirePlayer(e);
+      userId = await this._requirePlayer(e);
       if (!userId) return true;
 
       let fertilizerType = null;
@@ -448,15 +415,15 @@ export class farm extends plugin {
       const result = await this.plantingService.fertilizeCrop(userId, landIdNum, fertilizerType);
 
       if (result.success) {
-        const operationResult = this._buildOperationResult(result, 'fertilize')
+        const operationResult = PlantingMessageBuilder.buildRenderResult(result, 'fertilize')
         await this._renderFarmWithResult(e, userId, operationResult)
       } else {
-        await e.reply(result.message);
+        await e.reply(result.message || '施肥失败，请稍后重试');
       }
       return true;
     } catch (error) {
       logger.error('[农场游戏] 施肥失败:', error);
-      e.reply('施肥失败，请稍后重试');
+      await e.reply('施肥失败，请稍后重试');
       return true;
     }
   }
@@ -465,6 +432,7 @@ export class farm extends plugin {
    * 除虫
    */
   async pesticideCrop(e) {
+    let userId = null;
     try {
       const match = e.msg.match(/^#(nc)?除虫(\d+|全部)$/);
       if (!match) {
@@ -473,7 +441,7 @@ export class farm extends plugin {
       }
 
       const landParam = match[2];
-      const userId = await this._requirePlayer(e);
+      userId = await this._requirePlayer(e);
       if (!userId) return true;
 
       if (landParam === '全部') {
@@ -489,15 +457,15 @@ export class farm extends plugin {
       const result = await this.plantingService.treatPests(userId, landIdNum)
 
       if (result.success) {
-        const operationResult = this._buildOperationResult(result, 'pesticide')
+        const operationResult = PlantingMessageBuilder.buildRenderResult(result, 'pesticide')
         await this._renderFarmWithResult(e, userId, operationResult)
       } else {
-        await e.reply(result.message)
+        await e.reply(result.message || '除虫失败，请稍后重试')
       }
       return true
     } catch (error) {
       logger.error('[农场游戏] 除虫失败:', error)
-      e.reply('除虫失败，请稍后重试')
+      await e.reply('除虫失败，请稍后重试')
       return true
     }
   }
@@ -512,74 +480,15 @@ export class farm extends plugin {
 
       const result = await this.plantingService.harvestCrop(userId)
 
-      const harvestedCrops = result.data?.harvestedCrops || []
-      const skippedCrops = result.data?.skippedCrops || []
-      const isPartialHarvest = result.data?.isPartialHarvest
-      const levelUp = result.data?.levelUp
-      const unlockedItemNames = result.data?.unlockedItemNames || []
-
-      // 优先处理部分收获（包括全部跳过的情况）
-      if (isPartialHarvest && skippedCrops.length > 0) {
-        const details = []
-        const inventoryInfo = result.data?.inventoryInfo || {}
-
-        if (harvestedCrops.length > 0) {
-          details.push(`收获: ${harvestedCrops.length}块土地`)
-          details.push(``)
+      if (result.success) {
+        const operationResult = PlantingMessageBuilder.buildHarvestRenderResult(result)
+        if (operationResult) {
+          await this._renderFarmWithResult(e, userId, operationResult)
         }
-
-        details.push(`⚠️ 仓库已满 (${inventoryInfo.currentUsage}/${inventoryInfo.capacity})`)
-        details.push(`请清理或升级仓库后再收获`)
-
-        if (levelUp?.newLevel) {
-          details.push('')
-          details.push(`升级: Lv.${levelUp.oldLevel} → Lv.${levelUp.newLevel}`)
-          if (unlockedItemNames.length > 0) {
-            details.push(`解锁: ${unlockedItemNames.join('、')}`)
-          }
-        }
-
-        await this._renderFarmWithResult(e, userId, {
-          type: 'warning',
-          icon: '⚠️',
-          title: harvestedCrops.length > 0 ? '部分收获完成' : '仓库空间不足',
-          details
-        })
-      } else if (result.success) {
-        // 无成熟作物可收获
-        if (!result.data) {
-          await this._renderFarmWithResult(e, userId, {
-            type: 'info',
-            icon: 'ℹ️',
-            title: '暂无收获',
-            details: ['当前没有成熟的作物']
-          })
-          return true
-        }
-
-        const details = []
-        if (harvestedCrops.length > 0) {
-          const totalYield = harvestedCrops.reduce((sum, c) => sum + (c.yield || 0), 0)
-          details.push(`土地: ${harvestedCrops.length}块`)
-          details.push(`数量: ${totalYield}`)
-        }
-
-        if (levelUp?.newLevel) {
-          details.push(`升级: Lv.${levelUp.oldLevel} → Lv.${levelUp.newLevel}`)
-          if (unlockedItemNames.length > 0) {
-            details.push(`解锁: ${unlockedItemNames.join('、')}`)
-          }
-        }
-
-        await this._renderFarmWithResult(e, userId, {
-          type: 'success',
-          icon: '🎊',
-          title: '收获完成',
-          details: details.length > 0 ? details : ['所有成熟作物已收获']
-        })
-      } else {
-        e.reply(result.message)
+        return true
       }
+
+      await e.reply(result.message)
       return true
     } catch (error) {
       logger.error('[农场游戏] 收获全部失败:', error)
@@ -711,7 +620,7 @@ export class farm extends plugin {
       const result = await this.plantingService.batchCareCrops(userId, targets);
 
       if (result.success) {
-        const operationResult = this._buildOperationResult(result, careType)
+        const operationResult = PlantingMessageBuilder.buildRenderResult(result, careType)
         await this._renderFarmWithResult(e, userId, operationResult);
       } else {
         await e.reply(result.message || '批量操作失败，请稍后重试');

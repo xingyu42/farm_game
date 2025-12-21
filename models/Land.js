@@ -13,6 +13,10 @@ class Land {
     this.needsWater = data.needsWater;
     this.hasPests = data.hasPests;
     this.stealable = data.stealable;
+    this.waterDelayApplied = data.waterDelayApplied;
+    this.waterDelayMs = data.waterDelayMs;
+    this.waterNeededAt = data.waterNeededAt;
+    this.pestAppearedAt = data.pestAppearedAt;
     this.lastUpgradeTime = data.lastUpgradeTime;
     this.upgradeLevel = data.upgradeLevel ?? 0;
   }
@@ -32,7 +36,7 @@ class Land {
       errors.push(`土地品质必须是以下之一: ${validQualities.join(', ')}`);
     }
 
-    const validStatuses = ['empty', 'growing', 'ready'];
+    const validStatuses = ['empty', 'growing', 'mature'];
     if (!validStatuses.includes(this.status)) {
       errors.push(`土地状态必须是以下之一: ${validStatuses.join(', ')}`);
     }
@@ -47,6 +51,10 @@ class Land {
 
     if (!Number.isInteger(this.upgradeLevel) || this.upgradeLevel < 0) {
       errors.push('升级等级必须是非负整数');
+    }
+
+    if (this.waterDelayMs != null && (!Number.isInteger(this.waterDelayMs) || this.waterDelayMs < 0)) {
+      errors.push('缺水延时必须是非负整数毫秒');
     }
 
     return {
@@ -73,7 +81,10 @@ class Land {
    * 检查作物是否成熟
    */
   isReady(currentTime = Date.now()) {
-    return this.isGrowing() && this.harvestTime <= currentTime;
+    if (this.status === 'empty' || !this.crop || !this.harvestTime) {
+      return false;
+    }
+    return this.harvestTime <= currentTime;
   }
 }
 

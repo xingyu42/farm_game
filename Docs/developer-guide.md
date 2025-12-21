@@ -295,7 +295,7 @@ const total = Calculator.getTotalItems(inventory);
 const time = Calculator.calculateGrowTime(base, quality);
 
 // 产量
-const yield = Calculator.calculateYield(crop, land);
+const actualYield = Calculator.calculateYield(baseYield, land.quality, config);
 ```
 
 ### ItemResolver

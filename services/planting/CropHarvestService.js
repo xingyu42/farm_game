@@ -109,6 +109,7 @@ class CropHarvestService {
               hasPests: false,
               stealable: false,
               waterDelayApplied: false,
+              waterDelayMs: 0,
               waterNeededAt: null,
               pestAppearedAt: null
             };
@@ -266,7 +267,7 @@ class CropHarvestService {
       }
 
       return allLands.lands
-        .filter(land => land.crop && land.status === 'growing' && this._canHarvest(land, now))
+        .filter(land => land.crop && land.status !== 'empty' && this._canHarvest(land, now))
         .map(land => land.id);
 
     } catch (error) {

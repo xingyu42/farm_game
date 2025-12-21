@@ -393,7 +393,11 @@ class PlantingUtils {
             status: 'empty',
             needsWater: false,
             hasPests: false,
-            stealable: false
+            stealable: false,
+            waterDelayApplied: false,
+            waterDelayMs: 0,
+            waterNeededAt: null,
+            pestAppearedAt: null
         };
     }
 
@@ -417,7 +421,11 @@ class PlantingUtils {
             status: 'growing',
             needsWater: false,
             hasPests: false,
-            stealable: false
+            stealable: false,
+            waterDelayApplied: false,
+            waterDelayMs: 0,
+            waterNeededAt: null,
+            pestAppearedAt: null
         };
     }
 
