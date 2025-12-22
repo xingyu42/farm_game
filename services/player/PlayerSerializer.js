@@ -64,60 +64,6 @@ class PlayerSerializer {
     }
 
     /**
-     * 获取复杂字段的默认值
-     * @param {string} field 字段名
-     * @returns {any} 默认值
-     */
-    _getDefaultComplexField(field) {
-        const landConfig = this.config?.land?.default;
-
-        switch (field) {
-            case 'lands':
-                return new Array(landConfig?.startingLands || 3).fill(null).map((_, i) => ({
-                    id: i + 1,
-                    crop: null,
-                    quality: 'normal',
-                    plantTime: null,
-                    harvestTime: null,
-                    status: 'empty'
-                }));
-            case 'inventory':
-                return {};
-            case 'signIn':
-                return {
-                    lastSignDate: null,
-                    consecutiveDays: 0,
-                    totalSignDays: 0
-                };
-            case 'protection':
-                return {
-                    dogFood: {
-                        type: null,
-                        effectEndTime: 0
-                    },
-                    farmProtection: {
-                        endTime: 0
-                    }
-                };
-            case 'stealing':
-                return {
-                    lastStealTime: 0,
-                    cooldownEndTime: 0
-                };
-            case 'statistics':
-                return {
-                    totalHarvested: 0,
-                    totalStolenFrom: 0,
-                    totalStolenBy: 0,
-                    totalMoneyEarned: 0,
-                    totalMoneySpent: 0
-                };
-            default:
-                return {};
-        }
-    }
-
-    /**
      * 验证玩家数据的完整性
      * @param {Object} playerData 玩家数据
      * @returns {Object} 验证结果

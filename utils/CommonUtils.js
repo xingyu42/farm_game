@@ -191,6 +191,16 @@ export class CommonUtils {
     });
   }
 
+  // ==================== ID 生成工具方法 ====================
+
+  /**
+   * 生成唯一会话ID
+   * @returns {string} 格式: session_{timestamp}_{randomStr}
+   */
+  static generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   // ==================== 时间工具方法 ====================
 
   /**

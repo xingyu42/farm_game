@@ -30,6 +30,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { CommonUtils } from './CommonUtils.js';
 // 为了通过 ESLint 且兼容 Node 全局：从 globalThis 读取 AbortController 引用
 const AbortController = globalThis.AbortController;
 
@@ -216,7 +217,7 @@ class RedisClient {
     if (!context) {
       // 创建新的上下文并运行
       context = {
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId: CommonUtils.generateSessionId(),
         heldLocks: new Set(),
         startTime: Date.now()
       };
@@ -415,7 +416,7 @@ class RedisClient {
     const existingContext = this._getLockContext();
     if (!existingContext) {
       const context = {
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId: CommonUtils.generateSessionId(),
         heldLocks: new Set(),
         startTime: Date.now()
       };
@@ -491,7 +492,7 @@ class RedisClient {
     const existingContext = this._getLockContext();
     if (!existingContext) {
       const context = {
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId: CommonUtils.generateSessionId(),
         heldLocks: new Set(),
         startTime: Date.now()
       };
@@ -586,7 +587,7 @@ class RedisClient {
    */
   async runWithLockContext(operation, options = {}) {
     const context = {
-      sessionId: options.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sessionId: options.sessionId || CommonUtils.generateSessionId(),
       heldLocks: new Set(),
       startTime: Date.now()
     };
