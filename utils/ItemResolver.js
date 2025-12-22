@@ -108,9 +108,9 @@ class ItemResolver {
     for (const category of this.categories) {
       if (category === 'crops') {
         const cropsConfig = this.config.crops
-        if (cropsConfig[itemId]) return cropsConfig[itemId];
+        if (cropsConfig[itemId]) return { ...cropsConfig[itemId], category: 'crops' };
       } else if (itemsConfig[category] && itemsConfig[category][itemId]) {
-        return itemsConfig[category][itemId];
+        return { ...itemsConfig[category][itemId], category };
       }
     }
 

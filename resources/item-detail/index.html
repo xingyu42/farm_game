@@ -55,7 +55,7 @@
                 <div class="text-[10px] text-[#8b7355] mb-0.5">等级要求</div>
                 <div class="text-sm font-bold text-[#5d3a1a]">Lv.{{ item.requiredLevel }}</div>
             </div>
-            <div class="bg-[#e8d5b7] p-2 rounded border border-[#c9a86c] text-center">
+            <div v-if="item.maxStack" class="bg-[#e8d5b7] p-2 rounded border border-[#c9a86c] text-center">
                 <div class="text-[10px] text-[#8b7355] mb-0.5">堆叠上限</div>
                 <div class="text-sm font-bold text-[#5d3a1a]">{{ item.maxStack }}</div>
             </div>
