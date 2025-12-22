@@ -1,15 +1,32 @@
 /**
- * Redis客户端工具类
- * 提供分布式锁、TTL管理、原子计数器等核心功能
+ * @fileoverview Redis客户端封装 - 分布式锁、缓存、原子操作
  *
- * Hash操作使用说明：
- * - 仅用于非玩家数据的临时状态管理（如市场统计、全局计数器）
- * - 禁止用于玩家核心数据（资产、状态等），玩家数据请使用YAML存储
+ * Input:
+ * - node:async_hooks - AsyncLocalStorage (锁上下文管理)
+ * - global.redis - Yunzai 框架提供的 Redis 连接
  *
- * 锁系统功能：
- * - 可重入锁：同一调用链内对同一用户的重复加锁会被检测并跳过
- * - 批量锁：支持对多个用户按固定顺序批量获取锁，避免死锁
- * - 锁续租：长耗时操作自动续租，避免锁过期
+ * Output:
+ * - RedisClient (default, singleton) - Redis 客户端单例,提供:
+ *   - 分布式锁: acquireLock, releaseLock, withLock, withUserLocks
+ *   - 可重入锁: 同一调用链内自动检测并跳过重复加锁
+ *   - 锁续租: 长耗时操作自动续租看门狗
+ *   - 批量锁: 按固定顺序获取多个用户锁,避免死锁
+ *   - KV操作: set, get, del, exists, incr, expire
+ *   - Hash操作: hSet, hGet, hGetAll, hIncrBy (仅用于非玩家数据)
+ *   - List操作: lPush, lTrim, lLen, lRange
+ *   - 事务: multi, pipeline
+ *
+ * Pos: 工具类层,所有需要 Redis 操作的服务层都通过此单例访问
+ *
+ * 锁系统特性:
+ * - 可重入锁: 同一调用链内对同一用户的重复加锁会被检测并跳过
+ * - 批量锁: 支持对多个用户按固定顺序批量获取锁,避免死锁
+ * - 锁续租: 长耗时操作自动续租,避免锁过期
+ * - 指数退避: 获取锁失败时使用指数退避策略重试
+ *
+ * Hash操作使用说明:
+ * - 仅用于非玩家数据的临时状态管理(如市场统计、全局计数器)
+ * - 禁止用于玩家核心数据(资产、状态等),玩家数据请使用YAML存储
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';

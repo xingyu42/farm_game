@@ -1,9 +1,36 @@
 /**
- * 任务调度器 - 统一调度、配置、执行职责
- * 
- * 整合了 SimpleTaskScheduler、TaskConfig、TaskExecutor 的功能
- * 专注于：配置解析、任务调度、分布式锁、重试机制
- * 
+ * @fileoverview 任务调度器 - 统一调度引擎 (All-in-One)
+ *
+ * Input:
+ * - marketService - (依赖注入,市场服务,提供业务方法)
+ * - lockManager - (依赖注入,Redis客户端,分布式锁)
+ * - rawConfig - (依赖注入,游戏配置对象)
+ *
+ * Output:
+ * - TaskScheduler (class) - 统一调度器类,提供:
+ *   - start: 启动所有定时任务
+ *   - stop: 停止所有定时任务
+ *   - _parseConfig: 解析并验证配置
+ *   - _shouldExecuteToday: 判断每日任务是否应执行
+ *   - _executeTask: 执行单个任务(带分布式锁+重试)
+ *
+ * Pos: 服务层核心调度引擎,整合 SimpleTaskScheduler、TaskConfig、TaskExecutor 功能
+ *
+ * 职责整合 (All-in-One v1.0):
+ * - 配置解析: 验证 config.market.scheduler 和 tasks 配置
+ * - 任务调度: 基于 cron 表达式调度定时任务
+ * - 分布式锁: 使用 Redis 锁避免多实例重复执行
+ * - 重试机制: 失败后自动重试(retry_attempts次)
+ * - 每日任务: 支持每日任务的日期跟踪(lastResetDate)
+ *
+ * 配置项 (config.market.scheduler):
+ * - task_timeout: 任务执行超时(秒)
+ * - retry_attempts: 重试次数
+ * - max_concurrent_tasks: 最大并发任务数
+ *
+ * 任务映射:
+ * - dailyPriceUpdate: marketService.executeDailyPriceUpdate()
+ *
  * @version 1.0.0
  */
 

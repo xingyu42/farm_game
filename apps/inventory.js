@@ -1,6 +1,15 @@
 /**
- * 仓库功能命令处理器 (Miao-Yunzai 插件)
- * 处理玩家仓库相关指令：查看仓库、物品管理等
+ * @fileoverview 仓库管理应用层 - 查看仓库、物品锁定、容量升级
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 InventoryService, PlayerService, ItemResolver)
+ * - ../models/services.js - Puppeteer (图片渲染)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - InventoryCommands (class) - 仓库指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层仓库模块,处理仓库操作指令 (#仓库/#仓库升级/#锁定/#解锁)
  */
 
 // {{CHENGQI:

@@ -1,6 +1,14 @@
 /**
- * 物品数据模型 - 提供物品数据结构、验证和业务逻辑
- * 支持作物、种子、材料等各类物品的统一管理
+ * @fileoverview 物品领域模型 - Item Entity
+ *
+ * Input:
+ * - ../utils/ItemResolver.js - ItemResolver (物品解析和分类识别)
+ * - ../utils/CommonUtils.js - CommonUtils (通用工具函数)
+ *
+ * Output:
+ * - Item (default) - 物品领域模型类,包含验证和序列化方法
+ *
+ * Pos: 数据模型层,定义物品实体结构 (ID、分类、名称、数量、价格、图标、元数据)
  */
 
 import ItemResolver from '../utils/ItemResolver.js';

@@ -1,3 +1,17 @@
+/**
+ * @fileoverview 玩家系统应用层 - 注册、签到、信息查询
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 PlayerService, ProtectionService, StealService)
+ * - ../models/services.js - Puppeteer (图片渲染)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - player (class) - 玩家系统指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层核心模块,处理玩家基础功能指令 (#注册/#签到/#我的信息)
+ */
+
 // {{CHENGQI:
 // Action: Modified; Timestamp: 2025-07-14; Reason: Shrimp Task ID: #8a23c789, refactoring to use dedicated SignInService;
 // }}

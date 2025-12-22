@@ -1,15 +1,35 @@
 /**
- * MarketDataManager - 市场数据管理服务
+ * @fileoverview 市场数据管理服务 - 内存缓存 + JSON持久化 (v3.0)
  *
- * 专门负责市场数据的存储、检索、验证和格式化。
- * 从原有MarketService中提取的数据管理核心逻辑。
+ * Input:
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - ../../utils/fileStorage.js - FileStorage (JSON文件操作)
+ *
+ * Output:
+ * - MarketDataManager (class) - 数据管理服务类,提供:
+ *   - initializeMarketData: 初始化市场数据结构
+ *   - loadMarketData: 从JSON文件加载数据到内存
+ *   - getMarketData: 获取所有市场数据
+ *   - getItemData: 获取单个物品数据
+ *   - updateItemData: 更新物品数据(自动触发持久化)
+ *   - recordTransaction: 记录交易(供应量、价格更新)
+ *   - isFloatingPriceItem: 检查是否为浮动价格物品
+ *   - validateMarketData: 验证数据格式
+ *
+ * Pos: 服务层子服务,负责市场数据的存储、检索、验证和格式化
+ *
+ * 存储架构 (全JSON v3.0):
+ * - 运行时: 内存缓存 (this._marketData)
+ * - 持久化: JSON文件 (data/market/market.json)
+ * - 写入策略: 修改后5秒自动保存(防抖),关键操作立即持久化
+ * - 数据结构: { version, lastPersistedAt, items: {itemId: {...}}, globalStats }
+ *
+ * 性能优化:
+ * - 防抖自动保存: 避免频繁写盘
+ * - 并发写入控制: _persistPromise 确保同时只有一个持久化任务
+ * - 脏标记: _dirty 标记避免无效持久化
  *
  * @version 3.0.0 - 全JSON架构：内存运行时 + 防抖自动持久化
- *
- * 存储架构：
- * - 运行时：内存缓存 (this._marketData)
- * - 持久化：JSON文件 (data/market/market.json)
- * - 写入策略：修改后5秒自动保存，关键操作立即持久化
  */
 import ItemResolver from '../../utils/ItemResolver.js';
 import { FileStorage } from '../../utils/fileStorage.js';

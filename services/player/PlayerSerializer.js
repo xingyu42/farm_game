@@ -1,6 +1,18 @@
 /**
- * 玩家数据序列化工具
- * 负责玩家数据在YAML格式和对象格式之间的转换
+ * @fileoverview 玩家数据序列化工具 - YAML ↔ Player Model 转换器
+ *
+ * Input:
+ * - ../../models/Player.js - Player (玩家领域模型)
+ *
+ * Output:
+ * - PlayerSerializer (default) - 序列化工具类,提供:
+ *   - serialize: Player实例 → YAML对象 (调用 toJSON)
+ *   - deserialize: YAML对象 → Player实例 (调用 Player.fromObjectData)
+ *
+ * Pos: 服务层序列化工具,负责玩家数据在 YAML 格式和 Player 领域模型之间的双向转换
+ *
+ * 数据清理:
+ * - 自动清理废弃字段(如 stats 已被 statistics 取代)
  */
 
 import Player from '../../models/Player.js';

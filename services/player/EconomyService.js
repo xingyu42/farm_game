@@ -1,6 +1,24 @@
 /**
- * 经济服务
- * 处理玩家金币和经验值相关功能
+ * @fileoverview 经济服务 - 金币和经验值管理 + 升级奖励发放
+ *
+ * Input:
+ * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
+ * - ./LevelCalculator.js - LevelCalculator (等级计算工具)
+ *
+ * Output:
+ * - EconomyService (default) - 经济服务类,提供:
+ *   - changeCoins: 通用金币变更接口(正数增加、负数减少)
+ *   - addCoins: 增加金币
+ *   - deductCoins: 扣除金币
+ *   - addExperience: 增加经验值(自动检测升级并发放奖励)
+ *
+ * Pos: 服务层子服务,负责玩家经济系统(金币、经验值、升级奖励)
+ *
+ * 业务逻辑:
+ * - 金币操作: 统计记录(totalMoneyEarned/totalMoneySpent)
+ * - 经验值操作: 自动升级检测 + 升级奖励发放(金币)
+ * - 所有操作通过 executeWithTransaction 保证原子性
+ * - 内部使用 _updateCoinsInTransaction 和 _updateExpInTransaction 工具方法
  */
 
 import PlayerDataService from './PlayerDataService.js';

@@ -1,6 +1,36 @@
 ﻿/**
- * 作物收获专门服务
- * 专门处理作物收获逻辑，包括成熟度检查、产量计算、经验计算、仓库更新等
+ * @fileoverview 作物收获专门服务 - 收获操作核心逻辑
+ *
+ * Input:
+ * - ../../utils/calculator.js - Calculator (产量计算、经验值计算)
+ * - ./PlantingUtils.js - PlantingUtils (收获验证工具)
+ * - ./PlantingMessageBuilder.js - PlantingMessageBuilder (消息构建工具)
+ * - ../player/LevelCalculator.js - LevelCalculator (等级计算、升级检测)
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - plantingDataService - (依赖注入,种植数据持久化)
+ * - inventoryService - (依赖注入,仓库服务,添加作物)
+ * - landService - (依赖注入,土地服务)
+ * - playerService - (依赖注入,玩家服务,经验值更新)
+ * - cropMonitorService - (依赖注入,作物监控,移除调度)
+ *
+ * Output:
+ * - CropHarvestService (default) - 收获专门服务类,提供:
+ *   - harvestCrop: 收获作物(主入口,支持单块土地或全部成熟土地)
+ *   - _getMatureLandIds: 获取所有成熟土地ID列表
+ *   - _harvestSingleLand: 收获单块土地
+ *   - _calculateHarvestRewards: 计算收获奖励(产量、经验)
+ *
+ * Pos: 服务层子服务,专门处理收获逻辑(成熟度检查、产量计算、经验发放、仓库更新、土地重置)
+ *
+ * 业务流程:
+ * 1. 验证成熟度(harvestAt <= now)
+ * 2. 计算产量(带土地品质加成)
+ * 3. 计算经验值(带土地品质加成)
+ * 4. 检查仓库容量
+ * 5. 添加作物到仓库
+ * 6. 发放经验值(可能触发升级)
+ * 7. 重置土地状态
+ * 8. 移除收获调度
  */
 
 import Calculator from '../../utils/calculator.js';

@@ -1,6 +1,14 @@
 /**
- * 玩家数据模型 - 提供玩家数据结构、验证和业务逻辑
- * 支持玩家信息管理、仓库系统、土地管理和游戏统计
+ * @fileoverview 玩家领域模型 - Player Entity (DDD Pattern)
+ *
+ * Input:
+ * - ../utils/calculator.js - Calculator (仓库物品统计)
+ * - ../utils/CommonUtils.js - CommonUtils (时间格式化、剩余时间计算)
+ *
+ * Output:
+ * - Player (default) - 玩家领域模型类,包含数据验证、序列化、业务方法
+ *
+ * Pos: 数据模型层核心,定义玩家实体结构 (基础属性、土地、仓库、签到、防护、偷菜、统计)
  */
 
 import Calculator from '../utils/calculator.js';

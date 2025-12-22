@@ -1,4 +1,16 @@
-// apps/admin.js
+/**
+ * @fileoverview 管理员工具应用层 - 玩家数据管理、统计、备份
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 AdminService, GlobalStatsService, DataBackupService)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - adminApp (class) - 管理员指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层管理模块,处理管理员指令 (#nc管理...)
+ */
+
 import plugin from '../../../lib/plugins/plugin.js';
 import serviceContainer from '../services/index.js';
 

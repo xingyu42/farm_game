@@ -1,4 +1,31 @@
-
+/**
+ * @fileoverview 仓库服务 - 玩家物品仓库管理 (PRD v3.2)
+ *
+ * Input:
+ * - ../../utils/calculator.js - Calculator (仓库容量计算)
+ * - ../../models/Item.js - Item (物品领域模型)
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - ../../utils/CommonUtils.js - CommonUtils (通用工具)
+ * - PlayerDataService - (依赖注入,玩家数据持久化)
+ * - EconomyService - (依赖注入,经济服务)
+ *
+ * Output:
+ * - InventoryService (class) - 仓库服务类,提供:
+ *   - getInventory: 获取玩家仓库数据(Item实例)
+ *   - addItem: 添加物品到仓库
+ *   - removeItem: 从仓库移除物品
+ *   - hasItem: 检查仓库是否有足够物品
+ *   - upgradeInventory: 扩容仓库
+ *   - getInventoryUsage: 获取仓库使用率
+ *
+ * Pos: 服务层子服务,负责玩家仓库物品管理(增删查、容量管理、扩容)
+ *
+ * 业务逻辑:
+ * - 物品使用 Item 模型,支持 fromJSON 反序列化
+ * - 容量检查: 添加前强制检查仓库容量
+ * - 扩容机制: 基于配置表 config.inventory.upgrade
+ * - 所有操作通过 PlayerDataService.executeWithTransaction 保证原子性
+ */
 
 import Calculator from '../../utils/calculator.js';
 import Item from '../../models/Item.js';

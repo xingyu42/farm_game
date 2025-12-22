@@ -1,3 +1,33 @@
+/**
+ * @fileoverview 全局统计服务 - 经济数据分析 + 内存缓存
+ *
+ * Input:
+ * - ../../utils/playerYamlStorage.js - PlayerYamlStorage (YAML数据读取)
+ *
+ * Output:
+ * - GlobalStatsService (default) - 全局统计服务类,提供:
+ *   - getEconomyStatus: 获取经济分析数据(优先从缓存读取)
+ *   - rebuildAndCacheStats: 强制重建并缓存统计数据
+ *   - _calculateEconomyStats: 从YAML文件计算经济统计
+ *
+ * Pos: 服务层统计分析工具,负责全局经济数据分析和缓存管理
+ *
+ * 统计数据:
+ * - 总玩家数
+ * - 总金币数量
+ * - 平均金币数量
+ * - 总经验值
+ * - 总仓库物品数量
+ * - 等级分布
+ * - 在线玩家数(24小时内活跃)
+ *
+ * 缓存机制:
+ * - 内存缓存(this.cache)
+ * - 缓存超时: 1小时
+ * - 优先从缓存读取,缓存未命中时重新计算
+ * - 提供 rebuildAndCacheStats 强制刷新
+ */
+
 // services/StatisticsService.js
 
 import { PlayerYamlStorage } from '../../utils/playerYamlStorage.js';

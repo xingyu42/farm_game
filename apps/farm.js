@@ -1,12 +1,23 @@
+/**
+ * @fileoverview 农场核心操作应用层 - 种植、浇水、施肥、除虫、收获
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 PlantingService, PlayerService)
+ * - ../models/Config.js - 全局配置对象
+ * - ../models/services.js - Puppeteer (图片渲染)
+ * - ../services/planting/PlantingMessageBuilder.js - 种植消息构建器
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - farm (class) - 农场核心操作指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层核心模块,处理农场所有核心操作指令 (#我的农场/#种植/#浇水/#施肥/#除虫/#收获)
+ */
+
 import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
 import { Puppeteer } from '../models/services.js'
 import PlantingMessageBuilder from '../services/planting/PlantingMessageBuilder.js'
-
-/**
- * 农场管理功能模块
- * 处理种植、收获、农场信息查看等核心农场操作
- */
 export class farm extends plugin {
   constructor() {
     super({

@@ -1,6 +1,23 @@
 ﻿/**
- * 土地管理服务
- * 处理玩家土地管理相关功能
+ * @fileoverview 土地管理服务 - 土地扩张和品质升级
+ *
+ * Input:
+ * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
+ * - ./EconomyService.js - EconomyService (经济服务,金币扣除)
+ * - playerService - (可选依赖注入,用于某些操作)
+ *
+ * Output:
+ * - LandService (default) - 土地服务类,提供:
+ *   - expandLand: 扩张新土地(检查等级、金币、上限)
+ *   - upgradeLand: 升级土地品质(normal → good → excellent)
+ *
+ * Pos: 服务层子服务,负责玩家土地系统(扩张、升级、品质管理)
+ *
+ * 业务逻辑:
+ * - 土地扩张: 检查等级要求、金币要求、土地上限
+ * - 土地升级: 检查金币要求、品质上限(excellent为最高)
+ * - 配置来源: config.land.expansion (扩张) / config.land.upgrade (升级)
+ * - 所有操作通过 executeWithTransaction 保证原子性
  */
 
 import PlayerDataService from './PlayerDataService.js';

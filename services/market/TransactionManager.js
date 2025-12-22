@@ -1,8 +1,29 @@
 /**
- * TransactionManager - 事务管理服务
+ * @fileoverview 事务管理服务 - 分布式锁 + 批量更新
  *
- * 专门负责分布式锁管理、事务性批量更新、数据一致性保证。
- * 确保市场数据更新的原子性和并发安全性。
+ * Input:
+ * - redisClient - Redis客户端(分布式锁)
+ *
+ * Output:
+ * - TransactionManager (class) - 事务管理服务类,提供:
+ *   - executeBatchUpdate: 执行事务性批量更新
+ *   - getActiveTransactions: 获取活跃事务列表
+ *   - _generateTransactionId: 生成事务ID
+ *   - _executeOperations: 执行操作列表
+ *
+ * Pos: 服务层子服务,负责分布式锁管理、事务性批量更新、数据一致性保证
+ *
+ * 事务保障机制:
+ * - 分布式锁: 使用 Redis 锁确保并发安全
+ * - 批量更新: 批量执行多个操作,减少锁持有时间
+ * - 重试机制: 失败后自动重试(max_retries次)
+ * - 活跃事务跟踪: this.activeTransactions 跟踪所有进行中的事务
+ * - 超时控制: lock_timeout 配置锁超时时间
+ *
+ * 配置项 (config.market.transaction):
+ * - lock_timeout: 锁超时时间(秒)
+ * - max_retries: 最大重试次数
+ * - retry_delay: 重试延迟(秒)
  *
  * @version 1.0.0
  */

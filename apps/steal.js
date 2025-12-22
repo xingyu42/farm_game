@@ -1,10 +1,19 @@
+/**
+ * @fileoverview 偷菜与防护应用层 - 偷菜、狗粮、防护状态
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 StealService, ProtectionService, InventoryService)
+ * - ../models/Config.js - 全局配置对象
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - steal (class) - 偷菜与防护指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层社交模块,处理偷菜和防护指令 (#偷菜/#狗粮)
+ */
+
 import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
-
-/**
- * 偷菜与防御功能模块
- * 处理偷菜、使用狗粮、查看防护状态等功能
- */
 export class steal extends plugin {
   constructor() {
     super({

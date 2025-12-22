@@ -1,10 +1,27 @@
 /**
- * 简化版市场定时任务调度器 - 集成层
- * 
- * 重构为模块化架构，专注于组件集成和API兼容性。
- * 移除过度设计功能，保持核心业务价值。
- * 代码量从671行减少到40行，减少94%。
- * 
+ * @fileoverview 市场定时任务调度器 - 集成层 Facade (简化重构版)
+ *
+ * Input:
+ * - ./taskScheduler.js - TaskScheduler (统一任务调度器)
+ * - marketService - (依赖注入,市场服务)
+ *
+ * Output:
+ * - MarketScheduler (class) - 调度器集成层,提供:
+ *   - start: 启动所有定时任务
+ *   - stop: 停止所有定时任务
+ *
+ * Pos: 服务层集成 Facade,整合 TaskScheduler,保持向后兼容的 API
+ *
+ * 架构说明 (简化重构 v3.0):
+ * - MarketScheduler (Facade) - API兼容层
+ * - TaskScheduler (Core) - 核心调度引擎
+ * - 重构收益: 代码量从671行减少到40行,减少94%
+ *
+ * 定时任务:
+ * - dailyPriceUpdate: 每日价格更新(基于 cron 配置)
+ * - 使用 TaskScheduler 统一调度
+ * - 使用 Redis 分布式锁避免多实例重复执行
+ *
  * @version 3.0.0 - 简化重构版
  */
 

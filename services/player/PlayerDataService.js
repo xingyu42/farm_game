@@ -1,7 +1,26 @@
 /**
- * 玩家数据持久化服务
- * 负责YAML文件存储、数据序列化/反序列化等底层数据操作
- * 使用统一的YAML文件存储，通过分布式锁保障数据一致性
+ * @fileoverview 玩家数据持久化服务 - YAML存储 + 分布式锁事务管理
+ *
+ * Input:
+ * - ./PlayerSerializer.js - PlayerSerializer (数据序列化/反序列化)
+ * - ../../utils/playerYamlStorage.js - PlayerYamlStorage (YAML文件操作)
+ * - redisClient - Redis客户端 (分布式锁)
+ *
+ * Output:
+ * - PlayerDataService (default) - 玩家数据服务类,提供:
+ *   - withPlayerLock: 分布式锁包装器
+ *   - getPlayer: 读取玩家YAML数据
+ *   - savePlayer: 保存玩家YAML数据
+ *   - deletePlayer: 删除玩家数据
+ *   - playerExists: 检查玩家是否存在
+ *   - executeWithTransaction: 事务包装器(锁+读+操作+写)
+ *
+ * Pos: 服务层数据访问层(DAO),负责玩家数据的YAML持久化和分布式锁事务管理
+ *
+ * 数据一致性保障:
+ * - 所有写操作强制通过 withPlayerLock 获取分布式锁
+ * - executeWithTransaction 提供原子性事务操作(锁+读+操作+写)
+ * - 锁超时默认30秒,支持自定义
  */
 
 import PlayerSerializer from './PlayerSerializer.js';

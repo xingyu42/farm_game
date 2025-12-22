@@ -1,6 +1,31 @@
 ﻿/**
- * 作物种植专门服务
- * 专门处理作物种植逻辑，包括种植条件检查、种子扣除、土地状态更新等
+ * @fileoverview 作物种植专门服务 - 种植操作核心逻辑
+ *
+ * Input:
+ * - ../../utils/calculator.js - Calculator (生长时间、产量计算)
+ * - ./PlantingUtils.js - PlantingUtils (种植验证工具)
+ * - ./PlantingMessageBuilder.js - PlantingMessageBuilder (消息构建工具)
+ * - plantingDataService - (依赖注入,种植数据持久化)
+ * - inventoryService - (依赖注入,仓库服务,扣除种子)
+ * - landService - (依赖注入,土地服务)
+ * - cropMonitorService - (依赖注入,作物监控,调度收获)
+ *
+ * Output:
+ * - CropPlantingService (default) - 种植专门服务类,提供:
+ *   - plantCrop: 种植作物(主入口)
+ *   - _validatePlanting: 种植前置条件验证
+ *   - _updateLandState: 更新土地状态
+ *
+ * Pos: 服务层子服务,专门处理种植逻辑(条件检查、种子扣除、土地状态更新、收获调度)
+ *
+ * 业务流程:
+ * 1. 获取作物配置
+ * 2. 验证土地状态(空闲、未占用)
+ * 3. 检查种子库存
+ * 4. 扣除种子
+ * 5. 计算生长时间(带土地品质加成)
+ * 6. 更新土地状态(cropType, plantedAt, harvestAt)
+ * 7. 注册收获调度
  */
 
 import Calculator from '../../utils/calculator.js';

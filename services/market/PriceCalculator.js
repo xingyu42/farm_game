@@ -1,10 +1,34 @@
 /**
- * PriceCalculator - 价格计算服务（活跃度驱动模式 v3.0）
+ * @fileoverview 价格计算服务 - 活跃度驱动动态定价引擎 (v3.0)
  *
- * 核心算法：
- * 1. 活跃度 = actualSupply / (baseSupply × threshold)
- * 2. 惯性/波动 随活跃度动态变化
- * 3. 价格 = 惯性延续 + 市场回归 + 正态噪声
+ * Input:
+ * - ../../utils/CommonUtils.js - CommonUtils (安全计算工具)
+ *
+ * Output:
+ * - PriceCalculator (class) - 价格计算引擎类,提供:
+ *   - calculatePrice: 计算物品价格(活跃度驱动模式)
+ *   - _calculateActivity: 计算市场活跃度
+ *   - _calculateDynamicMomentum: 计算动态惯性系数
+ *   - _calculateDynamicVolatility: 计算动态波动系数
+ *   - _generateGaussianNoise: 生成正态分布噪声
+ *   - _clampPrice: 价格边界限制
+ *
+ * Pos: 服务层子服务,负责市场价格计算的核心算法逻辑
+ *
+ * 核心算法 (活跃度驱动模式 v3.0):
+ * 1. 活跃度计算: activity = actualSupply / (baseSupply × threshold)
+ * 2. 动态惯性: momentum ∈ [0.3, 0.85], 随活跃度增加而减弱
+ * 3. 动态波动: volatility ∈ [0.02, 0.12], 随活跃度增加而增强
+ * 4. 价格公式: newPrice = (currentPrice × momentum) + (targetPrice × (1 - momentum)) + noise
+ * 5. 目标价格: targetPrice = basePrice × (baseSupply / actualSupply)
+ * 6. 正态噪声: noise ~ N(0, volatility × currentPrice), 截断3σ
+ * 7. 价格边界: price ∈ [basePrice × minRatio, basePrice × maxRatio]
+ *
+ * 算法特性:
+ * - 惯性延续: 价格变化平滑,避免剧烈波动
+ * - 市场回归: 价格向目标价格靠拢(供需平衡)
+ * - 活跃度调节: 市场活跃时波动增强、惯性减弱
+ * - 正态噪声: 模拟市场随机性
  */
 import { CommonUtils } from '../../utils/CommonUtils.js';
 

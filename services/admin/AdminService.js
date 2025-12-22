@@ -1,3 +1,23 @@
+/**
+ * @fileoverview 管理员服务 - 管理员特权操作工具
+ *
+ * Input:
+ * - playerService - (依赖注入,玩家服务)
+ *
+ * Output:
+ * - AdminService (default) - 管理员服务类,提供:
+ *   - resetPlayer: 重置玩家数据
+ *   - addCoins: 为玩家添加金币
+ *   - addExperience: 为玩家添加经验值
+ *   - addItem: 为玩家添加物品
+ *
+ * Pos: 服务层管理工具,提供管理员特权操作(重置、添加资源等)
+ *
+ * 权限控制:
+ * - 调用方需要自行检查管理员权限(e.msg.sender.role === 'admin' 等)
+ * - AdminService 本身不做权限验证
+ */
+
 // services/AdminService.js
 
 class AdminService {

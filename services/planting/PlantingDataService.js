@@ -1,7 +1,23 @@
 /**
- * 种植数据持久化服务
- * 负责作物相关的Redis操作、数据序列化/反序列化等底层数据操作
- * 参考 PlayerDataService 的设计模式，专门处理种植模块的数据访问
+ * @fileoverview 种植数据持久化服务 - 作物数据访问层 (DAO)
+ *
+ * Input:
+ * - ./PlantingUtils.js - PlantingUtils (数据验证和序列化工具)
+ * - playerDataService - (依赖注入,玩家数据持久化,作物数据存储在Player.lands中)
+ *
+ * Output:
+ * - PlantingDataService (default) - 种植数据服务类,提供:
+ *   - getCropData: 获取玩家作物数据(lands数组)
+ *   - getLandCropData: 获取特定土地的作物数据
+ *   - updateCropData: 更新作物数据(通过PlayerDataService)
+ *   - executeWithTransaction: 事务包装器(锁+读+操作+写)
+ *
+ * Pos: 服务层数据访问层(DAO),负责作物数据的读写和事务管理,参考 PlayerDataService 设计模式
+ *
+ * 数据存储:
+ * - 作物数据存储在 Player.lands 数组中
+ * - 通过 PlayerDataService 进行持久化
+ * - 使用分布式锁保证并发安全
  */
 
 import { PlantingUtils } from './PlantingUtils.js';

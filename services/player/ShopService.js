@@ -1,15 +1,37 @@
 /**
- * 增强版商店服务 - 管理买卖交易（根据PRD v3.2设计）
- * 
- * 包含：商店浏览、购买、出售、价格查询等功能
- * 增强功能：
- * 1. 集成CommonUtils工具类，消除代码重复
- * 2. 标准化日志系统集成
- * 3. 参数验证统一化
- * 4. 错误处理增强
- * 5. 性能监控和批量处理支持
- * 
- * @version 2.0.0 - 增强版，解决代码重复和质量问题
+ * @fileoverview 商店服务 - 物品买卖交易系统 (PRD v3.2 增强版)
+ *
+ * Input:
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - ../../utils/CommonUtils.js - CommonUtils (通用工具,价格验证、数量验证)
+ * - inventoryService - (依赖注入,仓库服务)
+ * - playerService - (依赖注入,玩家服务)
+ * - serviceContainer - (可选注入,用于获取 MarketService 动态价格)
+ *
+ * Output:
+ * - ShopService (class) - 商店服务类,提供:
+ *   - buyItem: 购买物品
+ *   - sellItem: 出售物品
+ *   - getItemInfo: 查询物品信息和价格
+ *   - listShopItems: 列出商店所有可售物品
+ *
+ * Pos: 服务层子服务,负责商店交易系统(物品买卖、价格查询、库存管理)
+ *
+ * 业务逻辑:
+ * - 价格机制:
+ *   - 优先使用 MarketService 动态价格(浮动价格物品)
+ *   - 回退到物品配置固定价格
+ * - 购买流程: 检查金币 → 检查仓库容量 → 扣金币 → 加物品 → 更新统计
+ * - 出售流程: 检查物品 → 移除物品 → 加金币 → 更新统计
+ * - 参数验证: 统一使用 CommonUtils.validatePrice/validateQuantity
+ * - 性能统计: 记录交易次数、总交易额、平均交易时间
+ *
+ * 增强特性 (v2.0.0):
+ * - 集成 CommonUtils 工具类,消除代码重复
+ * - 标准化日志系统
+ * - 统一参数验证
+ * - 增强错误处理
+ * - 性能监控和批量处理支持
  */
 import ItemResolver from '../../utils/ItemResolver.js';
 import { CommonUtils } from '../../utils/CommonUtils.js';

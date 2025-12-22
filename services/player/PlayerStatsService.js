@@ -1,6 +1,21 @@
 /**
- * 统计服务
- * 处理玩家统计数据相关功能
+ * @fileoverview 玩家统计服务 - 玩家数据统计管理
+ *
+ * Input:
+ * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
+ *
+ * Output:
+ * - PlayerStatsService (default) - 统计服务类,提供:
+ *   - updateStatistics: 更新玩家统计数据
+ *
+ * Pos: 服务层子服务,负责玩家统计数据管理(收获、偷窃、金币统计)
+ *
+ * 统计字段:
+ * - totalHarvested: 总收获数量
+ * - totalStolenFrom: 被偷次数
+ * - totalStolenBy: 偷窃次数
+ * - totalMoneyEarned: 总收入金币
+ * - totalMoneySpent: 总支出金币
  */
 
 import PlayerDataService from './PlayerDataService.js';

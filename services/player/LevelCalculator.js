@@ -1,6 +1,20 @@
 /**
- * 等级计算工具
- * 负责经验值与等级之间的转换、升级奖励计算等
+ * @fileoverview 等级计算工具 - 经验值与等级转换 + 升级奖励计算
+ *
+ * Input:
+ * - config - 游戏配置对象 (levels.requirements, levels.rewards)
+ *
+ * Output:
+ * - LevelCalculator (default) - 等级计算工具类,提供静态方法:
+ *   - calculateLevel: 根据经验值计算玩家等级
+ *   - getLevelUpRewards: 计算升级奖励(金币、物品等)
+ *
+ * Pos: 服务层工具类,负责经验值系统的数值计算逻辑
+ *
+ * 计算逻辑:
+ * - 基于配置表 config.levels.requirements 查找当前等级
+ * - 从高到低遍历等级表,找到满足经验要求的最高等级
+ * - 升级奖励根据 config.levels.rewards.levelUp 配置计算
  */
 
 class LevelCalculator {

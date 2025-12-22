@@ -1,6 +1,20 @@
 /**
- * 签到服务
- * 处理玩家签到相关功能
+ * @fileoverview 签到服务 - 处理玩家每日签到和连续签到奖励
+ *
+ * Input:
+ * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
+ *
+ * Output:
+ * - SignInService (default) - 签到服务类,提供:
+ *   - signIn: 执行签到操作,计算连续签到天数和奖励
+ *
+ * Pos: 服务层子服务,负责签到逻辑(连续签到检测、奖励计算、金币发放)
+ *
+ * 业务逻辑:
+ * - 每日签到检测(基于 toDateString)
+ * - 连续签到天数统计(昨日签到则+1,否则重置为1)
+ * - 签到奖励: 基础奖励 + 连续签到加成
+ * - 所有操作通过 executeWithTransaction 保证原子性
  */
 
 import PlayerDataService from './PlayerDataService.js';

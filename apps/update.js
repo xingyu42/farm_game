@@ -1,3 +1,16 @@
+/**
+ * @fileoverview 插件更新应用层 - 插件版本更新和日志查询
+ *
+ * Input:
+ * - ../../other/update.js - Yunzai 框架更新工具
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - WerewolfUpdate (class) - 更新指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层维护模块,处理插件更新指令 (#农场更新/#更新日志)
+ */
+
 /* eslint-disable import/no-unresolved */
 import { update as Update } from '../../other/update.js'
 

@@ -1,9 +1,30 @@
 /**
- * MarketService - 市场服务统一入口 (Facade Pattern)
- * 
- * 重构后的MarketService作为Facade模式的统一入口，保持100% API兼容性。
- * 内部委托给专门的服务处理具体业务逻辑，实现职责分离和模块化。
- * 
+ * @fileoverview 市场服务 - 浮动价格系统 Facade (PRD T11)
+ *
+ * Input:
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - priceCalculator - (依赖注入,PriceCalculator,价格计算引擎)
+ * - marketDataManager - (依赖注入,MarketDataManager,数据存储)
+ * - transactionManager - (依赖注入,TransactionManager,事务管理)
+ * - playerService - (依赖注入,玩家服务)
+ *
+ * Output:
+ * - MarketService (class) - 市场服务 Facade,提供:
+ *   - initializeMarketData: 初始化市场数据
+ *   - isFloatingPriceItem: 检查是否为浮动价格物品
+ *   - getCurrentPrice: 获取当前价格
+ *   - recordTransaction: 记录交易(供应量更新)
+ *   - executeDailyPriceUpdate: 执行每日价格更新
+ *   - getMarketData: 获取市场数据
+ *
+ * Pos: 服务层 Facade,整合价格计算、数据管理、事务管理三大子系统,提供统一市场接口
+ *
+ * 架构说明 (Facade Pattern v3.0):
+ * - MarketService (Facade) - API统一入口
+ * - PriceCalculator - 价格计算引擎(活跃度驱动模式)
+ * - MarketDataManager - 数据存储(内存+JSON持久化)
+ * - TransactionManager - 分布式锁+批量更新
+ *
  * @version 3.0.0 - 重构版，保持完全兼容
  */
 import ItemResolver from '../../utils/ItemResolver.js';

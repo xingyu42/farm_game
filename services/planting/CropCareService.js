@@ -1,6 +1,26 @@
 /**
- * 作物护理专门服务
- * 专门处理作物护理逻辑，包括浇水、施肥、除虫等护理操作
+ * @fileoverview 作物护理专门服务 - 浇水施肥护理操作
+ *
+ * Input:
+ * - ./PlantingUtils.js - PlantingUtils (护理验证工具)
+ * - ./PlantingMessageBuilder.js - PlantingMessageBuilder (消息构建工具)
+ * - plantingDataService - (依赖注入,种植数据持久化)
+ * - inventoryService - (依赖注入,仓库服务,扣除护理道具)
+ * - landService - (依赖注入,土地服务)
+ * - cropMonitorService - (依赖注入,作物监控,更新护理调度)
+ *
+ * Output:
+ * - CropCareService (default) - 护理专门服务类,提供:
+ *   - waterCrop: 浇水护理(移除缺水状态、回撤延时)
+ *
+ * Pos: 服务层子服务,专门处理作物护理逻辑(浇水、施肥、除虫等护理操作)
+ *
+ * 业务逻辑:
+ * - 浇水护理:
+ *   - 移除缺水状态(needsWater = false)
+ *   - 回撤缺水延时(waterDelayApplied = false, waterDelayMs = 0)
+ *   - 更新护理时间戳(waterNeededAt = null)
+ *   - 更新护理调度
  */
 
 import { PlantingUtils } from './PlantingUtils.js';

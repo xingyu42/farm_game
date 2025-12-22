@@ -1,6 +1,28 @@
 /**
- * 统一的玩家服务
- * 整合所有玩家相关功能，包括经济、签到、防御、统计和土地管理
+ * @fileoverview 统一玩家服务 - 整合所有玩家相关功能的 Facade 层
+ *
+ * Input:
+ * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
+ * - ./LevelCalculator.js - LevelCalculator (等级计算工具)
+ * - ./EconomyService.js - EconomyService (经济系统)
+ * - ./SignInService.js - SignInService (签到系统)
+ * - ./PlayerStatsService.js - PlayerStatsService (统计服务)
+ * - ProtectionService - (延迟注入,避免循环依赖)
+ *
+ * Output:
+ * - PlayerService (default) - 玩家服务类,提供统一的玩家操作接口:
+ *   - 数据操作: getPlayer, savePlayer, registerPlayer, deletePlayer
+ *   - 经济操作: addCoins, deductCoins, addExperience
+ *   - 签到操作: signIn
+ *   - 土地操作: expandLand, upgradeLand (通过 LandService)
+ *   - 防御操作: applyDogFood, checkProtection (通过 ProtectionService)
+ *   - 统计操作: updateStatistics
+ *
+ * Pos: 服务层核心 Facade,整合经济、签到、防御、统计等子服务,提供统一的玩家操作接口
+ *
+ * 架构说明:
+ * - 循环依赖解决: ProtectionService 通过 setProtectionService() 延迟注入
+ * - ServiceContainer 注入: 通过 setServiceContainer() 获取 LandService 单例
  */
 
 import PlayerDataService from './PlayerDataService.js';

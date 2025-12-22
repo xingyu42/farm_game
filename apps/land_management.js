@@ -1,7 +1,14 @@
 ﻿/**
- * Land management commands (farm_game)
- * - #土地扩张
- * - #土地升级<品质名> (auto match first land)
+ * @fileoverview 土地管理应用层 - 土地扩张、品质升级
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 LandService, PlayerService)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - LandManagementCommands (class) - 土地管理指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层土地模块,处理土地操作指令 (#土地扩张/#土地升级)
  */
 
 export class LandManagementCommands extends plugin {

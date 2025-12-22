@@ -1,7 +1,32 @@
 /**
- * 作物监控服务
- * 统一管理作物状态监控和收获调度功能
- * 合并了 CropStatusService 和 CropScheduleService 的功能
+ * @fileoverview 作物监控服务 - 作物状态监控 + 收获调度系统
+ *
+ * Input:
+ * - ./PlantingUtils.js - PlantingUtils (验证工具)
+ * - plantingDataService - (依赖注入,种植数据持久化)
+ * - landService - (依赖注入,土地服务)
+ * - redis - (依赖注入,Redis客户端,ZSet调度)
+ *
+ * Output:
+ * - CropMonitorService (default) - 监控服务类,提供:
+ *   - 状态监控:
+ *     - updateAllCropsStatus: 更新所有玩家的作物状态(定时任务)
+ *     - checkCropStatus: 检查单块土地作物状态
+ *     - checkAllCropsStatus: 检查玩家所有作物状态
+ *   - 收获调度 (Redis ZSet):
+ *     - scheduleHarvest: 注册收获调度
+ *     - removeHarvestSchedule: 移除收获调度
+ *     - getDueHarvestSchedules: 获取到期调度列表
+ *   - 护理调度 (多检查点抽奖模式):
+ *     - scheduleCare: 注册护理检查点
+ *     - _processCareSchedules: 处理护理调度
+ *
+ * Pos: 服务层子服务,统一管理作物状态监控和收获调度,合并了 CropStatusService 和 CropScheduleService 功能
+ *
+ * 调度机制:
+ * - 收获调度: Redis ZSet (key: farm_game:schedule:harvest, score: harvestAt timestamp)
+ * - 护理调度: 多检查点抽奖模式 (key: farm_game:schedule:care)
+ * - 定时任务定期扫描到期任务并执行状态更新
  */
 
 import { PlantingUtils } from './PlantingUtils.js';

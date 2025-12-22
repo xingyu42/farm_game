@@ -1,6 +1,13 @@
 /**
- * 统一物品解析器工具类
- * 提供一致的物品信息访问接口，消除代码重复
+ * @fileoverview 物品解析器 - 统一物品信息查询接口
+ *
+ * Input:
+ * - Config (通过构造函数传入) - 全局配置对象,包含 items.categories 和各类物品配置
+ *
+ * Output:
+ * - ItemResolver (default) - 物品解析器类,提供物品查询、分类识别、配置访问方法
+ *
+ * Pos: 工具类层,负责物品ID/名称解析、分类识别,被服务层和模型层广泛使用
  */
 
 class ItemResolver {

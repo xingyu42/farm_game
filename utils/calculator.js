@@ -1,6 +1,19 @@
 ﻿/**
- * 计算器工具类 - 提供游戏中各种计算功能
- * 包括土地品质加成、作物产量、经验计算等核心逻辑
+ * @fileoverview 游戏计算器 - 土地加成、产量、经验值计算
+ *
+ * Input:
+ * - ./ItemResolver.js - ItemResolver (物品配置查询)
+ * - ./CommonUtils.js - CommonUtils (通用工具函数)
+ *
+ * Output:
+ * - Calculator (default) - 游戏计算器类,提供静态方法:
+ *   - calculateGrowTime: 计算带土地品质加成的生长时间
+ *   - calculateYield: 计算带土地品质加成的作物产量
+ *   - getTotalItems: 统计仓库总物品数量
+ *   - calculateExpGain: 计算经验值增益
+ *   - calculatePrice: 计算价格(含浮动)
+ *
+ * Pos: 工具类层,封装所有游戏数值计算逻辑,确保计算规则统一
  */
 
 import ItemResolver from './ItemResolver.js';

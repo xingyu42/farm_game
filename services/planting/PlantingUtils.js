@@ -1,7 +1,29 @@
 /**
- * 种植工具类
- * 整合种植相关的验证和序列化功能，提供统一的工具接口
- * 合并了 PlantingValidator 和 PlantingSerializer 的功能
+ * @fileoverview 种植工具类 - 验证 + 序列化统一工具 (Validator + Serializer)
+ *
+ * Input:
+ * - ../../models/Land.js - Land (土地领域模型)
+ * - ../../utils/calculator.js - Calculator (容量计算)
+ * - ../../utils/CommonUtils.js - CommonUtils (通用工具,物品数量提取)
+ *
+ * Output:
+ * - PlantingUtils (default) - 种植工具类,提供:
+ *   - 验证功能:
+ *     - validatePlayerData: 验证玩家数据存在性
+ *     - validateLandId: 验证土地编号有效性
+ *     - validateLandForPlanting: 验证土地种植条件
+ *     - validateLandForHarvest: 验证土地收获条件
+ *     - validateCareOperation: 验证护理操作条件
+ *     - validateInventorySpace: 验证仓库容量
+ *   - 序列化功能:
+ *     - serializeLand: Land实例 → 简单对象
+ *     - deserializeLand: 简单对象 → Land实例
+ *
+ * Pos: 服务层工具类,整合种植相关的验证和序列化功能,合并了 PlantingValidator 和 PlantingSerializer
+ *
+ * 统一验证规则:
+ * - 所有验证方法失败时返回错误对象 { success: false, message: string }
+ * - 验证成功时返回 null
  */
 
 import Land from '../../models/Land.js';

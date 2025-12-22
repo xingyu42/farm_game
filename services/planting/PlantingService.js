@@ -1,7 +1,30 @@
 /**
- * 种植服务 - 管理作物种植、生长和收获（门面模式）
- * 基于PRD v3.2设计，实现核心的种植收获循环
- * 重构为门面模式，委托给专门的服务处理，保持接口兼容性
+ * @fileoverview 种植服务 - 种植系统 Facade 门面 (PRD v3.2)
+ *
+ * Input:
+ * - ./CropPlantingService.js - CropPlantingService (作物种植专门服务)
+ * - ./CropHarvestService.js - CropHarvestService (作物收获专门服务)
+ * - ./CropCareService.js - CropCareService (作物护理专门服务)
+ * - ./CropMonitorService.js - CropMonitorService (作物监控服务)
+ * - plantingDataService - (依赖注入,种植数据持久化)
+ * - inventoryService - (依赖注入,仓库服务)
+ * - landService - (依赖注入,土地服务)
+ * - playerService - (依赖注入,玩家服务)
+ *
+ * Output:
+ * - PlantingService (default) - 种植服务 Facade,提供统一接口:
+ *   - plantCrop: 种植作物
+ *   - harvestCrop: 收获作物
+ *   - waterCrop: 浇水护理
+ *   - checkCrops: 查看作物状态
+ *   - checkAllCropsStatus: 批量查看所有作物
+ *
+ * Pos: 服务层 Facade,将种植系统拆分为专门服务(种植、收获、护理、监控),保持接口兼容性
+ *
+ * 架构说明 (Facade Pattern):
+ * - 委托给专门服务处理具体业务逻辑
+ * - 保持向后兼容的统一接口
+ * - 简化调用方使用复杂度
  */
 
 import CropPlantingService from './CropPlantingService.js';

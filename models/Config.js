@@ -1,3 +1,19 @@
+/**
+ * @fileoverview 配置管理器 - YAML配置热加载与文件监听
+ *
+ * Input:
+ * - yaml - YAML 解析库
+ * - chokidar - 文件监听库
+ * - fs, path - 文件系统操作
+ * - lodash - 深度合并工具
+ * - config/*.yaml - 所有配置文件 (crops, items, land, levels, market, steal)
+ *
+ * Output:
+ * - Config (default) - 全局配置单例,提供所有游戏配置的访问接口
+ *
+ * Pos: 模型层配置中心,管理所有 YAML 配置文件的加载、热更新、合并
+ */
+
 import YAML from 'yaml';
 import chokidar from 'chokidar';
 import fs from 'fs';

@@ -1,11 +1,33 @@
 /**
- * 服务依赖注入的中央入口（增强版本）
- * 所有业务服务将在这里实例化和导出
- * 
- * 新增功能：
- * 1. 集成新的工具类（CommonUtils）
- * 2. 增强的MarketScheduler和MarketService
- * 3. 简化的配置和日志系统
+ * @fileoverview 服务依赖注入容器 - 中央服务管理器
+ *
+ * Input:
+ * - ../models/Config.js - 配置管理器
+ * - ../utils/redisClient.js - Redis客户端
+ * - ../utils/CommonUtils.js - 通用工具类
+ * - ../utils/ItemResolver.js - 物品解析器
+ * - ./player/* - 玩家相关服务集合
+ * - ./planting/* - 种植相关服务集合
+ * - ./market/* - 市场相关服务集合
+ * - ./admin/* - 管理员服务集合
+ * - ./system/* - 系统服务集合
+ *
+ * Output:
+ * - ServiceContainer - 服务容器单例 (提供所有业务服务的访问接口)
+ *
+ * Pos: 服务层核心,实现依赖注入模式,按拓扑顺序初始化所有业务服务并解决循环依赖
+ *
+ * 服务初始化顺序 (拓扑排序):
+ * 1. Config, CommonUtils, ItemResolver (基础工具)
+ * 2. PlayerService (核心依赖)
+ * 3. AdminService, GlobalStatsService, PlayerStatsService, EconomyService (独立服务)
+ * 4. InventoryService, LandService (依赖 PlayerService)
+ * 5. PlantingDataService, PlantingService (依赖 InventoryService + LandService)
+ * 6. ShopService (依赖 InventoryService + PlayerService)
+ * 7. ProtectionService (注入回 PlayerService - 解决循环依赖)
+ * 8. StealService (依赖多个服务)
+ * 9. MarketService, MarketScheduler (市场子系统)
+ * 10. DataBackupService (数据备份)
  */
 
 // 导入配置和通用工具

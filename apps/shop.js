@@ -1,6 +1,15 @@
 /**
- * 商店功能命令处理器 (Miao-Yunzai 插件)
- * 处理玩家商店相关指令：查看商店、购买、出售、市场价格等
+ * @fileoverview 商店交易应用层 - 查看商店、购买、出售
+ *
+ * Input:
+ * - ../services/index.js - ServiceContainer (获取 ShopService, PlayerService, MarketService)
+ * - ../models/services.js - Puppeteer (图片渲染)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - ShopCommands (class) - 商店指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层商店模块,处理交易指令 (#商店/#购买/#出售/#市场)
  */
 
 // {{CHENGQI:

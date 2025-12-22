@@ -1,18 +1,29 @@
+/**
+ * @fileoverview 文件存储抽象层 - 统一的文件读写接口
+ *
+ * Input:
+ * - node:fs/promises - 异步文件操作
+ * - node:path - 路径处理
+ * - node:url - URL to 文件路径转换
+ * - yaml - YAML 解析和序列化
+ *
+ * Output:
+ * - FileStorage (class) - 文件存储操作类,提供:
+ *   - readYAML: 读取 YAML 文件
+ *   - writeYAML: 写入 YAML 文件
+ *   - readJSON: 读取 JSON 文件
+ *   - writeJSON: 写入 JSON 文件
+ *   - ensureDir: 确保目录存在
+ *   - deleteFile: 删除文件
+ *   - exists: 检查文件是否存在
+ *
+ * Pos: 工具类层,为 PlayerYamlStorage 和其他需要文件操作的模块提供统一接口
+ */
+
 // {{CHENGQI:
 // Action: Added; Timestamp: 2025-01-30; Reason: Shrimp Task ID: #ab881598-451c-498e-9305-7566f7991892, Creating file storage utility as per PRD 6.2 structure;
 // }}
 // {{START MODIFICATIONS}}
-
-/**
- * 文件存储操作工具类
- * 提供统一的文件读写接口，支持JSON和YAML数据持久化
- *
- * 功能：
- * - 统一的文件读写接口
- * - JSON和YAML数据持久化支持
- * - 目录管理功能
- * - 异步文件操作
- */
 
 import fs from 'node:fs/promises'
 import path, { join, dirname } from 'node:path'

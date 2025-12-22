@@ -1,6 +1,35 @@
 /**
- * 偷窃核心服务 - 实现完整的偷窃逻辑
- * 包含成功率计算、双重锁机制、防重复偷取等功能
+ * @fileoverview 偷窃核心服务 - 偷菜系统完整实现 (PRD T10)
+ *
+ * Input:
+ * - ../../utils/CommonUtils.js - CommonUtils (通用工具)
+ * - playerService - (依赖注入,玩家服务)
+ * - inventoryService - (依赖注入,仓库服务)
+ * - protectionService - (依赖注入,防御服务)
+ * - landService - (依赖注入,土地服务)
+ *
+ * Output:
+ * - StealService (class) - 偷窃服务类,提供:
+ *   - executeSteal: 执行偷窃操作(主入口)
+ *   - _calculateStealSuccess: 计算偷窃成功率
+ *   - _selectRandomTarget: 随机选择偷窃目标土地
+ *   - _calculateStealAmount: 计算偷窃数量
+ *   - _updateStealStatistics: 更新偷窃统计
+ *
+ * Pos: 服务层子服务,负责偷菜系统(成功率计算、数量波动、防护检测、双重锁)
+ *
+ * 业务逻辑:
+ * - 双重分布式锁: 同时锁定偷窃者和目标玩家,避免并发冲突
+ * - 成功率计算: 基础成功率 + 等级差异修正
+ * - 防护检测: 检查目标防护状态,触发防护消耗
+ * - 偷窃数量: 基础数量 ± 随机波动(配置项 stealAmountVariation)
+ * - CD检测: 检查偷窃冷却时间
+ * - 防重复: 同一用户今日只能偷一次
+ *
+ * 并发安全:
+ * - 使用 Redis 分布式锁(redisClient.acquireBatchLock)
+ * - 固定顺序锁定(attackerId < targetId ? [a, t] : [t, a])
+ * - 避免死锁
  */
 
 import { CommonUtils } from '../../utils/CommonUtils.js';

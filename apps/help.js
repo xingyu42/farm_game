@@ -1,11 +1,19 @@
+/**
+ * @fileoverview 帮助文档应用层 - 游戏指令帮助和使用指南
+ *
+ * Input:
+ * - lodash - 对象合并工具
+ * - ../models/services.js - Data (配置导入), Puppeteer (图片渲染)
+ * - ../../../lib/plugins/plugin.js - Miao-Yunzai 插件基类
+ *
+ * Output:
+ * - HelpCommands (class) - 帮助指令处理器,导出给 index.js 动态加载
+ *
+ * Pos: 应用层帮助模块,处理帮助查询指令 (#农场帮助)
+ */
+
 import lodash from 'lodash'
 import { Data, Puppeteer } from '../models/services.js'
-
-/**
- * 农场游戏帮助系统 (Miao-Yunzai 插件)
- * 提供全面的游戏命令帮助和使用指南
- * 帮助系统命令处理器，使用图片渲染
- */
 export class HelpCommands extends plugin {
   constructor() {
     super({

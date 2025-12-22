@@ -1,16 +1,20 @@
 /**
- * 公共工具类 - 消除代码重复，提供统一API
+ * @fileoverview 通用工具集 - 时间、随机数、数组、对象操作
  *
- * 该工具类旨在解决项目中的代码重复问题，提供高质量、可复用的通用功能。
- * 所有方法都是静态方法，可以直接调用，无需实例化。
+ * Input:
+ * - (无外部依赖,纯静态工具类)
  *
- * 主要功能：
- * 1. 仓库使用率计算
- * 2. 参数验证工具（价格、数量）
- * 3. 安全数学计算（浮点精度处理）
- * 4. 数字格式化工具
+ * Output:
+ * - CommonUtils (class) - 通用工具类,提供静态方法集合:
+ *   - 时间工具: getRemainingMinutes, formatDuration, getCurrentTimestamp
+ *   - 随机工具: getRandomInt, getRandomFloat, getRandomElement, shuffleArray
+ *   - 数组工具: removeDuplicates, chunkArray, flattenArray
+ *   - 对象工具: deepClone, deepMerge, isEmpty
+ *   - 仓库工具: getInventoryUsagePercent
+ *   - 验证工具: 价格、数量验证,浮点精度处理
  *
- * @author Claude Code
+ * Pos: 工具类层核心,被所有层级广泛使用的通用函数库
+ *
  * @version 1.1.0
  */
 export class CommonUtils {

@@ -1,7 +1,33 @@
 /**
- * 数据备份服务
- * 定期备份YAML文件中的玩家数据到JSON文件
- * 支持自动清理旧备份文件，确保存储空间可控
+ * @fileoverview 数据备份服务 - 定期备份 YAML → JSON
+ *
+ * Input:
+ * - ../../utils/fileStorage.js - FileStorage (JSON文件操作)
+ * - ../../utils/playerYamlStorage.js - PlayerYamlStorage (YAML数据读取)
+ *
+ * Output:
+ * - DataBackupService (default) - 数据备份服务类,提供:
+ *   - start: 启动备份服务(定时任务)
+ *   - stop: 停止备份服务
+ *   - performBackup: 执行一次备份操作
+ *   - cleanupOldBackups: 清理旧备份文件
+ *
+ * Pos: 服务层系统服务,负责定期备份玩家数据并清理旧备份
+ *
+ * 备份机制:
+ * - 定期扫描 YAML 文件(data/players/*.yaml)
+ * - 备份到 JSON 文件(data/backups/backup_{timestamp}.json)
+ * - 自动清理旧备份(保留最近 maxBackups 个)
+ *
+ * 配置项 (config.backup):
+ * - enabled: 是否启用备份
+ * - interval: 备份间隔(毫秒)
+ * - maxBackups: 最大保留备份数量
+ * - filePrefix: 备份文件前缀
+ * - startDelay: 启动延迟(毫秒)
+ * - compress: 是否压缩(预留)
+ * - retryCount: 重试次数
+ * - retryInterval: 重试间隔(毫秒)
  */
 
 import { FileStorage } from '../../utils/fileStorage.js';

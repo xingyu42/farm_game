@@ -1,7 +1,20 @@
 /**
- * 玩家 YAML 存储工具类
- * 用于长周期玩家数据的 YAML 文件读写操作
- * 存储目录：data/players/
+ * @fileoverview 玩家 YAML 存储 - 玩家数据持久化到 YAML 文件
+ *
+ * Input:
+ * - ./fileStorage.js - FileStorage (文件操作抽象层)
+ *
+ * Output:
+ * - PlayerYamlStorage (class) - 玩家 YAML 存储类,提供:
+ *   - readPlayer: 读取玩家 YAML 数据
+ *   - writePlayer: 写入玩家 YAML 数据
+ *   - deletePlayer: 删除玩家 YAML 文件
+ *   - exists: 检查玩家文件是否存在
+ *   - listAllPlayers: 列出所有玩家文件
+ *
+ * Pos: 工具类层,被 PlayerDataService 使用,负责玩家数据的 YAML 持久化
+ *
+ * 存储路径: data/players/{userId}.yaml
  */
 
 import { FileStorage } from './fileStorage.js'

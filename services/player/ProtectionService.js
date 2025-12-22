@@ -1,6 +1,28 @@
 /**
- * 防御机制服务
- * 负责管理狗粮等防御效果，与Player模型的protection字段完全兼容
+ * @fileoverview 防御机制服务 - 狗粮防护系统管理
+ *
+ * Input:
+ * - ../../utils/ItemResolver.js - ItemResolver (物品配置查询)
+ * - playerService - (依赖注入,玩家服务,用于仓库和数据操作)
+ *
+ * Output:
+ * - ProtectionService (class) - 防御服务类,提供:
+ *   - applyDogFood: 应用狗粮防御效果
+ *   - checkProtection: 检查玩家当前防护状态
+ *   - consumeProtection: 消耗一次防护次数
+ *
+ * Pos: 服务层子服务,负责狗粮防护系统(防御效果应用、防护状态查询、防护消耗)
+ *
+ * 业务逻辑:
+ * - 狗粮分类: category === 'defense'
+ * - 防护字段: Player.protection { count, endTime }
+ * - 防护效果: 基于物品配置 effect.duration 和 effect.stealProtectionCount
+ * - 状态检查: 检查防护次数和过期时间
+ * - 防护消耗: 偷窃失败时消耗一次防护次数
+ *
+ * 循环依赖解决:
+ * - ProtectionService 和 PlayerService 循环依赖
+ * - 通过构造函数注入 PlayerService 实例解决
  */
 
 import ItemResolver from '../../utils/ItemResolver.js';
