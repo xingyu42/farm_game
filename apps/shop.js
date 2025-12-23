@@ -66,6 +66,7 @@ export class ShopCommands extends plugin {
     this.shopService = serviceContainer.getService('shopService');
     this.playerService = serviceContainer.getService('playerService');
     this.marketService = serviceContainer.getService('marketService');
+    this.stealService = serviceContainer.getService('stealService');
   }
 
   /**
@@ -223,7 +224,21 @@ export class ShopCommands extends plugin {
       // 确保玩家存在
       if (!(await this.playerService.isPlayer(userId))) return e.reply('您未注册，请先"#nc注册"')
 
-      // 执行购买
+      // 解析物品信息，判断是否为工具类
+      const itemResolver = this.shopService.itemResolver;
+      const itemId = itemResolver.findItemByName(itemName);
+
+      if (itemId) {
+        const itemConfig = itemResolver.findItemById(itemId);
+        // 工具类购买后直接装备
+        if (itemConfig?.category === 'tools') {
+          const result = await this._buyAndEquipTool(userId, itemId, itemConfig, quantity);
+          await e.reply(result.message);
+          return true;
+        }
+      }
+
+      // 非工具类走原有流程
       const result = await this.shopService.buyItem(userId, itemName, quantity);
 
       if (result.success) {
@@ -239,6 +254,92 @@ export class ShopCommands extends plugin {
       await e.reply('❌ 购买失败，请稍后再试');
       return true;
     }
+  }
+
+  /**
+   * 购买工具并直接装备
+   * @param {string} userId 用户ID
+   * @param {string} toolId 工具ID
+   * @param {Object} toolConfig 工具配置
+   * @param {number} quantity 购买数量
+   * @returns {Object} 结果
+   * @private
+   */
+  async _buyAndEquipTool(userId, toolId, toolConfig, quantity) {
+    // 工具只能购买1个并直接装备
+    if (quantity > 1) {
+      return { success: false, message: `❌ 工具购买后直接装备，每次只能购买1个` };
+    }
+
+    const playerData = await this.playerService.getPlayer(userId);
+
+    // 检查等级要求
+    if (playerData.level < (toolConfig.requiredLevel || 1)) {
+      return {
+        success: false,
+        message: `❌ 等级不足！${toolConfig.name} 需要 ${toolConfig.requiredLevel} 级，您当前 ${playerData.level} 级`
+      };
+    }
+
+    // 检查金币
+    const price = toolConfig.price || 0;
+    if (playerData.coins < price) {
+      return {
+        success: false,
+        message: `❌ 金币不足！${toolConfig.name} 需要 ${price} 金币，您当前 ${playerData.coins} 金币`
+      };
+    }
+
+    // 扣除金币
+    const economyService = this.playerService.getEconomyService();
+    await economyService.removeCoins(userId, price);
+
+    // 直接装备工具
+    await this.stealService.equipStealTool(userId, toolId);
+
+    // 获取更新后的金币
+    const updatedPlayer = await this.playerService.getPlayer(userId);
+
+    // 使用配置驱动构建效果文本
+    const effectsText = this._buildEffectsTextFromConfig(toolConfig);
+
+    return {
+      success: true,
+      message: [
+        `✅ 购买并装备 ${toolConfig.name}`,
+        `💰 花费: ${price} 金币 | 剩余: ${updatedPlayer.coins} 金币`,
+        ``,
+        `🔧 工具效果:`,
+        effectsText,
+        ``,
+        `💡 下次偷菜时自动生效，使用后消耗`,
+        `⏰ 有效期: 24小时内未使用将自动失效`
+      ].join('\n')
+    };
+  }
+
+  /**
+   * 从配置构建效果文本（复用 effectMappings）
+   * @param {Object} itemConfig 物品配置
+   * @returns {string} 效果文本
+   * @private
+   */
+  _buildEffectsTextFromConfig(itemConfig) {
+    const mappings = this.shopService.config.items?.effectMappings;
+    if (!mappings) return '   无特殊效果';
+
+    const effects = [];
+    for (const [path, mapping] of Object.entries(mappings)) {
+      const value = this._getValueByPath(itemConfig, path);
+      if (value === undefined || value === null) continue;
+
+      const formatted = this._formatEffectValue(value, mapping);
+      if (formatted !== null) {
+        effects.push(`   ${mapping.label}: ${formatted}`);
+      }
+    }
+
+    return effects.length > 0 ? effects.join('\n') : '   无特殊效果';
   }
 
   /**

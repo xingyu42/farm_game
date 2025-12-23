@@ -353,43 +353,39 @@ defense:
     maxStack: 20
     duration: 1440 # 持续24小时
     icon: "twemoji:bone"
-# 偷菜工具配置（未来扩展）
+# 偷菜工具配置（一次性装备，偷菜后消耗）
 tools:
   basic_lockpick:
     name: "基础开锁器"
-    price: 100
+    price: 1000
     category: "tools"
-    description: "提高偷菜成功率的基础工具"
-    requiredLevel: 5
-    maxStack: 10
-    effect:
-      successRateBonus: 10 # +10%成功率
-      duration: 60 # 持续60分钟
-    icon: "twemoji:locked-with-key"
-  advanced_gloves:
-    name: "隐形手套"
-    price: 250
-    category: "tools"
-    description: "减少被发现概率的高级工具"
+    description: "一次性装备，下次偷菜成功率+10%"
     requiredLevel: 10
     maxStack: 10
     effect:
+      successRateBonus: 10 # +10%成功率
+    icon: "twemoji:locked-with-key"
+  advanced_gloves:
+    name: "高级手套"
+    price: 5000
+    category: "tools"
+    description: "一次性装备，下次偷菜成功率+20%"
+    requiredLevel: 25
+    maxStack: 10
+    effect:
       successRateBonus: 20 # +20%成功率
-      stealthBonus: 15 # +15%隐匿加成
-      duration: 90 # 持续90分钟
     icon: "twemoji:gloves"
   master_toolkit:
     name: "大师工具包"
-    price: 500
+    price: 50000
     category: "tools"
-    description: "专业偷菜者的终极装备"
-    requiredLevel: 15
+    description: "一次性装备，成功率+35%，收益+25%，冷却-20%"
+    requiredLevel: 40
     maxStack: 5
     effect:
       successRateBonus: 35 # +35%成功率
       rewardBonus: 25 # +25%收益加成
       cooldownReduction: 20 # -20%冷却时间
-      duration: 120 # 持续120分钟
     icon: "twemoji:wrench"
 
 # 分类定义
@@ -456,18 +452,12 @@ effectMappings:
   "effect.successRateBonus":
     label: "成功率"
     format: "plus_percent"
-  "effect.stealthBonus":
-    label: "隐匿加成"
-    format: "plus_percent"
   "effect.rewardBonus":
     label: "收益加成"
     format: "plus_percent"
   "effect.cooldownReduction":
     label: "冷却缩减"
     format: "minus_percent"
-  "effect.duration":
-    label: "持续时间"
-    format: "minutes"
   # 作物效果
   "growTime":
     label: "生长时间"

@@ -63,6 +63,101 @@ export class StealService {
     logger.info('[StealService] 偷窃服务已初始化');
   }
 
+  // ==========================================
+  // 偷菜工具系统 - 一次性装备
+  // Redis Key: farm_game:steal:tool:{userId}
+  // 策略: 装备后单次偷菜生效，使用后消耗
+  // ==========================================
+
+  /**
+   * 装备偷菜工具
+   * @param {string} userId 用户ID
+   * @param {string} toolId 工具ID
+   * @returns {Object} 装备结果
+   */
+  async equipStealTool(userId, toolId) {
+    const toolsConfig = this.config.items?.tools;
+    if (!toolsConfig || !toolsConfig[toolId]) {
+      throw new Error(`未知的工具: ${toolId}`);
+    }
+
+    const toolConfig = toolsConfig[toolId];
+    const effect = toolConfig.effect || {};
+
+    const equipData = {
+      toolId,
+      toolName: toolConfig.name,
+      stats: {
+        successRateBonus: effect.successRateBonus || 0,
+        rewardBonus: effect.rewardBonus || 0,
+        cooldownReduction: effect.cooldownReduction || 0
+      },
+      equippedAt: Date.now()
+    };
+
+    const redisKey = `farm_game:steal:tool:${userId}`;
+    // 24小时过期防止永久占用，实际在偷菜后主动删除
+    await this.redisClient.setex(redisKey, 86400, JSON.stringify(equipData));
+
+    logger.info(`[StealService] 玩家 ${userId} 装备工具 ${toolConfig.name}`);
+
+    return {
+      success: true,
+      toolId,
+      toolName: toolConfig.name,
+      stats: equipData.stats,
+      message: `成功装备 ${toolConfig.name}，下次偷菜时生效`
+    };
+  }
+
+  /**
+   * 获取已装备的偷菜工具
+   * @param {string} userId 用户ID
+   * @returns {Object|null} 工具数据或null
+   * @private
+   */
+  async _getEquippedTool(userId) {
+    try {
+      const redisKey = `farm_game:steal:tool:${userId}`;
+      const rawData = await this.redisClient.client.get(redisKey);
+      if (!rawData) return null;
+      return JSON.parse(rawData);
+    } catch (error) {
+      logger.warn(`[StealService] 获取装备工具失败 [${userId}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 消耗已装备的工具（偷菜后调用）
+   * @param {string} userId 用户ID
+   * @private
+   */
+  async _consumeEquippedTool(userId) {
+    const redisKey = `farm_game:steal:tool:${userId}`;
+    await this.redisClient.del(redisKey);
+  }
+
+  /**
+   * 获取装备工具状态（供UI显示）
+   * @param {string} userId 用户ID
+   * @returns {Object} 工具状态
+   */
+  async getEquippedToolStatus(userId) {
+    const tool = await this._getEquippedTool(userId);
+    if (!tool) {
+      return { equipped: false, message: '未装备工具' };
+    }
+
+    return {
+      equipped: true,
+      toolId: tool.toolId,
+      toolName: tool.toolName,
+      stats: tool.stats,
+      message: `已装备 ${tool.toolName}`
+    };
+  }
+
   /**
    * 执行偷窃操作 - 主要入口方法
    * @param {string} attackerId 偷窃者ID
@@ -103,6 +198,9 @@ export class StealService {
    * @private
    */
   async _executeStealCore(attackerId, targetId) {
+    // 0. 获取装备的工具（一次获取，整个流程使用）
+    const equippedTool = await this._getEquippedTool(attackerId);
+
     // 1. 检查冷却状态（在锁内检查，避免竞态条件）
     const cooldownStatus = await this.getStealCooldownStatus(attackerId);
     if (!cooldownStatus.canSteal) {
@@ -127,16 +225,21 @@ export class StealService {
       throw new Error('目标没有可偷取的作物');
     }
 
-    // 5. 计算偷窃成功率
-    const successRate = await this._calculateSuccessRate(attackerId, targetId);
+    // 5. 计算偷窃成功率（应用工具加成）
+    const successRate = await this._calculateSuccessRate(attackerId, targetId, equippedTool);
 
     // 6. 执行偷窃判定
     const isSuccess = Math.random() * 100 < successRate;
 
+    // 7. 消耗装备的工具（无论成功失败都消耗）
+    if (equippedTool) {
+      await this._consumeEquippedTool(attackerId);
+    }
+
     if (isSuccess) {
-      return await this._handleStealSuccess(attackerId, targetId, stealableLands, successRate);
+      return await this._handleStealSuccess(attackerId, targetId, stealableLands, successRate, equippedTool);
     } else {
-      return await this._handleStealFailure(attackerId, targetId, successRate);
+      return await this._handleStealFailure(attackerId, targetId, successRate, equippedTool);
     }
   }
 
@@ -146,10 +249,11 @@ export class StealService {
    * @param {string} targetId 目标用户ID
    * @param {Array} stealableLands 可偷取的土地
    * @param {number} successRate 成功率
+   * @param {Object|null} equippedTool 装备的工具
    * @returns {Object} 成功结果
    * @private
    */
-  async _handleStealSuccess(attackerId, targetId, stealableLands, successRate) {
+  async _handleStealSuccess(attackerId, targetId, stealableLands, successRate, equippedTool = null) {
     const rewards = [];
     const cropsConfig = this.config.crops || {};
     let inventoryFull = false;
@@ -163,8 +267,8 @@ export class StealService {
         continue;
       }
 
-      // 计算偷取数量
-      const stealAmount = this._calculateStealAmount(land, cropConfig);
+      // 计算偷取数量（应用工具加成）
+      const stealAmount = this._calculateStealAmount(land, cropConfig, equippedTool);
 
       if (stealAmount > 0) {
         const addResult = await this.inventoryService.addItem(attackerId, land.crop, stealAmount);
@@ -189,7 +293,7 @@ export class StealService {
     // 检查是否实际偷到东西
     if (rewards.length === 0) {
       // 未偷到任何东西，仅设置冷却，不设置目标保护
-      await this._setStealCooldown(attackerId);
+      await this._setStealCooldown(attackerId, equippedTool);
       await this._recordStealAttempt(attackerId, targetId);
 
       return {
@@ -198,12 +302,13 @@ export class StealService {
         successRate,
         rewards: [],
         totalStolen: 0,
+        usedTool: equippedTool?.toolName || null,
         message: inventoryFull ? '仓库容量不足，偷到的作物放不下' : '没有获得任何作物'
       };
     }
 
-    // 设置偷窃冷却
-    await this._setStealCooldown(attackerId);
+    // 设置偷窃冷却（应用工具加成）
+    await this._setStealCooldown(attackerId, equippedTool);
 
     // 设置目标保护
     await this.protectionService.setFarmProtection(
@@ -220,6 +325,7 @@ export class StealService {
       successRate,
       rewards,
       totalStolen: rewards.reduce((sum, r) => sum + r.quantity, 0),
+      usedTool: equippedTool?.toolName || null,
       message: `偷窃成功！获得了 ${rewards.length} 种作物`
     };
   }
@@ -229,12 +335,13 @@ export class StealService {
    * @param {string} attackerId 偷窃者ID
    * @param {string} targetId 目标用户ID
    * @param {number} successRate 成功率
+   * @param {Object|null} equippedTool 装备的工具
    * @returns {Object} 失败结果
    * @private
    */
-  async _handleStealFailure(attackerId, targetId, successRate) {
-    // 设置偷窃冷却（失败也有冷却）
-    await this._setStealCooldown(attackerId);
+  async _handleStealFailure(attackerId, targetId, successRate, equippedTool = null) {
+    // 设置偷窃冷却（失败也有冷却，应用工具加成）
+    await this._setStealCooldown(attackerId, equippedTool);
 
     // 记录偷窃记录
     await this._recordStealAttempt(attackerId, targetId);
@@ -243,6 +350,7 @@ export class StealService {
       success: false,
       result: 'steal_failed',
       successRate,
+      usedTool: equippedTool?.toolName || null,
       message: '偷窃失败！被发现了'
     };
   }
@@ -393,10 +501,11 @@ export class StealService {
    * 计算偷窃成功率
    * @param {string} attackerId 偷窃者ID
    * @param {string} targetId 目标用户ID
+   * @param {Object|null} equippedTool 装备的工具
    * @returns {number} 成功率（0-100）
    * @private
    */
-  async _calculateSuccessRate(attackerId, targetId) {
+  async _calculateSuccessRate(attackerId, targetId, equippedTool = null) {
     try {
       const baseRate = this.stealConfig.basic.baseSuccessRate;
       const factors = this.stealConfig.successRateFactors;
@@ -414,6 +523,12 @@ export class StealService {
       const levelFactor = factors.levelDifferenceFactor;
       finalRate += levelDiff * levelFactor * 10; // 每级差异影响1%（levelFactor * 10）
 
+      // 应用工具成功率加成
+      if (equippedTool?.stats?.successRateBonus) {
+        finalRate += equippedTool.stats.successRateBonus;
+        logger.debug(`[StealService] 工具加成: +${equippedTool.stats.successRateBonus}% 成功率`);
+      }
+
       // 限制成功率范围
       const maxRate = factors.maxSuccessRate;
       const minRate = factors.minSuccessRate;
@@ -429,10 +544,12 @@ export class StealService {
   /**
    * 计算偷取数量
    * @param {Object} land 土地对象
+   * @param {Object} cropConfig 作物配置
+   * @param {Object|null} equippedTool 装备的工具
    * @returns {number} 偷取数量
    * @private
    */
-  _calculateStealAmount(land, cropConfig) {
+  _calculateStealAmount(land, cropConfig, equippedTool = null) {
     try {
       const rewardConfig = this.stealConfig.rewards;
       const baseRate = rewardConfig.baseRewardRate;
@@ -458,7 +575,14 @@ export class StealService {
       stealRate = Math.min(maxRate, stealRate);
 
       // 计算基础偷取数量
-      const baseAmount = baseYield * stealRate;
+      let baseAmount = baseYield * stealRate;
+
+      // 应用工具收益加成
+      if (equippedTool?.stats?.rewardBonus) {
+        const rewardMultiplier = 1 + (equippedTool.stats.rewardBonus / 100);
+        baseAmount *= rewardMultiplier;
+        logger.debug(`[StealService] 工具加成: +${equippedTool.stats.rewardBonus}% 收益`);
+      }
 
       // 应用随机波动
       const randomFactor = randomRange.min + Math.random() * (randomRange.max - randomRange.min);
@@ -474,11 +598,20 @@ export class StealService {
   /**
    * 设置偷窃冷却
    * @param {string} userId 用户ID
+   * @param {Object|null} equippedTool 装备的工具
    * @private
    */
-  async _setStealCooldown(userId) {
+  async _setStealCooldown(userId, equippedTool = null) {
     try {
-      const cooldownMinutes = this.stealConfig.basic.cooldownMinutes;
+      let cooldownMinutes = this.stealConfig.basic.cooldownMinutes;
+
+      // 应用工具冷却缩减
+      if (equippedTool?.stats?.cooldownReduction) {
+        const reduction = cooldownMinutes * (equippedTool.stats.cooldownReduction / 100);
+        cooldownMinutes = Math.max(1, cooldownMinutes - reduction); // 最少1分钟冷却
+        logger.debug(`[StealService] 工具加成: -${equippedTool.stats.cooldownReduction}% 冷却时间`);
+      }
+
       const cooldownMs = cooldownMinutes * 60 * 1000;
       const cooldownEnd = Date.now() + cooldownMs;
 

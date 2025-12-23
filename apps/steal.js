@@ -14,11 +14,13 @@
 
 import serviceContainer from '../services/index.js'
 import Config from '../models/Config.js'
+import ItemResolver from '../utils/ItemResolver.js'
+
 export class steal extends plugin {
   constructor() {
     super({
       name: '偷菜与防御',
-      dsc: '偷菜、使用狗粮、查看防护状态等功能',
+      dsc: '偷菜、使用狗粮等功能',
       event: 'message',
       priority: 5000,
       rule: [
@@ -35,6 +37,7 @@ export class steal extends plugin {
 
     // 初始化配置
     this.config = Config
+    this.itemResolver = new ItemResolver(Config)
 
     // 初始化服务
     this._initServices();
@@ -186,6 +189,10 @@ export class steal extends plugin {
       message += `🎉 偷菜成功！\n`
       message += `成功率: ${result.successRate}%\n`
 
+      if (result.usedTool) {
+        message += `使用工具: ${result.usedTool}\n`
+      }
+
       if (result.rewards && result.rewards.length > 0) {
         message += `获得奖励:\n`
         const merged = new Map()
@@ -202,6 +209,10 @@ export class steal extends plugin {
     } else {
       message += `😅 偷菜失败！\n`
       message += `成功率: ${result.successRate}%`
+
+      if (result.usedTool) {
+        message += `\n使用工具: ${result.usedTool} (已消耗)`
+      }
     }
 
     return message
