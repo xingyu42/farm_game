@@ -1,5 +1,5 @@
 /**
- * @fileoverview 经济服务 - 金币和经验值管理 + 升级奖励发放
+ * @fileoverview 经济服务 - 金币和经验值管理
  *
  * Input:
  * - ./PlayerDataService.js - PlayerDataService (玩家数据持久化)
@@ -10,13 +10,13 @@
  *   - changeCoins: 通用金币变更接口(正数增加、负数减少)
  *   - addCoins: 增加金币
  *   - deductCoins: 扣除金币
- *   - addExperience: 增加经验值(自动检测升级并发放奖励)
+ *   - addExperience: 增加经验值(自动检测升级)
  *
- * Pos: 服务层子服务,负责玩家经济系统(金币、经验值、升级奖励)
+ * Pos: 服务层子服务,负责玩家经济系统(金币、经验值)
  *
  * 业务逻辑:
  * - 金币操作: 统计记录(totalMoneyEarned/totalMoneySpent)
- * - 经验值操作: 自动升级检测 + 升级奖励发放(金币)
+ * - 经验值操作: 自动升级检测 + 解锁物品通知
  * - 所有操作通过 executeWithTransaction 保证原子性
  * - 内部使用 _updateCoinsInTransaction 和 _updateExpInTransaction 工具方法
  */
@@ -140,20 +140,13 @@ class EconomyService {
      * @returns {Object} 升级信息
      */
     async _handleLevelUp(playerData, oldLevel, newLevel) {
-        const rewards = this.levelCalculator.getLevelUpRewards(oldLevel, newLevel);
+        const levelInfo = this.levelCalculator.getLevelUpRewards(oldLevel, newLevel);
         const unlockedItems = this.levelCalculator.getUnlockedItems(oldLevel, newLevel);
-
-        // 应用奖励
-        playerData.coins += rewards.totalCoins;
-        // 注意：土地槽位现在只通过土地扩展系统管理，不再通过等级奖励增加
-
-        // 更新统计
-        playerData.statistics.totalMoneyEarned += rewards.totalCoins;
 
         return {
             oldLevel,
             newLevel,
-            rewards,
+            levelsGained: levelInfo.levelsGained,
             unlockedItems
         };
     }

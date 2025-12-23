@@ -507,11 +507,6 @@ requirements:
     description: "无上农神"
     unlocks: ["至尊徽章", "永恒之果"]
 
-# 等级奖励配置
-rewards:
-  levelUp:
-    coins: 50 # 每次升级获得金币
-
 # 经验来源配置
 experienceSources:
   planting: 2 # 种植获得经验

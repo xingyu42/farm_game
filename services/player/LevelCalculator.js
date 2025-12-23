@@ -1,20 +1,20 @@
 /**
- * @fileoverview 等级计算工具 - 经验值与等级转换 + 升级奖励计算
+ * @fileoverview 等级计算工具 - 经验值与等级转换
  *
  * Input:
- * - config - 游戏配置对象 (levels.requirements, levels.rewards)
+ * - config - 游戏配置对象 (levels.requirements)
  *
  * Output:
- * - LevelCalculator (default) - 等级计算工具类,提供静态方法:
+ * - LevelCalculator (default) - 等级计算工具类,提供方法:
  *   - calculateLevel: 根据经验值计算玩家等级
- *   - getLevelUpRewards: 计算升级奖励(金币、物品等)
+ *   - getLevelUpRewards: 获取升级信息(等级数)
+ *   - getUnlockedItems: 获取升级解锁的物品
  *
  * Pos: 服务层工具类,负责经验值系统的数值计算逻辑
  *
  * 计算逻辑:
  * - 基于配置表 config.levels.requirements 查找当前等级
  * - 从高到低遍历等级表,找到满足经验要求的最高等级
- * - 升级奖励根据 config.levels.rewards.levelUp 配置计算
  */
 
 class LevelCalculator {
@@ -51,21 +51,14 @@ class LevelCalculator {
     }
 
     /**
-     * 计算升级奖励
+     * 获取升级信息
      * @param {number} oldLevel 旧等级
      * @param {number} newLevel 新等级
-     * @returns {Object} 奖励信息
+     * @returns {Object} 升级信息
      */
     getLevelUpRewards(oldLevel, newLevel) {
-        const levelUpRewards = this.config.levels.rewards.levelUp;
-        const coinsPerLevel = levelUpRewards.coins;
-
-        const levelsGained = newLevel - oldLevel;
-
         return {
-            levelsGained,
-            totalCoins: coinsPerLevel * levelsGained
-            // 注意：landSlots奖励已移除，土地槽位现在只通过土地扩展系统管理
+            levelsGained: newLevel - oldLevel
         };
     }
 

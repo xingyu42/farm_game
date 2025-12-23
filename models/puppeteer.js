@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Puppeteer 渲染器 - 浏览器实例管理与图片渲染
+ *
+ * Input:
+ * - puppeteer - 无头浏览器控制库
+ * - node:path, node:fs, node:url - Node.js内置模块
+ * - lodash - 工具库
+ * - lib/renderer/loader.js - Yunzai渲染器加载器
+ * - ./constants.js - 路径常量
+ *
+ * Output:
+ * - Puppeteer (default) - 渲染器类,提供:
+ *   - browserInit: 初始化浏览器实例
+ *   - renderVue: Vue模板客户端渲染
+ *   - render: HTML模板渲染
+ *   - close: 关闭浏览器
+ *
+ * Pos: 模型层渲染器,负责Chromium实例管理和页面截图
+ */
 import puppeteer from 'puppeteer'
 import path from 'path'
 import fs from 'fs'
@@ -7,11 +26,6 @@ import Renderer from '../../../lib/renderer/loader.js'
 import { _path, PLUGIN_NAME } from '../models/constants.js'
 
 const renderer = Renderer.getRenderer()
-
-/**
- *  Puppeteer 管理器
- * 负责浏览器实例管理和渲染功能
- */
 class Puppeteer {
   constructor(logger) {
     this.browser = null
