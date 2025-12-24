@@ -4,6 +4,7 @@
  * Input:
  * - ./taskScheduler.js - TaskScheduler (统一任务调度器)
  * - marketService - (依赖注入,市场服务)
+ * - cropMonitorService - (依赖注入,可选,作物监控服务)
  *
  * Output:
  * - MarketScheduler (class) - 调度器集成层,提供:
@@ -19,6 +20,7 @@
  *
  * 定时任务:
  * - dailyPriceUpdate: 每日价格更新(基于 cron 配置)
+ * - processCareSchedules: 护理调度处理(间隔执行)
  * - 使用 TaskScheduler 统一调度
  * - 使用 Redis 分布式锁避免多实例重复执行
  *
@@ -28,7 +30,7 @@
 import { TaskScheduler } from './taskScheduler.js';
 
 export class MarketScheduler {
-  constructor(marketService, redisClient, config) {
+  constructor(marketService, redisClient, config, cropMonitorService = null) {
     // 保持向后兼容的属性
     this.marketService = marketService;
     this.redis = redisClient;
@@ -38,7 +40,8 @@ export class MarketScheduler {
     // 组装新架构组件
     this.scheduler = new TaskScheduler({
       marketService,
-      lockManager: redisClient, // 直接使用 redisClient，它有 withLock 方法
+      cropMonitorService,
+      lockManager: redisClient,
       rawConfig: config
     });
   }

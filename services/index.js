@@ -230,6 +230,7 @@ class ServiceContainer {
         this.services.marketService,
         redisClient,
         config,
+        this.services.plantingService.cropMonitorService
       );
 
       this.initialized = true;

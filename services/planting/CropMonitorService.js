@@ -887,6 +887,20 @@ class CropMonitorService {
     }
 
     /**
+     * 获取到期的护理调度数量（用于空闲轮询优化）
+     * @param {number} currentTime 当前时间戳
+     * @returns {Promise<number>} 到期的护理调度数量
+     */
+    async getPendingCareScheduleCount(currentTime = Date.now()) {
+        try {
+            return await this.redis.client.zCount(this.careScheduleKey, 0, currentTime);
+        } catch (error) {
+            logger.error(`[CropMonitorService] 获取护理调度数量失败: ${error.message}`);
+            return 0;
+        }
+    }
+
+    /**
      * 获取到期的护理调度
      * @param {number} currentTime 当前时间戳
      * @returns {Promise<Array>} 到期的护理调度列表

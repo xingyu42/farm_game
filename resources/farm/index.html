@@ -133,7 +133,7 @@
                 <!-- Crop -->
                 <div v-else-if="plot.crop" class="relative w-full h-full flex justify-center items-center">
                     <div v-if="plot.state === 'growing'" class="absolute w-11 h-11 rounded-full opacity-60"
-                         :style="getProgressStyle(plot.progress, plot.alert)"></div>
+                         :style="getProgressStyle(plot.progress, plot.needsWater, plot.hasPests)"></div>
                     <span class="iconify text-2xl z-10 drop-shadow-sm filter select-none"
                           :class="{'scale-110': plot.state === 'ready'}"
                           :data-icon="plot.cropIcon"></span>
@@ -149,10 +149,10 @@
                 <div v-if="plot.state === 'ready'" class="absolute -top-1.5 -right-1.5 badge badge-xs badge-warning w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
                     <span class="iconify text-[10px] text-stone-800" data-icon="fa6-solid:check"></span>
                 </div>
-                <div v-if="plot.alert === 'water'" class="absolute -bottom-1.5 -right-1.5 badge badge-xs badge-info w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
+                <div v-if="plot.needsWater" class="absolute -bottom-1.5 -right-1.5 badge badge-xs badge-info w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
                     <span class="iconify text-[10px] text-white" data-icon="ion:water"></span>
                 </div>
-                <div v-if="plot.alert === 'pest'" class="absolute -bottom-1.5 -right-1.5 badge badge-xs badge-error w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
+                <div v-if="plot.hasPests" class="absolute -top-1.5 -right-1.5 badge badge-xs badge-error w-5 h-5 p-0 border-2 border-white shadow-sm flex items-center justify-center z-20">
                     <span class="iconify text-[10px] text-white" data-icon="fa6-solid:bug"></span>
                 </div>
             </div>
@@ -211,11 +211,12 @@
                         crop: land.isEmpty ? null : (land.cropName || 'crop'),
                         cropIcon: land.cropIcon || '',
                         progress: land.growthPercent ?? 0,
-                        alert: land.hasPests ? 'pest' : (land.needsWater ? 'water' : null),
+                        needsWater: land.needsWater || false,
+                        hasPests: land.hasPests || false,
                         isLocked: false
                     });
                 } else {
-                    initialPlots.push({ id: i, state: 'locked', quality: 'normal', isLocked: true, crop: null, alert: null, progress: 0, cropIcon: '' });
+                    initialPlots.push({ id: i, state: 'locked', quality: 'normal', isLocked: true, crop: null, needsWater: false, hasPests: false, progress: 0, cropIcon: '' });
                 }
             }
 
@@ -226,7 +227,7 @@
             const stats = computed(() => ({
                 planted: plots.value.filter(p => p.state === 'growing' || p.state === 'ready').length,
                 ready: plots.value.filter(p => p.state === 'ready').length,
-                issues: plots.value.filter(p => p.alert).length
+                issues: plots.value.filter(p => p.needsWater || p.hasPests).length
             }));
 
             const getPlotClass = (plot) => {
@@ -235,10 +236,10 @@
                 return plot.state === 'growing' ? 'plot-base wet' : 'plot-base dry';
             };
 
-            const getProgressStyle = (percent, alert) => {
+            const getProgressStyle = (percent, needsWater, hasPests) => {
                 let color = '#76ff03';
-                if (alert === 'water') color = '#fb923c';
-                if (alert === 'pest') color = '#ef4444';
+                if (hasPests) color = '#ef4444';
+                else if (needsWater) color = '#fb923c';
                 return {
                     background: `conic-gradient(${color} ${percent}%, transparent 0)`,
                     '-webkit-mask': 'radial-gradient(transparent 58%, black 60%)',

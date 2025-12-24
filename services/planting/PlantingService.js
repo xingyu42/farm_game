@@ -85,6 +85,14 @@ class PlantingService {
   }
 
   /**
+   * 获取作物监控服务实例（供外部调度器使用）
+   * @returns {CropMonitorService} 作物监控服务
+   */
+  get cropMonitorService() {
+    return this._cropMonitorService;
+  }
+
+  /**
    * 种植作物
    * @param {string} userId 用户ID
    * @param {number} landId 土地编号
