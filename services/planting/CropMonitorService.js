@@ -110,6 +110,15 @@ class CropMonitorService {
     }
 
     /**
+     * 处理待执行的护理调度（供 MarketScheduler / TaskScheduler 调用）
+     * @param {number} currentTime 当前时间戳
+     * @returns {Object} 处理结果
+     */
+    async processPendingCareSchedules(currentTime = Date.now()) {
+        return await this._processCareSchedules(currentTime);
+    }
+
+    /**
      * 更新单个玩家的作物状态
      * @param {string} userId 用户ID
      * @param {Array} landSchedules 土地计划列表
