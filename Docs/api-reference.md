@@ -271,12 +271,12 @@ constructor() {
   super({
     name: '插件名称',
     dsc: '插件描述',
-    task: {
+  })
+    this.task = {
       name: '任务名称',
       cron: '0 0 * * *',  // cron表达式
       fnc: 'taskMethod'   // 执行方法
     }
-  })
 }
 
 async taskMethod() {

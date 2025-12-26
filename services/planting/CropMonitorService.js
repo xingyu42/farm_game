@@ -58,17 +58,14 @@ class CropMonitorService {
             let updatedPlayersCount = 0;
             let updatedLandsCount = 0;
 
-            // 1. 处理护理调度（多检查点抽奖模式）
-            const careResult = await this._processCareSchedules(now);
-
-            // 2. 高效获取所有到期的作物成员
+            // 1. 高效获取所有到期的作物成员（收获调度）
             const dueSchedules = await this.getDueHarvestSchedules(now);
 
             if (dueSchedules && dueSchedules.length > 0) {
-                // 3. 按玩家ID对需要更新的土地进行分组
+                // 2. 按玩家ID对需要更新的土地进行分组
                 const updatesByUser = await this.getDueSchedulesByUser(now);
 
-                // 4. 批量处理每个玩家的更新
+                // 3. 批量处理每个玩家的更新
                 for (const userId in updatesByUser) {
                     try {
                         // 使用分布式锁确保数据一致性
@@ -85,14 +82,14 @@ class CropMonitorService {
                     }
                 }
 
-                // 5. 从计划中移除已处理的成员
+                // 4. 从计划中移除已处理的成员
                 const dueMembers = dueSchedules.map(schedule => schedule.member);
                 await this.batchRemoveHarvestSchedules(dueMembers);
             }
 
-            const hasUpdates = updatedLandsCount > 0 || careResult.triggeredCount > 0;
+            const hasUpdates = updatedLandsCount > 0;
             if (hasUpdates) {
-                logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态，触发${careResult.triggeredCount}个护理事件`);
+                logger.info(`[CropMonitorService] 更新了${updatedPlayersCount}个玩家的${updatedLandsCount}块土地状态`);
             }
 
             return {
@@ -100,7 +97,7 @@ class CropMonitorService {
                 updatedPlayers: updatedPlayersCount,
                 updatedLands: updatedLandsCount,
                 processedSchedules: dueSchedules?.length || 0,
-                careEvents: careResult
+                careSchedules: 0 // 护理调度已独立处理，见 processPendingCareSchedules()
             };
 
         } catch (error) {
@@ -205,11 +202,7 @@ class CropMonitorService {
                 hasUpdates = true;
             }
 
-            // 检查是否需要护理
-            this._updateCareNeeds(landUpdates, landData, now);
-            if (Object.keys(landUpdates).length > 0) {
-                hasUpdates = true;
-            }
+            // 护理需求由调度系统处理 (见 addCareSchedulesForCrop)
 
             if (hasUpdates) {
                 await this.plantingDataService.updateLandCropData(userId, landId, landUpdates);
@@ -637,14 +630,15 @@ class CropMonitorService {
 
                 const { value: member, score } = popped[0];
 
-                // 检查是否真的到期
+                // 检查是否真的到期 (score > now 表示未到期)
                 if (score > now) {
-                    // 未到期，放回去
+                    // 未到期，放回并终止循环（ZSet 有序，后续任务必然也未到期）
                     await this.redis.client.zAdd(this.careScheduleKey, {
                         score: score,
                         value: member
                     });
-                    break;
+                    logger.debug(`[CropMonitorService] 遇到未到期护理检查点，终止处理: ${member}, score=${score}, now=${now}`);
+                    break; // 优化：ZSet 严格有序，遇到未到期任务立即终止
                 }
 
                 // 解析成员信息: userId:landId:careType:checkpointIndex
@@ -680,9 +674,9 @@ class CropMonitorService {
                     }, 'processCare');
                 } catch (error) {
                     logger.error(`[CropMonitorService] 处理护理事件失败 [${schedule.userId}][${schedule.landId}]: ${error.message}`);
-                    // 处理失败，将成员重新加入调度（延迟5秒后重试）
+                    // 处理失败，将成员重新加入调度（延迟 30 秒后重试，自然限制重试次数）
                     await this.redis.client.zAdd(this.careScheduleKey, {
-                        score: now + 5000,
+                        score: now + 30000,
                         value: member
                     });
                 }
@@ -964,29 +958,6 @@ class CropMonitorService {
         } catch (error) {
             logger.error(`[CropMonitorService] 移除护理调度失败: ${error.message}`);
             return { success: false, message: error.message };
-        }
-    }
-
-    /**
-     * 更新护理需求（保留兼容性，但不再由定时任务调用）
-     * @deprecated 使用多检查点调度模式替代
-     * @private
-     */
-    _updateCareNeeds(landUpdate, landData, now) {
-        // 检查是否需要生成新的护理需求
-        if (landData.status === 'growing') {
-            const timeSincePlant = now - landData.plantTime;
-            const totalGrowTime = landData.harvestTime - landData.plantTime;
-            const growthProgress = timeSincePlant / totalGrowTime;
-
-            // 在生长过程中随机生成护理需求
-            if (growthProgress > 0.3 && !landData.needsWater && Math.random() < 0.12) {
-                landUpdate.needsWater = true;
-            }
-
-            if (growthProgress > 0.5 && !landData.hasPests && Math.random() < 0.10) {
-                landUpdate.hasPests = true;
-            }
         }
     }
 

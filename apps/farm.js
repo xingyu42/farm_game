@@ -54,21 +54,26 @@ export class farm extends plugin {
           reg: '^#(nc)?收获$',
           fnc: 'harvestAllCrops'
         }
-      ],
-      // 添加定时任务，检查作物状态
-      task: [
-        {
-          cron: '0 * * * * *',  // 每分钟的第0秒执行
-          name: '更新作物状态',
-          fnc: () => this.updateCropsStatus()
-        },
-        {
-          cron: '*/30 * * * * *',  // 每30秒执行一次
-          name: '处理护理调度',
-          fnc: () => this.processCareSchedules()
-        }
       ]
     })
+
+    /**
+     * 注意：Miao-Yunzai 当前的 `lib/plugins/plugin.js` 会将传入的 `task` 归一化为对象，
+     * 若在 super(...) 里直接传数组会被覆盖，导致 loader 收集不到任务。
+     * 因此这里在 super(...) 之后显式设置 `this.task`（支持数组，见 `lib/plugins/loader.js:594`）。
+     */
+    this.task = [
+      {
+        cron: '0 * * * * *', // 每分钟的第0秒执行
+        name: '更新作物状态',
+        fnc: () => this.updateCropsStatus()
+      },
+      {
+        cron: '*/30 * * * * *', // 每30秒执行一次
+        name: '处理护理调度',
+        fnc: () => this.processCareSchedules()
+      }
+    ]
 
     // 初始化配置
     this.config = Config
