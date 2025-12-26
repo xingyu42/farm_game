@@ -3,7 +3,6 @@
  *
  * Input:
  * - marketService - (依赖注入,市场服务,提供业务方法)
- * - cropMonitorService - (依赖注入,可选,作物监控服务,护理调度)
  * - lockManager - (依赖注入,Redis客户端,分布式锁)
  * - rawConfig - (依赖注入,游戏配置对象)
  *
@@ -31,15 +30,13 @@
  *
  * 任务映射:
  * - dailyPriceUpdate: marketService.executeDailyPriceUpdate()
- * - processCareSchedules: cropMonitorService.processPendingCareSchedules()
  *
  * @version 1.0.0
  */
 
 export class TaskScheduler {
-    constructor({ marketService, cropMonitorService, lockManager, rawConfig }) {
+    constructor({ marketService, lockManager, rawConfig }) {
         this.marketService = marketService;
-        this.cropMonitorService = cropMonitorService;
         this.lockManager = lockManager;
 
         // 解析配置
@@ -53,23 +50,8 @@ export class TaskScheduler {
 
         // 任务映射表（构造时预绑定，移除运行时可选链开销）
         this.taskMapping = {
-            dailyPriceUpdate: () => this.marketService.executeDailyPriceUpdate(),
-            processCareSchedules: cropMonitorService
-                ? () => this._processCareSchedulesWithCheck()
-                : () => Promise.resolve({ skipped: true, reason: 'service_not_available' })
+            dailyPriceUpdate: () => this.marketService.executeDailyPriceUpdate()
         };
-    }
-
-    /**
-     * 带空闲检查的护理调度处理（优化轮询）
-     * @private
-     */
-    async _processCareSchedulesWithCheck() {
-        const count = await this.cropMonitorService.getPendingCareScheduleCount();
-        if (count === 0) {
-            return { skipped: true, reason: 'no_pending_schedules' };
-        }
-        return this.cropMonitorService.processPendingCareSchedules();
     }
 
     /**

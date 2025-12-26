@@ -59,14 +59,6 @@ scheduler:
       enabled: true # 启用任务
       description: "每日价格更新任务（归档供应历史+计算新价格+重置计数器）"
 
-    - name: processCareSchedules
-      type: interval # 间隔执行任务
-      interval: 30 # 每30秒执行一次
-      timeout: 60 # 1分钟超时（秒）
-      retry_attempts: 1 # 重试1次
-      enabled: true # 启用任务
-      description: "护理调度处理（检查缺水/虫害触发）"
-
 # 事务配置
 transaction:
   lock_timeout: 600 # 事务锁超时时间（秒）

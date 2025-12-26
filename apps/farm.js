@@ -61,6 +61,11 @@ export class farm extends plugin {
           cron: '0 * * * * *',  // 每分钟的第0秒执行
           name: '更新作物状态',
           fnc: () => this.updateCropsStatus()
+        },
+        {
+          cron: '*/30 * * * * *',  // 每30秒执行一次
+          name: '处理护理调度',
+          fnc: () => this.processCareSchedules()
         }
       ]
     })
@@ -516,6 +521,34 @@ export class farm extends plugin {
       await this.plantingService.updateAllCropsStatus()
     } catch (error) {
       logger.error('[农场游戏] 更新作物状态失败:', error)
+    }
+  }
+
+  /**
+   * 处理护理调度（每30秒执行一次）
+   * 检查并触发到期的护理需求（缺水/虫害）
+   */
+  async processCareSchedules() {
+    try {
+      const cropMonitorService = this.plantingService.cropMonitorService;
+      if (!cropMonitorService) {
+        logger.warn('[农场游戏] cropMonitorService 不可用，跳过护理调度处理');
+        return;
+      }
+
+      // 先检查是否有待处理的调度（优化空闲轮询）
+      const count = await cropMonitorService.getPendingCareScheduleCount();
+      if (count === 0) {
+        return; // 没有待处理的调度，静默返回
+      }
+
+      // 处理到期的护理调度
+      const result = await cropMonitorService.processPendingCareSchedules();
+      if (result?.triggeredCount > 0) {
+        logger.info(`[农场游戏] 护理调度处理完成: 触发了${result.triggeredCount}个护理事件`);
+      }
+    } catch (error) {
+      logger.error('[农场游戏] 处理护理调度失败:', error);
     }
   }
 
