@@ -314,7 +314,7 @@ fertilizer:
 # 杀虫剂配置
 pesticide:
   pesticide_basic:
-    name: "基础杀虫剂"
+    name: "杀虫剂"
     price: 8
     category: "pesticide"
     description: "清除作物害虫"

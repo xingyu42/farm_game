@@ -624,20 +624,25 @@ class CropMonitorService {
             while (processedInBatch < maxBatchSize) {
                 // 原子弹出一个最早到期的成员
                 const popped = await this.redis.client.zPopMin(this.careScheduleKey);
-                if (!popped || popped.length === 0) {
+                if (!popped) {
                     break; // 没有更多到期成员
                 }
 
-                const { value: member, score } = popped[0];
+                const { value: member, score } = popped;
+                const scoreNumber = Number(score);
+                if (!Number.isFinite(scoreNumber)) {
+                    logger.warn(`[CropMonitorService] 无效的护理调度 score: ${score}`);
+                    continue;
+                }
 
                 // 检查是否真的到期 (score > now 表示未到期)
-                if (score > now) {
+                if (scoreNumber > now) {
                     // 未到期，放回并终止循环（ZSet 有序，后续任务必然也未到期）
                     await this.redis.client.zAdd(this.careScheduleKey, {
-                        score: score,
+                        score: scoreNumber,
                         value: member
                     });
-                    logger.debug(`[CropMonitorService] 遇到未到期护理检查点，终止处理: ${member}, score=${score}, now=${now}`);
+                    logger.debug(`[CropMonitorService] 遇到未到期护理检查点，终止处理: ${member}, score=${scoreNumber}, now=${now}`);
                     break; // 优化：ZSet 严格有序，遇到未到期任务立即终止
                 }
 
