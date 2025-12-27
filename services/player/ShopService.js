@@ -35,6 +35,7 @@
  */
 import ItemResolver from '../../utils/ItemResolver.js';
 import { CommonUtils } from '../../utils/CommonUtils.js';
+import { playerYamlStorage } from '../../utils/playerYamlStorage.js';
 
 export class ShopService {
   constructor(redisClient, config, inventoryService, playerService, serviceContainer = null) {
@@ -52,6 +53,70 @@ export class ShopService {
       averageTransactionTime: 0,
       lastTransactionTime: null
     };
+  }
+
+  /**
+   * 获取土地收益权服务（可选）
+   * @private
+   */
+  _getLandTradeService() {
+    if (!this.serviceContainer) return null;
+    try {
+      return this.serviceContainer.getService('landTradeService');
+    } catch {
+      return null;
+    }
+  }
+
+  /** @private */
+  _collectSoldHolderIds(playerData) {
+    const holderSet = new Set();
+    const lands = Array.isArray(playerData?.lands) ? playerData.lands : [];
+    for (const land of lands) {
+      const trade = land?.trade;
+      if (trade?.status === 'sold' && trade?.sold?.holderId) {
+        holderSet.add(trade.sold.holderId);
+      }
+    }
+    return [...holderSet];
+  }
+
+  /**
+   * 出售作物（涉及跨用户分红）时的锁包装：一次性获取 地主+所有持有人 锁，避免死锁
+   * @private
+   */
+  async _withCropDividendLocks(ownerId, operation, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const rawOwner = await playerYamlStorage.readPlayer(ownerId, null).catch(() => null);
+      const snapshotHolders = rawOwner ? this._collectSoldHolderIds(rawOwner) : [];
+      const snapshotSet = new Set(snapshotHolders);
+
+      try {
+        return await this.redis.withUserLocks([ownerId, ...snapshotHolders], async () => {
+          // 二次校验：确保锁集合覆盖最新持有人（否则释放后重试）
+          const owner = await this.playerService.getPlayer(ownerId);
+          if (!owner) {
+            return { success: false, message: '玩家不存在' };
+          }
+          const currentHolders = this._collectSoldHolderIds(owner);
+          const missing = currentHolders.filter(hid => !snapshotSet.has(hid));
+          if (missing.length > 0) {
+            const err = new Error('CROP_DIVIDEND_LOCKSET_CHANGED');
+            err._retry = true;
+            throw err;
+          }
+
+          return await operation();
+        }, 'sell_crop_dividend', 30);
+      } catch (error) {
+        if (error?._retry && attempt < maxRetries) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    // 理论不会走到这里
+    throw new Error('CROP_DIVIDEND_LOCKSET_CHANGED');
   }
 
   /**
@@ -431,7 +496,7 @@ export class ShopService {
 
       // 获取当前出售价格
       const unitPrice = await this._getItemPrice(itemId);
-      const totalValue = CommonUtils.calcCoins(unitPrice, quantity);
+      const totalValue = Math.floor(CommonUtils.calcCoins(unitPrice, quantity));
 
       // 获取玩家数据
       const player = await this.playerService.getPlayer(userId);
@@ -453,40 +518,73 @@ export class ShopService {
         };
       }
 
-      // 执行出售事务：移除物品 + 增加金币
-      return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
-        // 使用 InventoryService 移除物品
-        const removeResult = await this.inventoryService.removeItem(userId, itemId, quantity);
+      const landTradeService = itemInfo.category === 'crops' ? this._getLandTradeService() : null;
 
+      // 出售作物需要跨用户分红：使用一次性多锁避免死锁
+      if (itemInfo.category === 'crops' && landTradeService) {
+        return await this._withCropDividendLocks(userId, async () => {
+          const removeResult = await this.inventoryService.removeItem(userId, itemId, quantity);
+          if (!removeResult.success) {
+            return { success: false, message: removeResult.message };
+          }
+
+          const economyService = this.playerService.getEconomyService();
+          await economyService.addCoins(userId, totalValue);
+
+          const dividendInfo = await landTradeService.distributeDividend(userId, totalValue);
+          const finalPlayer = await this.playerService.getPlayer(userId);
+
+          await this._recordTransactionSafely(itemId, quantity, 'sell');
+
+          const duration = Date.now() - startTime;
+          this._updateTransactionStats(totalValue, duration);
+
+          const dividendText = dividendInfo?.success && dividendInfo.totalDividend > 0
+            ? `\n本次分红：${CommonUtils.formatNumber(dividendInfo.totalDividend)} 金币（净得 ${CommonUtils.formatNumber(totalValue - dividendInfo.totalDividend)}）`
+            : dividendInfo && dividendInfo.success === false
+              ? `\n分红失败：${dividendInfo.message || '未知错误'}`
+              : '';
+
+          return {
+            success: true,
+            message: `成功出售 ${quantity} 个 ${itemInfo.name}，获得 ${CommonUtils.formatNumber(totalValue)} 金币${dividendText}`,
+            remainingCoins: CommonUtils.formatNumber(finalPlayer.coins),
+            remainingItems: removeResult.remaining,
+            transaction: {
+              itemId,
+              itemName: itemInfo.name,
+              quantity,
+              unitPrice,
+              totalValue,
+              totalDividend: dividendInfo?.success ? (dividendInfo.totalDividend || 0) : 0,
+              remainingCoins: finalPlayer.coins,
+              remainingItems: removeResult.remaining
+            }
+          };
+        });
+      }
+
+      // 非作物出售：保持原有单用户锁逻辑
+      return await this.playerService.dataService.executeWithTransaction(userId, async () => {
+        const removeResult = await this.inventoryService.removeItem(userId, itemId, quantity);
         if (!removeResult.success) {
-          // 如果移除物品失败，通过抛出错误让事务回滚
           throw new Error(`移除物品失败: ${removeResult.message}`);
         }
 
-        // 获取 EconomyService 实例
         const economyService = this.playerService.getEconomyService();
-
-        // 增加金币
         await economyService.addCoins(userId, totalValue);
 
-        // 获取更新后的玩家数据
-        const updatedPlayer = await this.playerService.getPlayer(userId);
+        const finalPlayer = await this.playerService.getPlayer(userId);
 
-        // 更新统计数据
-        if (updatedPlayer.statistics) {
-          updatedPlayer.statistics.totalMoneyEarned += totalValue;
-        }
-
-        // 记录交易统计（不影响主流程）
         await this._recordTransactionSafely(itemId, quantity, 'sell');
 
         const duration = Date.now() - startTime;
         this._updateTransactionStats(totalValue, duration);
 
-        const result = {
+        return {
           success: true,
           message: `成功出售 ${quantity} 个 ${itemInfo.name}，获得 ${CommonUtils.formatNumber(totalValue)} 金币`,
-          remainingCoins: CommonUtils.formatNumber(updatedPlayer.coins),
+          remainingCoins: CommonUtils.formatNumber(finalPlayer.coins),
           remainingItems: removeResult.remaining,
           transaction: {
             itemId,
@@ -494,12 +592,11 @@ export class ShopService {
             quantity,
             unitPrice,
             totalValue,
-            remainingCoins: updatedPlayer.coins,
+            totalDividend: 0,
+            remainingCoins: finalPlayer.coins,
             remainingItems: removeResult.remaining
           }
         };
-
-        return result;
       });
 
     } catch (error) {
@@ -579,27 +676,86 @@ export class ShopService {
       }
 
       // 计算总价值（对累加结果再次处理，消除浮点精度漂移）
-      const totalValue = CommonUtils.calcCoins(
+      const totalValue = Math.floor(CommonUtils.calcCoins(
         cropItems.reduce((sum, crop) => sum + CommonUtils.calcCoins(crop.unitPrice, crop.quantity), 0),
         1
-      );
+      ));
 
-      // 执行批量出售事务：移除所有作物 + 增加金币
-      return await this.playerService.dataService.executeWithTransaction(userId, async (dataService, userId) => {
-        // 获取 EconomyService 实例
+      const landTradeService = this._getLandTradeService();
+
+      // 执行批量出售（作物）+ 分红：使用一次性多锁避免死锁
+      if (landTradeService) {
+        return await this._withCropDividendLocks(userId, async () => {
+          const economyService = this.playerService.getEconomyService();
+
+          const soldDetails = [];
+          for (const crop of cropItems) {
+            const removeResult = await this.inventoryService.removeItem(userId, crop.itemId, crop.quantity);
+            if (!removeResult.success) {
+              throw new Error(`移除作物失败: ${crop.itemId} - ${removeResult.message}`);
+            }
+
+            const itemInfo = this.itemResolver.getItemInfo(crop.itemId);
+            soldDetails.push({
+              itemId: crop.itemId,
+              itemName: itemInfo.name,
+              quantity: crop.quantity,
+              unitPrice: crop.unitPrice,
+              totalValue: CommonUtils.calcCoins(crop.unitPrice, crop.quantity)
+            });
+
+            await this._recordTransactionSafely(crop.itemId, crop.quantity, 'sell');
+          }
+
+          await economyService.addCoins(userId, totalValue);
+
+          const dividendInfo = await landTradeService.distributeDividend(userId, totalValue);
+          const finalPlayer = await this.playerService.getPlayer(userId);
+
+          const duration = Date.now() - startTime;
+          this._updateTransactionStats(totalValue, duration);
+
+          const updatedInventoryData = await this.inventoryService.getInventory(userId);
+          const lockedNote = skippedLocked.length > 0 ? `（跳过 ${skippedLocked.length} 种锁定作物）` : '';
+          const dividendText = dividendInfo?.success && dividendInfo.totalDividend > 0
+            ? `\n本次分红：${CommonUtils.formatNumber(dividendInfo.totalDividend)} 金币（净得 ${CommonUtils.formatNumber(totalValue - dividendInfo.totalDividend)}）`
+            : dividendInfo && dividendInfo.success === false
+              ? `\n分红失败：${dividendInfo.message || '未知错误'}`
+              : '';
+
+          return {
+            success: true,
+            message: `成功出售 ${cropItems.length} 种作物，获得 ${CommonUtils.formatNumber(totalValue)} 金币${lockedNote}${dividendText}`,
+            remainingCoins: CommonUtils.formatNumber(finalPlayer.coins),
+            soldDetails,
+            skippedLocked,
+            totalValue,
+            inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
+            transaction: {
+              cropCount: cropItems.length,
+              totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0),
+              totalValue,
+              totalDividend: dividendInfo?.success ? (dividendInfo.totalDividend || 0) : 0,
+              remainingCoins: finalPlayer.coins,
+              inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
+              soldDetails,
+              skippedLocked
+            }
+          };
+        });
+      }
+
+      // 若 landTradeService 不存在，回退到原有逻辑（无分红）
+      return await this.playerService.dataService.executeWithTransaction(userId, async () => {
         const economyService = this.playerService.getEconomyService();
 
-        // 批量移除作物并记录每种作物的出售详情
         const soldDetails = [];
         for (const crop of cropItems) {
-          // 使用 InventoryService 移除物品
           const removeResult = await this.inventoryService.removeItem(userId, crop.itemId, crop.quantity);
-
           if (!removeResult.success) {
             throw new Error(`移除作物失败: ${crop.itemId} - ${removeResult.message}`);
           }
 
-          // 记录出售详情
           const itemInfo = this.itemResolver.getItemInfo(crop.itemId);
           soldDetails.push({
             itemId: crop.itemId,
@@ -608,51 +764,38 @@ export class ShopService {
             unitPrice: crop.unitPrice,
             totalValue: CommonUtils.calcCoins(crop.unitPrice, crop.quantity)
           });
-
-          // 记录交易统计（不影响主流程）
           await this._recordTransactionSafely(crop.itemId, crop.quantity, 'sell');
         }
 
-        // 增加金币
         await economyService.addCoins(userId, totalValue);
 
-        // 获取更新后的玩家数据
-        const updatedPlayer = await this.playerService.getPlayer(userId);
-
-        // 更新统计数据
-        if (updatedPlayer.statistics) {
-          updatedPlayer.statistics.totalMoneyEarned += totalValue;
-        }
+        const finalPlayer = await this.playerService.getPlayer(userId);
 
         const duration = Date.now() - startTime;
         this._updateTransactionStats(totalValue, duration);
 
-        // 获取仓库数据计算使用率
         const updatedInventoryData = await this.inventoryService.getInventory(userId);
+        const lockedNote = skippedLocked.length > 0 ? `（跳过 ${skippedLocked.length} 种锁定作物）` : '';
 
-        const lockedNote = skippedLocked.length > 0
-          ? `（跳过 ${skippedLocked.length} 种锁定作物）`
-          : '';
-        const result = {
+        return {
           success: true,
           message: `成功出售 ${cropItems.length} 种作物，获得 ${CommonUtils.formatNumber(totalValue)} 金币${lockedNote}`,
-          remainingCoins: CommonUtils.formatNumber(updatedPlayer.coins),
-          soldDetails: soldDetails,
-          skippedLocked: skippedLocked,
-          totalValue: totalValue,
+          remainingCoins: CommonUtils.formatNumber(finalPlayer.coins),
+          soldDetails,
+          skippedLocked,
+          totalValue,
           inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
           transaction: {
             cropCount: cropItems.length,
             totalQuantity: cropItems.reduce((sum, crop) => sum + crop.quantity, 0),
-            totalValue: totalValue,
-            remainingCoins: updatedPlayer.coins,
+            totalValue,
+            totalDividend: 0,
+            remainingCoins: finalPlayer.coins,
             inventoryUsage: `${updatedInventoryData.usage}/${updatedInventoryData.capacity}`,
-            soldDetails: soldDetails,
-            skippedLocked: skippedLocked
+            soldDetails,
+            skippedLocked
           }
         };
-
-        return result;
       });
 
     } catch (error) {

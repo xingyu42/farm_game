@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>土地买卖契约</title>
+    <link rel="stylesheet" href="../common/lib/daisyui.css">
+    <script src="../common/lib/vue.js"></script>
+    <script src="../common/lib/unocss.js"></script>
+    <script src="../common/lib/iconify.js"></script>
+    <style>[v-cloak] { display: none; }</style>
+</head>
+<body class="bg-transparent w-230">
+
+<div id="app" v-cloak class="w-230 p-4">
+    <!-- 主卷轴容器 -->
+    <div class="relative w-220 mx-auto pt-3 pb-3">
+
+        <!-- 卷轴顶部木轴 -->
+        <div class="absolute -top-3 -left-3 -right-3 h-6 z-10
+            bg-[#8b6914] border-3 border-[#3d2914] rounded-full
+            shadow-[0_4px_8px_rgba(0,0,0,0.4),inset_0_3px_0_#d4a574,inset_0_-3px_0_#5c4a1f]">
+        </div>
+
+        <!-- 卷轴底部木轴 -->
+        <div class="absolute -bottom-3 -left-3 -right-3 h-6 z-10
+            bg-[#8b6914] border-3 border-[#3d2914] rounded-full
+            shadow-[0_4px_8px_rgba(0,0,0,0.4),inset_0_3px_0_#d4a574,inset_0_-3px_0_#5c4a1f]">
+        </div>
+
+        <!-- 红蜡封印 -->
+        <div class="absolute -top-1 right-8 z-20 w-14 h-14 rounded-full rotate-6
+            bg-[#a02030] border-2 border-[#4a0a10]
+            shadow-[2px_4px_8px_rgba(0,0,0,0.5),inset_3px_3px_6px_#dc3545,inset_-3px_-3px_6px_#6b1520]
+            flex items-center justify-center">
+            <!-- 蜡封内圈 -->
+            <div class="w-10 h-10 rounded-full border-2 border-[#f4e4bc]/30
+                flex items-center justify-center
+                text-[#f4e4bc]/60 text-sm font-black tracking-tight">
+                契
+            </div>
+        </div>
+
+        <!-- 羊皮纸主体 -->
+        <div class="relative min-h-120 p-6 pt-8 pb-8 rounded-sm
+            bg-[#f5e8c8] border-2 border-[#c4a060]
+            shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
+
+            <!-- 羊皮纸纹理叠加 -->
+            <div class="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style="background-image: url('data:image/svg+xml,%3Csvg viewBox=&quot;0 0 200 200&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cfilter id=&quot;noise&quot;%3E%3CfeTurbulence type=&quot;fractalNoise&quot; baseFrequency=&quot;0.9&quot; numOctaves=&quot;4&quot; stitchTiles=&quot;stitch&quot;/%3E%3C/filter%3E%3Crect width=&quot;100%25&quot; height=&quot;100%25&quot; filter=&quot;url(%23noise)&quot;/%3E%3C/svg%3E')"></div>
+
+            <!-- 墨水内边框 -->
+            <div class="absolute inset-4 border-2 border-[#3d2914]/40 pointer-events-none"></div>
+
+            <!-- 四角装饰花纹 -->
+            <div class="absolute top-5 left-5 w-4 h-4 border-t-2 border-l-2 border-[#3d2914]/60"></div>
+            <div class="absolute top-5 right-5 w-4 h-4 border-t-2 border-r-2 border-[#3d2914]/60"></div>
+            <div class="absolute bottom-5 left-5 w-4 h-4 border-b-2 border-l-2 border-[#3d2914]/60"></div>
+            <div class="absolute bottom-5 right-5 w-4 h-4 border-b-2 border-r-2 border-[#3d2914]/60"></div>
+
+            <!-- 内容区 -->
+            <div class="relative z-10">
+
+                <!-- 标题区 -->
+                <header class="text-center mb-4 pt-1">
+                    <!-- 金币 (绝对定位) -->
+                    <div class="absolute left-6 top-8">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1
+                            bg-[#e5d4b0] border-2 border-[#3d2914]/50 rounded-sm
+                            shadow-[inset_1px_1px_2px_#f7edd5,inset_-1px_-1px_2px_#c4b090,0_1px_2px_rgba(0,0,0,0.15)]">
+                            <span class="iconify text-3.5" data-icon="twemoji:money-bag"></span>
+                            <span class="text-3.5 font-black text-[#3d2914]">
+                                {{ playerCoins.toLocaleString() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 标题 -->
+                    <h1 class="text-5 font-black text-[#2c1810] tracking-widest
+                        drop-shadow-[1px_1px_0_rgba(244,228,188,0.8)]">
+                        土地买卖契约
+                    </h1>
+                    <!-- 副标题 -->
+                    <p class="text-2.5 text-[#6b5a48] italic tracking-wide mt-1">
+                        "地主卖作物的钱，先平分到他所有土地上，然后你按约定比例从你买的那块地的'平分钱'里抽成。"
+                    </p>
+                </header>
+
+                <!-- 标签页导航 -->
+                <nav class="flex justify-center items-center gap-1 mb-5 flex-wrap">
+                    <button v-for="tab in tabs" :key="tab.id"
+                        @click="currentTab = tab.id"
+                        class="px-4 py-2 text-3.5 font-bold tracking-wide transition-all duration-150
+                            border border-[#3d2914]/60 rounded-sm cursor-pointer"
+                        :class="currentTab === tab.id
+                            ? 'bg-[#3d2914] text-[#f4e4bc] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                            : 'bg-transparent text-[#3d2914] hover:bg-[#3d2914]/10'">
+                        <span class="iconify inline mr-1 text-3.5" :data-icon="tab.icon"></span>
+                        {{ tab.label }}
+                    </button>
+                </nav>
+
+                <!-- 数据表格区 -->
+                <div class="min-h-60 max-h-80 overflow-y-auto pr-1
+                    scrollbar scrollbar-w-1 scrollbar-thumb-[#3d2914]/50 scrollbar-track-transparent">
+
+                    <!-- 空状态 -->
+                    <div v-if="currentList.length === 0"
+                        class="flex flex-col items-center justify-center py-16 opacity-50">
+                        <span class="iconify text-12 mb-4 text-[#3d2914]/40" data-icon="twemoji:rolled-up-newspaper"></span>
+                        <p class="text-4 font-bold text-[#3d2914]">{{ emptyText }}</p>
+                        <p class="text-3 text-[#6b5a48] mt-1">此卷宗暂无记录</p>
+                    </div>
+
+                    <!-- 土地市场表格 -->
+                    <table v-else class="w-full border-collapse text-3.5">
+                        <thead>
+                            <tr class="border-b-2 border-[#3d2914]">
+                                <th class="text-left py-2.5 px-2 font-black text-[#2c1810] text-3">序</th>
+                                <th class="text-left py-2.5 px-2 font-black text-[#2c1810] text-3">地块</th>
+                                <th class="text-center py-2.5 px-2 font-black text-[#2c1810] text-3">分红率</th>
+                                <th v-if="currentTab === 'market' || currentTab === 'holdings'"
+                                    class="text-left py-2.5 px-2 font-black text-[#2c1810] text-3">地主</th>
+                                <th v-if="currentTab === 'resale'"
+                                    class="text-left py-2.5 px-2 font-black text-[#2c1810] text-3">卖家</th>
+                                <th v-if="currentTab === 'sold'"
+                                    class="text-left py-2.5 px-2 font-black text-[#2c1810] text-3">持有人</th>
+                                <th v-if="currentTab === 'holdings'"
+                                    class="text-right py-2.5 px-2 font-black text-[#2c1810] text-3">累计</th>
+                                <th v-if="currentTab === 'holdings'"
+                                    class="text-center py-2.5 px-2 font-black text-[#2c1810] text-3">状态</th>
+                                <th v-if="currentTab !== 'holdings'"
+                                    class="text-right py-2.5 px-2 font-black text-[#2c1810] text-3">价格</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in currentList" :key="item.actionNo"
+                                class="border-b border-dashed border-[#3d2914]/25 transition-colors hover:bg-[#3d2914]/5"
+                                :class="idx % 2 === 1 ? 'bg-[#3d2914]/[0.02]' : ''">
+
+                                <!-- 序号 -->
+                                <td class="py-3 px-2 font-mono text-[#6b5a48] font-bold">
+                                    {{ item.actionNo }}
+                                </td>
+
+                                <!-- 地块 -->
+                                <td class="py-3 px-2">
+                                    <div class="flex items-center gap-1">
+                                        <span class="iconify text-4" data-icon="twemoji:brown-square"></span>
+                                        <span class="font-bold text-[#3d2914]">{{ item.landId }}</span>
+                                    </div>
+                                </td>
+
+                                <!-- 分红率 - 蜡封徽章样式 -->
+                                <td class="py-3 px-2 text-center">
+                                    <span class="inline-flex items-center justify-center
+                                        w-9 h-9 rounded-full text-2.5 font-black
+                                        bg-[#a02030] text-[#f4e4bc] border border-[#4a0a10]
+                                        shadow-[1px_2px_4px_rgba(0,0,0,0.3),inset_2px_2px_3px_#dc3545,inset_-2px_-2px_3px_#6b1520]">
+                                        {{ item.dividendRate }}%
+                                    </span>
+                                </td>
+
+                                <!-- 地主/卖家/持有人 -->
+                                <td v-if="currentTab === 'market' || currentTab === 'holdings'"
+                                    class="py-3 px-2 text-[#3d2914] font-medium truncate max-w-20">
+                                    {{ item.ownerName }}
+                                </td>
+                                <td v-if="currentTab === 'resale'"
+                                    class="py-3 px-2 text-[#3d2914] font-medium truncate max-w-20">
+                                    {{ item.sellerName }}
+                                </td>
+                                <td v-if="currentTab === 'sold'"
+                                    class="py-3 px-2 text-[#3d2914] font-medium truncate max-w-20">
+                                    {{ item.holderName }}
+                                </td>
+
+                                <!-- 累计分红 (仅持有) -->
+                                <td v-if="currentTab === 'holdings'"
+                                    class="py-3 px-2 text-right font-bold text-[#2d8b4e]">
+                                    +{{ item.totalDividend?.toLocaleString() || 0 }}
+                                </td>
+
+                                <!-- 状态徽章 (仅持有) -->
+                                <td v-if="currentTab === 'holdings'" class="py-3 px-2 text-center">
+                                    <span v-if="item.resaleStatus === 'listed'"
+                                        class="inline-flex items-center justify-center px-2 py-1 rounded-sm
+                                            text-2.5 font-bold bg-[#a02030] text-white
+                                            shadow-[0_2px_4px_rgba(0,0,0,0.2),inset_1px_1px_2px_#dc3545]">
+                                        转售中
+                                    </span>
+                                    <span v-else
+                                        class="inline-flex items-center justify-center px-2 py-1 rounded-sm
+                                            text-2.5 font-bold bg-[#2d8b4e] text-white
+                                            shadow-[0_2px_4px_rgba(0,0,0,0.2),inset_1px_1px_2px_#4eba6f]">
+                                        持有中
+                                    </span>
+                                </td>
+
+                                <!-- 价格 -->
+                                <td v-if="currentTab !== 'holdings'"
+                                    class="py-3 px-2 text-right">
+                                    <span class="font-black text-[#8b6914]">
+                                        {{ item.price?.toLocaleString() || item.originalPrice?.toLocaleString() }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页统计 -->
+                <div v-if="currentList.length > 0"
+                    class="text-center text-3 text-[#6b5a48] mt-4 pt-3
+                        border-t border-dashed border-[#3d2914]/30">
+                    <span class="iconify inline mr-1" data-icon="twemoji:memo"></span>
+                    共 <span class="font-bold text-[#3d2914]">{{ total }}</span> 条记录，
+                    显示前 <span class="font-bold text-[#3d2914]">{{ currentList.length }}</span> 条
+                </div>
+
+                <!-- 底部操作提示 -->
+                <footer class="mt-5 pt-4 border-t-2 border-[#3d2914]/60">
+                    <div class="flex items-center gap-3
+                        bg-[#3d2914]/8 border border-[#3d2914]/20
+                        rounded-sm px-4 py-3">
+                        <span class="iconify text-5 text-[#8b6914] flex-shrink-0" data-icon="twemoji:feather"></span>
+                        <div class="text-3.5 text-[#3d2914]">
+                            <template v-if="currentTab === 'market'">
+                                <span class="font-mono font-bold bg-[#3d2914] text-[#f4e4bc] px-2 py-0.5 rounded-sm">
+                                    #nc购买土地 &lt;序号&gt;
+                                </span>
+                                <span class="ml-2 text-[#6b5a48]">购买土地收益权</span>
+                            </template>
+                            <template v-else-if="currentTab === 'resale'">
+                                <span class="font-mono font-bold bg-[#3d2914] text-[#f4e4bc] px-2 py-0.5 rounded-sm">
+                                    #nc购买转售 &lt;序号&gt;
+                                </span>
+                                <span class="ml-2 text-[#6b5a48]">购买转售权益</span>
+                            </template>
+                            <template v-else-if="currentTab === 'listings'">
+                                <span class="font-mono font-bold bg-[#3d2914] text-[#f4e4bc] px-2 py-0.5 rounded-sm">
+                                    #nc取消出售 &lt;序号&gt;
+                                </span>
+                                <span class="ml-2 text-[#6b5a48]">取消挂牌</span>
+                            </template>
+                            <template v-else-if="currentTab === 'holdings'">
+                                <span class="font-mono font-bold bg-[#3d2914] text-[#f4e4bc] px-2 py-0.5 rounded-sm">
+                                    #nc转售土地 &lt;序号&gt;
+                                </span>
+                                <span class="ml-2 text-[#6b5a48]">挂牌转售</span>
+                            </template>
+                            <template v-else-if="currentTab === 'sold'">
+                                <span class="font-mono font-bold bg-[#3d2914] text-[#f4e4bc] px-2 py-0.5 rounded-sm">
+                                    #nc赎回土地 &lt;序号&gt;
+                                </span>
+                                <span class="ml-2 text-[#6b5a48]">原价赎回</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- 签署信息 -->
+                    <div class="flex justify-end items-center gap-2 mt-3 text-3 text-[#6b5a48] italic">
+                        <span>签发于 芬吉尔土地登记处</span>
+                        <span class="iconify text-3.5" data-icon="twemoji:classical-building"></span>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const data = window.FARM_DATA || {};
+
+        const playerCoins = ref(data.playerCoins ?? 0);
+        const currentTab = ref(data.currentTab || 'market');
+
+        const tabs = [
+            { id: 'market', label: '市场', icon: 'twemoji:department-store' },
+            { id: 'resale', label: '转售', icon: 'twemoji:handshake' },
+            { id: 'listings', label: '挂牌', icon: 'twemoji:bookmark-tabs' },
+            { id: 'holdings', label: '持有', icon: 'twemoji:briefcase' },
+            { id: 'sold', label: '售出', icon: 'twemoji:chart-increasing' }
+        ];
+
+        const lists = {
+            market: data.marketList || [],
+            resale: data.resaleList || [],
+            listings: data.myListings || [],
+            holdings: data.myHoldings || [],
+            sold: data.mySold || []
+        };
+
+        const totals = {
+            market: data.marketTotal ?? 0,
+            resale: data.resaleTotal ?? 0,
+            listings: data.listingsTotal ?? 0,
+            holdings: data.holdingsTotal ?? 0,
+            sold: data.soldTotal ?? 0
+        };
+
+        const emptyTexts = {
+            market: '暂无挂牌',
+            resale: '暂无转售',
+            listings: '暂无挂牌',
+            holdings: '暂无持有',
+            sold: '暂无售出'
+        };
+
+        const currentList = computed(() => lists[currentTab.value] || []);
+        const total = computed(() => totals[currentTab.value] || 0);
+        const emptyText = computed(() => emptyTexts[currentTab.value] || '暂无数据');
+
+        onMounted(() => document.body.classList.add('ready'));
+
+        return {
+            playerCoins,
+            currentTab,
+            tabs,
+            currentList,
+            total,
+            emptyText
+        };
+    }
+}).mount('#app');
+</script>
+
+</body>
+</html>

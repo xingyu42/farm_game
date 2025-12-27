@@ -18,6 +18,7 @@
 | **inventory.js** | 仓库管理 | #仓库, #仓库升级, #锁定, #解锁 | InventoryService |
 | **steal.js** | 偷菜系统 | @用户 #偷菜, #狗粮 | StealService, ProtectionService |
 | **land_management.js** | 土地管理 | #土地扩张, #土地升级 | LandService |
+| **land_trade.js** | 土地收益权交易 | #出售土地, #土地市场, #购买土地, #我的挂牌, #我的持有, #转售土地, #赎回土地 | LandTradeService, PlayerService |
 | **admin.js** | 管理员工具 | #nc管理... | AdminService, GlobalStatsService |
 | **help.js** | 帮助文档 | #农场帮助 | - |
 | **update.js** | 更新通知 | #农场更新 | - |

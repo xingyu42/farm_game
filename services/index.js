@@ -21,9 +21,9 @@
  * 1. Config, CommonUtils, ItemResolver (基础工具)
  * 2. PlayerService (核心依赖)
  * 3. AdminService, GlobalStatsService, PlayerStatsService, EconomyService (独立服务)
- * 4. InventoryService, LandService (依赖 PlayerService)
+ * 4. InventoryService, LandService, LandTradeService (依赖 PlayerService)
  * 5. PlantingDataService, PlantingService (依赖 InventoryService + LandService)
- * 6. ShopService (依赖 InventoryService + PlayerService)
+ * 6. ShopService (依赖 InventoryService + PlayerService + LandTradeService)
  * 7. ProtectionService (注入回 PlayerService - 解决循环依赖)
  * 8. StealService (依赖多个服务)
  * 9. MarketService, MarketScheduler (市场子系统)
@@ -47,6 +47,7 @@ import PlantingService from './planting/PlantingService.js';
 import InventoryService from './player/InventoryService.js';
 import ShopService from './player/ShopService.js';
 import LandService from './player/LandService.js';
+import LandTradeService from './player/LandTradeService.js';
 import ProtectionService from './player/ProtectionService.js';
 import StealService from './player/StealService.js';
 import PlantingDataService from './planting/PlantingDataService.js';
@@ -132,6 +133,13 @@ class ServiceContainer {
 
       // 实例化LandService（事务实现层；可选注入 PlayerService 供旧代码访问）
       this.services.landService = new LandService(
+        redisClient,
+        config,
+        this.services.playerService
+      );
+
+      // 实例化LandTradeService（土地收益权买卖）
+      this.services.landTradeService = new LandTradeService(
         redisClient,
         config,
         this.services.playerService
@@ -229,8 +237,7 @@ class ServiceContainer {
       this.services.marketScheduler = new MarketScheduler(
         this.services.marketService,
         redisClient,
-        config,
-        this.services.plantingService.cropMonitorService
+        config
       );
 
       this.initialized = true;

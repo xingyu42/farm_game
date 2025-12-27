@@ -36,7 +36,8 @@ export class ShopCommands extends plugin {
           fnc: 'viewMarket'
         },
         {
-          reg: '^#(nc)?购买(.+?)(\\d+)?$',
+          // 避免与土地收益权指令冲突：#nc购买土地 ... / #nc购买转售 ...
+          reg: '^#(nc)?购买(?!土地|转售)(.+?)(\\d+)?$',
           fnc: 'buyItem'
         },
         {
@@ -44,7 +45,8 @@ export class ShopCommands extends plugin {
           fnc: 'sellAllCrops'
         },
         {
-          reg: '^#(nc)?出售(.+?)(\\d+)?$',
+          // 避免与土地收益权指令冲突：#nc出售土地 ...
+          reg: '^#(nc)?出售(?!土地)(.+?)(\\d+)?$',
           fnc: 'sellItem'
         },
         {

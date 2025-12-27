@@ -43,6 +43,7 @@ farm_game/
 │   ├── inventory.js            # 仓库管理 (#仓库/#仓库升级)
 │   ├── steal.js                # 偷菜系统 (#偷菜/#狗粮)
 │   ├── land_management.js      # 土地管理 (#土地扩张/#土地升级)
+│   ├── land_trade.js           # 土地收益权 (#出售土地/#土地市场)
 │   ├── admin.js                # 管理员工具
 │   ├── help.js                 # 帮助文档
 │   └── update.js               # 更新通知
@@ -59,6 +60,7 @@ farm_game/
 │   │   ├── EconomyService.js           # 经济系统
 │   │   ├── InventoryService.js         # 仓库管理
 │   │   ├── LandService.js              # 土地操作
+│   │   ├── LandTradeService.js         # 土地收益权交易
 │   │   ├── ProtectionService.js        # 防护系统
 │   │   ├── StealService.js             # 偷菜逻辑
 │   │   ├── ShopService.js              # 商店交易
@@ -112,7 +114,8 @@ farm_game/
 │   │   ├── land.yaml           # 土地配置
 │   │   ├── levels.yaml         # 等级配置
 │   │   ├── market.yaml         # 市场配置
-│   │   └── steal.yaml          # 偷菜配置
+│   │   ├── steal.yaml          # 偷菜配置
+│   │   └── land_trade.yaml     # 土地收益权配置
 │   └── default_config/         # 默认配置 (系统提供)
 │       └── ...                 # (同上)
 │
@@ -202,6 +205,7 @@ graph TD
 
     PlayerService --> Inventory[InventoryService]
     PlayerService --> Land[LandService]
+    PlayerService --> LandTrade[LandTradeService]
 
     Inventory --> PlantingData[PlantingDataService]
     Land --> PlantingData
@@ -209,6 +213,7 @@ graph TD
 
     Inventory --> Shop[ShopService]
     PlayerService --> Shop
+    LandTrade --> Shop
 
     PlayerService --> Protection[ProtectionService]
     Protection -.注入回.-> PlayerService
@@ -264,13 +269,13 @@ sequenceDiagram
 
 | 文件夹 | 索引文档 | 文件数 | 主要职责 |
 |--------|----------|--------|---------|
-| **apps/** | [FOLDER_INDEX.md](./apps/FOLDER_INDEX.md) | 9 | 指令处理、参数验证、响应渲染 |
-| **services/** | [FOLDER_INDEX.md](./services/FOLDER_INDEX.md) | 30+ | 业务逻辑、数据操作、事务管理 |
+| **apps/** | [FOLDER_INDEX.md](./apps/FOLDER_INDEX.md) | 10 | 指令处理、参数验证、响应渲染 |
+| **services/** | [FOLDER_INDEX.md](./services/FOLDER_INDEX.md) | 31+ | 业务逻辑、数据操作、事务管理 |
 | **models/** | [FOLDER_INDEX.md](./models/FOLDER_INDEX.md) | 8 | 数据模型、验证、序列化 |
 | **utils/** | [FOLDER_INDEX.md](./utils/FOLDER_INDEX.md) | 6 | 工具函数、计算、存储抽象 |
-| **config/** | - | 6×2 | YAML配置文件 (作物/物品/土地/等级/市场/偷菜) |
+| **config/** | - | 7×2 | YAML配置文件 (作物/物品/土地/等级/市场/偷菜/土地收益权) |
 | **resources/** | - | 多个 | Vue组件、CSS、图片资源 |
-| **Docs/** | - | 5 | 项目文档、架构设计、开发指南 |
+| **Docs/** | - | 5+ | 项目文档、架构设计、开发指南 |
 
 ---
 
@@ -383,13 +388,13 @@ wheat:
 
 ## 📊 项目统计
 
-- **总代码文件**: 66 个 JavaScript 文件
-- **核心服务**: 15+ 个业务服务
-- **应用指令**: 9 个应用模块
+- **总代码文件**: 68 个 JavaScript 文件
+- **核心服务**: 16+ 个业务服务
+- **应用指令**: 10 个应用模块
 - **数据模型**: 4 个核心模型 (Player, Land, Item, Config)
 - **工具类**: 6 个工具类
-- **配置文件**: 6 类 YAML 配置
-- **代码行数**: 约 15,000+ 行 (不含注释)
+- **配置文件**: 7 类 YAML 配置
+- **代码行数**: 约 16,000+ 行 (不含注释)
 
 ---
 

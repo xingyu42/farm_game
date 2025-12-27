@@ -20,6 +20,7 @@ services/
 │   ├── EconomyService.js       # 经济系统
 │   ├── InventoryService.js     # 仓库管理
 │   ├── LandService.js          # 土地操作
+│   ├── LandTradeService.js     # 土地收益权交易
 │   ├── ProtectionService.js    # 防护系统
 │   ├── StealService.js         # 偷菜逻辑
 │   ├── ShopService.js          # 商店交易
@@ -55,7 +56,8 @@ services/
 | `playerService` | PlayerService | 玩家核心管理 | PlayerDataService, EconomyService, SignInService |
 | `plantingService` | PlantingService | 种植生命周期 | PlantingDataService, InventoryService, LandService |
 | `inventoryService` | InventoryService | 仓库物品管理 | PlayerDataService, EconomyService |
-| `shopService` | ShopService | 商店交易 | InventoryService, PlayerService |
+| `shopService` | ShopService | 商店交易 | InventoryService, PlayerService, LandTradeService |
+| `landTradeService` | LandTradeService | 土地收益权交易 | PlayerService, EconomyService, FileStorage |
 | `marketService` | MarketService | 市场价格系统 | PriceCalculator, MarketDataManager, TransactionManager |
 | `stealService` | StealService | 偷菜逻辑 | PlayerService, InventoryService, ProtectionService |
 | `protectionService` | ProtectionService | 防护系统 | PlayerService |

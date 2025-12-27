@@ -6,7 +6,7 @@
  * - chokidar - 文件监听库
  * - fs, path - 文件系统操作
  * - lodash - 深度合并工具
- * - config/*.yaml - 所有配置文件 (crops, items, land, levels, market, steal)
+ * - config/*.yaml - 所有配置文件 (crops, items, land, levels, market, steal, land_trade)
  *
  * Output:
  * - Config (default) - 全局配置单例,提供所有游戏配置的访问接口
@@ -114,6 +114,11 @@ class Config {
   /** 获取市场设置 */
   get market() {
     return this.getDefOrConfig('market');
+  }
+
+  /** 获取土地收益权交易设置 */
+  get land_trade() {
+    return this.getDefOrConfig('land_trade');
   }
 
   /**
