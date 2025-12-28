@@ -294,7 +294,7 @@ export class ShopCommands extends plugin {
 
     // 扣除金币
     const economyService = this.playerService.getEconomyService();
-    await economyService.removeCoins(userId, price);
+    await economyService.deductCoins(userId, price);
 
     // 直接装备工具
     await this.stealService.equipStealTool(userId, toolId);

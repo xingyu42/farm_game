@@ -20,18 +20,18 @@ export class LandTradeCommands extends plugin {
       event: 'message',
       priority: 100,
       rule: [
-        { reg: '^#(nc)?出售土地\\s+\\d+(\\s+\\d+)?\\s*$', fnc: 'listLand' },
-        { reg: '^#(nc)?取消出售\\s+\\d+\\s*$', fnc: 'cancelListing' },
-        { reg: '^#(nc)?土地市场\\s*$', fnc: 'viewMarket' },
-        { reg: '^#(nc)?购买土地\\s+\\d+\\s*$', fnc: 'buyLand' },
-        { reg: '^#(nc)?我的挂牌\\s*$', fnc: 'myListings' },
-        { reg: '^#(nc)?我的持有\\s*$', fnc: 'myHoldings' },
-        { reg: '^#(nc)?我的售出\\s*$', fnc: 'mySold' },
-        { reg: '^#(nc)?赎回土地\\s+\\d+\\s*$', fnc: 'redeemLand' },
-        { reg: '^#(nc)?转售土地\\s+\\d+\\s*$', fnc: 'listResale' },
-        { reg: '^#(nc)?取消转售\\s+\\d+\\s*$', fnc: 'cancelResale' },
-        { reg: '^#(nc)?转售市场\\s*$', fnc: 'viewResaleMarket' },
-        { reg: '^#(nc)?购买转售\\s+\\d+\\s*$', fnc: 'buyResale' }
+        { reg: '^#(nc)?出售土地\\s+(\\d+)(\\s+\\d+)?$', fnc: 'listLand' },
+        { reg: '^#(nc)?取消出售(\\d+)$', fnc: 'cancelListing' },
+        { reg: '^#(nc)?土地市场$', fnc: 'viewMarket' },
+        { reg: '^#(nc)?购买土地(\\d+)$', fnc: 'buyLand' },
+        { reg: '^#(nc)?我的挂牌$', fnc: 'myListings' },
+        { reg: '^#(nc)?我的持有$', fnc: 'myHoldings' },
+        { reg: '^#(nc)?我的售出$', fnc: 'mySold' },
+        { reg: '^#(nc)?赎回土地(\\d+)$', fnc: 'redeemLand' },
+        { reg: '^#(nc)?转售土地(\\d+)$', fnc: 'listResale' },
+        { reg: '^#(nc)?取消转售(\\d+)$', fnc: 'cancelResale' },
+        { reg: '^#(nc)?转售市场$', fnc: 'viewResaleMarket' },
+        { reg: '^#(nc)?购买转售(\\d+)$', fnc: 'buyResale' }
       ]
     });
 
@@ -73,7 +73,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?出售土地\s+(\d+)(?:\s+(\d+))?\s*$/);
+      const match = e.msg.match(/^#(?:nc)?出售土地\s+(\d+)(?:\s+(\d+))?$/);
       if (!match) {
         await e.reply('用法：#nc出售土地 <价格> [分红率%]\n示例：#nc出售土地 50000 35');
         return true;
@@ -98,7 +98,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?取消出售\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?取消出售(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc取消出售 <我的挂牌序号>');
@@ -168,7 +168,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?购买土地\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?购买土地(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc购买土地 <土地市场序号>');
@@ -305,7 +305,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?赎回土地\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?赎回土地(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc赎回土地 <我的售出序号>');
@@ -328,7 +328,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?转售土地\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?转售土地(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc转售土地 <我的持有序号>');
@@ -351,7 +351,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?取消转售\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?取消转售(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc取消转售 <我的持有序号>');
@@ -421,7 +421,7 @@ export class LandTradeCommands extends plugin {
       const userId = e.user_id.toString();
       if (!(await this._validatePlayer(e, userId))) return true;
 
-      const match = e.msg.match(/^#(?:nc)?购买转售\s+(\d+)\s*$/);
+      const match = e.msg.match(/^#(?:nc)?购买转售(\d+)$/);
       const no = match ? parseInt(match[1], 10) : NaN;
       if (!Number.isInteger(no) || no <= 0) {
         await e.reply('用法：#nc购买转售 <转售市场序号>');
