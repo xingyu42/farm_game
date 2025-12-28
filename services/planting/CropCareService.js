@@ -124,16 +124,16 @@ class CropCareService {
           throw new Error('没有可用的肥料');
         }
 
-        // 4. 验证肥料库存
-        const hasEnoughFertilizer = await this.inventoryService.hasItem(userId, actualFertilizerType, 1);
-        if (!hasEnoughFertilizer.success) {
-          throw new Error(`肥料不足: ${actualFertilizerType}`);
-        }
-
-        // 5. 获取肥料配置并验证
+        // 4. 获取肥料配置并验证（提前获取以便显示名称）
         const fertilizerConfig = this.config.items.fertilizer?.[actualFertilizerType];
         if (!fertilizerConfig) {
           throw new Error(`无效的肥料类型: ${actualFertilizerType}`);
+        }
+
+        // 5. 验证肥料库存
+        const hasEnoughFertilizer = await this.inventoryService.hasItem(userId, actualFertilizerType, 1);
+        if (!hasEnoughFertilizer.success) {
+          throw new Error(`${fertilizerConfig.name}不足`);
         }
 
         const fertilizerEffect = fertilizerConfig.effect || {};
@@ -226,16 +226,16 @@ class CropCareService {
           throw new Error('没有可用的杀虫剂');
         }
 
-        // 4. 验证杀虫剂库存
-        const hasEnoughPesticide = await this.inventoryService.hasItem(userId, actualPesticideType, 1);
-        if (!hasEnoughPesticide.success) {
-          throw new Error(`杀虫剂不足: ${actualPesticideType}`);
-        }
-
-        // 5. 获取杀虫剂配置并验证
+        // 4. 获取杀虫剂配置并验证（提前获取以便显示名称）
         const pesticideConfig = this.config.items.pesticide?.[actualPesticideType];
         if (!pesticideConfig) {
           throw new Error(`无效的杀虫剂类型: ${actualPesticideType}`);
+        }
+
+        // 5. 验证杀虫剂库存
+        const hasEnoughPesticide = await this.inventoryService.hasItem(userId, actualPesticideType, 1);
+        if (!hasEnoughPesticide.success) {
+          throw new Error(`${pesticideConfig.name}不足`);
         }
 
         const landUpdates = {

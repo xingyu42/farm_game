@@ -446,10 +446,11 @@ export class InventoryService {
       const item = inventory.items[itemId];
 
       if (!item) {
+        const itemName = this.itemResolver.getItemName(itemId);
         return {
           success: false,
           available: 0,
-          message: `仓库中没有 ${itemId}`
+          message: `仓库中没有 ${itemName}`
         };
       }
 
