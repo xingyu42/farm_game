@@ -23,7 +23,7 @@ export class adminApp extends plugin {
       priority: 400,
       rule: [
         {
-          reg: '^#nc管理(重置玩家|添加金币|添加经验|设置土地品质|统计|经济分析|备份)(.*)$',
+          reg: '^#nc管理(重置玩家|添加金币|添加经验|设置土地品质|统计|备份)(.*)$',
           fnc: 'handleAdmin'
         }
       ]
@@ -67,7 +67,6 @@ export class adminApp extends plugin {
         await this.setLandQuality(e, args);
         break;
       case '统计':
-      case '经济分析':
         await this.getStats(e);
         break;
       case '备份':
