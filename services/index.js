@@ -58,6 +58,7 @@ import { PriceCalculator } from './market/PriceCalculator.js';
 import { MarketDataManager } from './market/MarketDataManager.js';
 import { TransactionManager } from './market/TransactionManager.js';
 import ItemResolver from '../utils/ItemResolver.js';
+import RankingService from './RankingService.js';
 
 class ServiceContainer {
   constructor() {
@@ -107,6 +108,12 @@ class ServiceContainer {
       this.services.globalStatsService = new GlobalStatsService(
         redisClient,
         null // logger使用默认值
+      );
+
+      // 实例化RankingService（农场主排行榜）
+      this.services.rankingService = new RankingService(
+        redisClient,
+        config
       );
 
       // 实例化PlayerStatsService
