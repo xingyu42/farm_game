@@ -128,37 +128,21 @@
             <div class="flex-1 h-0.5 bg-gradient-to-r from-[#8b4513]/30 to-transparent ml-2"></div>
         </div>
 
-        <div class="bg-[#fffae8] border-2 border-[#c27d53] rounded-1 overflow-hidden">
-            <div class="grid grid-cols-[2fr_0.8fr_1.2fr_1fr] px-3 py-2 bg-gradient-to-b from-[#c27d53] to-[#9c5a3c]
-                border-b-2 border-[#4a281a] text-3 font-bold text-[#ffe4b5] drop-shadow-[1px_1px_0_rgba(0,0,0,0.3)]">
-                <span>商品</span>
-                <span class="text-center">趋势</span>
-                <span class="text-right">收购价</span>
-                <span class="text-right">涨跌</span>
-            </div>
-            <div class="max-h-75 overflow-y-auto">
-                <div v-for="(item, idx) in otherItems" :key="item.name"
-                    class="grid grid-cols-[2fr_0.8fr_1.2fr_1fr] px-3 py-1.5 text-3.5 items-center border-b border-[#522516]/10"
-                    :class="{ 'bg-black/2': idx % 2 === 1 }">
-                    <span class="flex items-center gap-1.5 font-bold text-[#4a281a]">
-                        <span class="iconify text-4" :data-icon="item.icon"></span>
-                        {{ item.name }}
-                    </span>
-                    <span class="text-center text-4">
-                        <span v-if="item.priceChange > 0" class="iconify" data-icon="twemoji:chart-increasing"></span>
-                        <span v-else-if="item.priceChange < 0" class="iconify" data-icon="twemoji:chart-decreasing"></span>
-                        <span v-else class="iconify" data-icon="twemoji:minus"></span>
-                    </span>
-                    <span class="text-right font-mono text-[#2d7a1e]">{{ item.currentPrice }}</span>
-                    <span class="text-right font-mono font-bold"
-                        :class="{
-                            'text-[#16c784]': item.priceChange > 0,
-                            'text-[#ea3943]': item.priceChange < 0,
-                            'text-[#848e9c]': item.priceChange === 0
-                        }">
-                        {{ item.priceChange > 0 ? '+' : '' }}{{ item.priceChange }}%
-                    </span>
-                </div>
+        <div class="grid grid-cols-6 gap-2">
+            <div v-for="item in otherItems" :key="item.name"
+                class="bg-[#fffae8] border-2 border-[#c27d53] rounded-1 p-2 flex flex-col items-center
+                shadow-[inset_1px_1px_0_0_#fff8e0,inset_-1px_-1px_0_0_#d4a86a,0_2px_0_0_rgba(0,0,0,0.15)]">
+                <span class="iconify text-6 leading-none drop-shadow-[1px_1px_0_rgba(0,0,0,0.1)]" :data-icon="item.icon"></span>
+                <span class="text-2.5 font-bold text-[#4a281a] mt-1 max-w-full truncate text-center">{{ item.name }}</span>
+                <span class="text-3 font-bold font-mono text-[#2d7a1e] mt-0.5">{{ item.currentPrice }}</span>
+                <span class="text-2.5 font-bold font-mono px-1 py-0.5 rounded-sm mt-0.5"
+                    :class="{
+                        'text-[#16c784] bg-[#16c784]/10': item.priceChange > 0,
+                        'text-[#ea3943] bg-[#ea3943]/10': item.priceChange < 0,
+                        'text-[#848e9c] bg-[#848e9c]/10': item.priceChange === 0
+                    }">
+                    {{ item.priceChange > 0 ? '+' : '' }}{{ item.priceChange }}%
+                </span>
             </div>
         </div>
     </div>
