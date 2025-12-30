@@ -480,7 +480,7 @@ care:
     # 浇水检查点（生长进度百分比）
     checkpoints: [0.35, 0.50, 0.65]
     # 每个检查点的触发概率
-    probability: 0.40
+    probability: 0.10
     # 惩罚机制：缺水延缓生长
     penalty:
       type: "growthDelay"
@@ -490,7 +490,7 @@ care:
     # 虫害检查点（生长进度百分比）
     checkpoints: [0.55, 0.70, 0.85]
     # 每个检查点的触发概率
-    probability: 0.35
+    probability: 0.05
     # 惩罚机制：虫害减少产量
     penalty:
       type: "yieldReduction"
