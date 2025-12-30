@@ -33,7 +33,7 @@
 
 ## 🌟 主要功能
 
-- **🌱 真实的种植体验**: 从播种、浇水、除草到收获，体验作物的完整生长周期，感受丰收的喜悦！
+- **🌱 真实的种植体验**: 从播种、浇水到收获，体验作物的完整生长周期，感受丰收的喜悦！
 - **🏡 个性化的家园管理**: 开垦荒地，升级土地，解锁更多高级作物，一步步打造你的梦想庄园。
 - **🏪 自由的市场交易**: 在商店里自由买卖种子和作物，抓住市场机遇，体验成为商业大亨的乐趣。
 - **🐶 刺激的社交互动**: 体验“半夜偷菜”的刺激，也可以部署忠诚的狗狗来保护你的劳动成果。
@@ -52,11 +52,11 @@
   git clone --depth=1 https://github.com/xingyu42/farm_game.git ./plugins/farm_game
   ```
 
-  - **Gitee (国内)**:
+- **Gitee (国内)**:
 
- ```bash
- git clone --depth=1 https://gitee.com/lianzi01/farm_game.git ./plugins/farm_game
- ```
+  ```bash
+  git clone --depth=1 https://gitee.com/lianzi01/farm_game.git ./plugins/farm_game
+  ```
 
 ### 2. 重启机器人
 
