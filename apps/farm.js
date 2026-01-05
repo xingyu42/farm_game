@@ -1,5 +1,5 @@
 /**
- * @fileoverview 农场核心操作应用层 - 种植、浇水、施肥、除虫、收获
+ * @fileoverview 农场核心操作应用层 - 种植、浇水、施肥、除虫、收获、铲除
  *
  * Input:
  * - ../services/index.js - ServiceContainer (获取 PlantingService, PlayerService)
@@ -11,7 +11,7 @@
  * Output:
  * - farm (class) - 农场核心操作指令处理器,导出给 index.js 动态加载
  *
- * Pos: 应用层核心模块,处理农场所有核心操作指令 (#我的农场/#种植/#浇水/#施肥/#除虫/#收获)
+ * Pos: 应用层核心模块,处理农场所有核心操作指令 (#我的农场/#种植/#浇水/#施肥/#除虫/#铲除/#收获)
  */
 
 import serviceContainer from '../services/index.js'
@@ -49,6 +49,10 @@ export class farm extends plugin {
         {
           reg: '^#(nc)?除虫(\\d+|全部)$',
           fnc: 'pesticideCrop'
+        },
+        {
+          reg: '^#(nc)?铲除(\\d+|全部)$',
+          fnc: 'shovelCrop'
         },
         {
           reg: '^#(nc)?收获$',
@@ -488,6 +492,68 @@ export class farm extends plugin {
       logger.error('[农场游戏] 除虫失败:', error)
       await e.reply('除虫失败，请稍后重试')
       return true
+    }
+  }
+
+  /**
+   * 铲除作物（单块/全部）
+   * 命令格式：#铲除[土地号] | #铲除全部
+   */
+  async shovelCrop(e) {
+    try {
+      const match = e.msg.match(/^#(nc)?铲除(\d+|全部)$/);
+      if (!match) {
+        await e.reply('格式错误！使用: #铲除[土地编号] 或 #铲除全部');
+        return true;
+      }
+
+      const landParam = match[2];
+      const userId = await this._requirePlayer(e);
+      if (!userId) return true;
+
+      let result;
+      if (landParam === '全部') {
+        result = await this.plantingService.clearCrop(userId);
+      } else {
+        const landIdNum = parseInt(landParam);
+        if (isNaN(landIdNum) || landIdNum <= 0) {
+          await e.reply('土地编号必须为正整数');
+          return true;
+        }
+        result = await this.plantingService.clearCrop(userId, landIdNum);
+      }
+
+      if (!result?.success) {
+        await e.reply(result?.message || '铲除失败，请稍后重试');
+        return true;
+      }
+
+      const clearedCount = result?.data?.clearedCount ?? 0;
+      const clearedLands = result?.data?.clearedLands ?? [];
+
+      const operationResult = clearedCount > 0
+        ? {
+          type: 'success',
+          icon: 'fa6-solid:shovel',
+          title: '铲除完成',
+          details: [
+            `土地: ${clearedCount}块`,
+            clearedLands.length ? `编号: ${clearedLands.join('、')}` : '作物已清理'
+          ]
+        }
+        : {
+          type: 'info',
+          icon: 'lucide:info',
+          title: '无需铲除',
+          details: ['当前没有可铲除的作物']
+        };
+
+      await this._renderFarmWithResult(e, userId, operationResult);
+      return true;
+    } catch (error) {
+      logger.error('[农场游戏] 铲除失败:', error);
+      await e.reply('铲除失败，请稍后重试');
+      return true;
     }
   }
 

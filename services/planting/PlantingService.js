@@ -146,6 +146,111 @@ class PlantingService {
   }
 
   /**
+   * 铲除作物（不产出，不返还种子）
+   * @param {string} userId 用户ID
+   * @param {number|null} landId 土地编号（可选，为空时铲除所有非空土地）
+   * @returns {Object} 铲除结果
+   */
+  async clearCrop(userId, landId = null) {
+    try {
+      return await this._plantingDataService.executeWithTransaction(userId, async () => {
+        const cropsConfig = this.config.crops;
+
+        // 1) 确定要铲除的土地
+        let targetLandIds = [];
+        if (landId !== null && landId !== undefined) {
+          if (!Number.isInteger(landId) || landId < 1) {
+            return { success: false, message: '土地编号必须为正整数' };
+          }
+          const landData = await this.landService.getLandById(userId, landId);
+          if (!landData) {
+            return { success: false, message: `土地 ${landId} 不存在` };
+          }
+          if (!landData.crop || landData.status === 'empty') {
+            return { success: false, message: `第${landId}块土地没有可铲除的作物` };
+          }
+          targetLandIds = [landId];
+        } else {
+          const allLandsResult = await this.landService.getAllLands(userId);
+          if (!allLandsResult?.success) {
+            return { success: false, message: '获取土地数据失败' };
+          }
+          targetLandIds = (allLandsResult.lands || [])
+            .filter(land => land && land.crop && land.status !== 'empty')
+            .map(land => land.id);
+        }
+
+        if (targetLandIds.length === 0) {
+          return { success: true, message: '没有需要铲除的作物', data: { clearedCount: 0, clearedLands: [] } };
+        }
+
+        // 2) 记录作物信息并重置土地
+        const clearedCrops = [];
+        const landUpdates = {};
+
+        for (const lid of targetLandIds) {
+          const landData = await this.landService.getLandById(userId, lid);
+          if (!landData || !landData.crop || landData.status === 'empty') continue;
+
+          const cropType = landData.crop;
+          const cropName = cropsConfig?.[cropType]?.name || cropType;
+          clearedCrops.push({ landId: lid, cropType, cropName });
+
+          landUpdates[lid] = {
+            crop: null,
+            plantTime: null,
+            harvestTime: null,
+            originalHarvestTime: null,
+            status: 'empty',
+            needsWater: false,
+            hasPests: false,
+            stealable: false,
+            waterDelayApplied: false,
+            waterDelayMs: 0,
+            waterNeededAt: null,
+            pestAppearedAt: null
+          };
+        }
+
+        if (Object.keys(landUpdates).length === 0) {
+          return { success: true, message: '没有需要铲除的作物', data: { clearedCount: 0, clearedLands: [] } };
+        }
+
+        await this._plantingDataService.updateMultipleLands(userId, landUpdates);
+
+        // 3) 移除收获/护理调度
+        const scheduleMembers = Object.keys(landUpdates).map(lid => `${userId}:${lid}`);
+        try {
+          await this._cropMonitorService.batchRemoveHarvestSchedules(scheduleMembers);
+        } catch (error) {
+          logger.warn(`[PlantingService] 移除收获调度失败 [${userId}]: ${error.message}`);
+        }
+        for (const lid of Object.keys(landUpdates)) {
+          await this._cropMonitorService.removeCareSchedulesForLand(userId, Number(lid));
+        }
+
+        const clearedLandIds = Object.keys(landUpdates).map(v => Number(v)).sort((a, b) => a - b);
+        const clearedCount = clearedLandIds.length;
+
+        return {
+          success: true,
+          message: clearedCount === 1
+            ? `已铲除第${clearedLandIds[0]}块土地的作物`
+            : `已铲除${clearedCount}块土地的作物`,
+          data: {
+            clearedCount,
+            clearedLands: clearedLandIds,
+            clearedCrops
+          }
+        };
+      });
+    } catch (error) {
+      logger.error(`[PlantingService] 铲除失败 [${userId}]: ${error.message}`);
+      return { success: false, message: error.message || '铲除失败' };
+    }
+  }
+
+  /**
    * 检查是否可以收获
    * @param {string} userId 用户ID
    * @param {number} landId 土地编号
